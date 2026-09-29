@@ -17,7 +17,7 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Loads with Bingus Shared Loader, patches the Med-Kit record | ✅ | STATUS `OK - perk stacked`, `rows_appended=39 passive, 8 stat` (v4.0, 2026-09-30) |
 | Mod manager shows presets as a pick-one option | ❔ | v4.1 feature |
 | Two armor profiles at once | ❔ | offline engine test passes; untested in game |
-| F7 opens the panel and text is readable | ❔ | v4.2; uses the game UI font, else the engine debug font |
+| F7 opens the panel and text is readable | ✅ | v4.2, confirmed in game 2026-09-30 |
 | Mouse clicks and typing work in the panel | ❔ | v4.2 |
 | A change applies without re-equipping the armor | ❔ | v4.2; unknown when the game re-reads passives |
 | Panel save survives a game restart | ❔ | v4.2; offline test passes |

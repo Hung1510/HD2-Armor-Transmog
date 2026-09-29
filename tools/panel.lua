@@ -239,6 +239,10 @@ local function clear_gui()
 end
 
 -- ---------------------------------------------------------------- draw
+-- Passive Picker's own look (matches the mod icon and the web builder): a yellow header
+-- with a hazard stripe, toggle switches, underlined armor tabs, value cards with an
+-- accent bar when changed. Coordinates are panel units from the top left; the gui
+-- counts pixels from the bottom left.
 local function draw(width, height)
     local Gui, Vector3, Vector2, Color = sr.Gui, sr.Vector3, sr.Vector2, sr.Color
     local s = height / 1080 * 0.8
@@ -256,8 +260,11 @@ local function draw(width, height)
         end
         return nil
     end
-    local GOLD, WHITE, MUTED, DIM = color(255, 213, 0), color(238, 242, 246), color(153, 171, 184), color(95, 108, 120)
-    local WARN, GOOD, LINE = color(255, 150, 60), color(120, 220, 140), color(70, 82, 94)
+    local BG, CARD, CARD_HI = color(15, 17, 21, 238), color(25, 29, 36), color(33, 39, 48)
+    local LINE, TEXT, MUTED, DIM = color(46, 52, 62), color(232, 230, 223), color(154, 160, 170), color(98, 104, 114)
+    local ACCENT, INK = color(244, 210, 31), color(20, 20, 20)
+    local ACCENT_SOFT = color(244, 210, 31, 40)
+    local GOOD, WARN = color(95, 208, 138), color(240, 163, 58)
 
     local function rect(x, y, w, h, c, z)
         Gui.rect(gui, Vector3(ox + x * s, height - oy - (y + h) * s, z or 951), Vector2(w * s, h * s), c)
@@ -277,194 +284,246 @@ local function draw(width, height)
             if limit and measure > limit * s then size = size * limit * s / measure; measure = limit * s end
             if align_right then px = px - measure end
         end
-        Gui.text(gui, value, ink_font, size, ink_material, Vector3(px, height - oy - y * s - size * 0.8, 953), c or WHITE)
+        Gui.text(gui, value, ink_font, size, ink_material, Vector3(px, height - oy - y * s - size * 0.8, 954), c or TEXT)
     end
-    local function outline(x, y, w, h, c)
-        rect(x, y, w, 2, c, 952); rect(x, y + h - 2, w, 2, c, 952)
-        rect(x, y, 2, h, c, 952); rect(x + w - 2, y, 2, h, c, 952)
+    local function border(x, y, w, h, c, z)
+        rect(x, y, w, 1, c, z or 952); rect(x, y + h - 1, w, 1, c, z or 952)
+        rect(x, y, 1, h, c, z or 952); rect(x + w - 1, y, 1, h, c, z or 952)
     end
     local function region(key, x, y, w, h, enabled)
         regions[#regions + 1] = { key = key, x = ox + x * s, y = height - oy - (y + h) * s, w = w * s, h = h * s,
                                   enabled = enabled ~= false }
     end
-    local function button(key, label, x, y, w, h, enabled, active, ink)
+    -- filled = primary (yellow), else a quiet outlined button
+    local function button(key, label, x, y, w, h, enabled, filled, ink)
         local hovered = ui.hover == key and enabled ~= false
-        local fill = active and color(90, 74, 8) or hovered and color(52, 66, 80) or color(28, 34, 42)
-        rect(x, y, w, h, fill, 951)
-        outline(x, y, w, h, enabled == false and DIM or (active or hovered) and GOLD or LINE)
-        text(label, x + 8, y + (h - 16) / 2, 16, enabled == false and DIM or ink or WHITE, w - 12)
+        if filled then
+            rect(x, y, w, h, hovered and color(255, 226, 70) or ACCENT, 951)
+        else
+            rect(x, y, w, h, hovered and CARD_HI or CARD, 951)
+            border(x, y, w, h, enabled == false and LINE or hovered and ACCENT or LINE)
+        end
+        local c = enabled == false and DIM or filled and INK or ink or TEXT
+        text(label, x + 10, y + (h - 15) / 2, 15, c, w - 16)
         region(key, x, y, w, h, enabled)
     end
-    local function tickbox(key, x, y, on, enabled)
+    -- toggle switch: track + knob, knob right and yellow when on
+    local function switch(key, x, y, on, enabled)
         local hovered = ui.hover == key
-        rect(x, y, 20, 20, color(20, 26, 34), 951)
-        outline(x, y, 20, 20, (on or hovered) and GOLD or LINE)
-        if on then rect(x + 5, y + 5, 10, 10, GOLD, 952) end
-        region(key, x - 4, y - 3, 28, 26, enabled)
+        rect(x, y, 32, 16, on and ACCENT or (hovered and color(70, 78, 90) or LINE), 952)
+        rect(on and (x + 18) or (x + 2), y + 2, 12, 12, on and INK or (hovered and TEXT or MUTED), 953)
+        region(key, x - 4, y - 4, 40, 24, enabled)
     end
+    local function small_caps(value, x, y, c) text(value, x, y, 12, c or MUTED) end
 
-    -- frame
-    rect(0, 0, W, H, color(8, 11, 15, 232), 950)
-    outline(0, 0, W, H, GOLD)
+    -- frame: dark body, yellow header, hazard stripe
+    rect(0, 0, W, H, BG, 950)
+    rect(0, 0, W, 50, ACCENT, 951)
+    for k = 0, math.floor(W / 24) do
+        rect(k * 24, 50, 12, 6, INK, 952)
+    end
+    rect(0, 50, W, 6, color(200, 170, 20), 951)
+    border(0, 0, W, H, LINE, 955)
     region('panel', 0, 0, W, H, false)
-    text('PASSIVE PICKER', 18, 12, 24, GOLD)
-    text('armor passive stacker', 214, 18, 15, MUTED)
-    text(hotkey() .. ' to close', W - 18, 16, 15, MUTED, nil, true)
+    text('PASSIVE PICKER', 18, 13, 24, INK)
+    text('armor passive stacker  v' .. tostring(MOD.version), 238, 20, 14, color(70, 60, 10))
+    text(hotkey() .. ' to close', W - 18, 18, 14, INK, nil, true)
 
     if state.phase ~= 'ready' then
-        text('Reading the game\'s armor passives... (' .. perks_found .. ' of ' .. #CAT_LIST .. ' found)', 18, 70, 18, WHITE)
-        text('Load into your ship or a mission if this does not finish.', 18, 98, 15, MUTED)
+        text('Reading the game\'s armor passives... (' .. perks_found .. ' of ' .. #CAT_LIST .. ' found)', 22, 84, 18, TEXT)
+        text('Load into your ship or a mission if this does not finish.', 22, 112, 15, MUTED)
         return regions
     end
 
-    -- armor tabs
+    -- armor tabs: underlined text, one per stack
     local p = current()
-    local x = 16
+    local x = 22
     for n, prof in ipairs(LOADOUT.profiles) do
         local label = CAT[prof.perk].name .. ' armor'
-        button('tab:' .. n, label, x, 52, 168, 32, true, n == ui.tab and not ui.adding)
-        x = x + 174
-        if x > W - 330 then break end
+        local key = 'tab:' .. n
+        local active = n == ui.tab and not ui.adding
+        local w = math.min(190, 24 + #label * 8.2)
+        text(label, x, 72, 16, active and TEXT or (ui.hover == key and TEXT or MUTED), w - 8)
+        if active then rect(x, 96, w - 14, 3, ACCENT, 952)
+        elseif ui.hover == key then rect(x, 96, w - 14, 1, MUTED, 952) end
+        region(key, x - 6, 64, w, 36)
+        x = x + w
+        if x > W - 340 then break end
     end
-    button('add', '+ Armor', x, 52, 100, 32, true, ui.adding)
+    local add_key = 'add'
+    text('+ Armor', x + 4, 72, 16, (ui.adding or ui.hover == add_key) and ACCENT or color(220, 190, 40))
+    if ui.adding then rect(x + 4, 96, 70, 3, ACCENT, 952) end
+    region(add_key, x - 2, 64, 90, 36)
     if p and not ui.adding then
         local sure = ui.confirm and ui.confirm.kind == 'remove'
-        button('remove', sure and 'Sure? Click again' or 'Remove this armor', W - 16 - 190, 52, 190, 32, true, sure)
+        local label = sure and 'Click again to remove' or 'Remove this armor'
+        text(label, W - 22, 74, 14, (sure or ui.hover == 'remove') and WARN or DIM, nil, true)
+        region('remove', W - 22 - 180, 64, 180, 36)
     end
-    rect(16, 90, W - 32, 2, LINE, 951)
+    rect(0, 100, W, 1, LINE, 951)
 
-    -- left list
-    local LX, LW, LY, RH = 16, 322, 100, 25
+    -- left: passives
+    local LX, LW, LY, RH = 0, 336, 112, 25
+    rect(LX, 101, LW, H - 101, color(19, 22, 27, 240), 950)
+    rect(LW, 101, 1, H - 101, LINE, 951)
     if ui.adding then
-        text('Pick the armor passive for the new stack:', LX + 4, LY, 16, GOLD, LW)
+        small_caps('CHOOSE THE ARMOR PASSIVE FOR A NEW STACK', 22, LY, ACCENT)
         local used = {}
         for _, prof in ipairs(LOADOUT.profiles) do used[prof.perk] = true end
-        local y = LY + 28
+        local y = LY + 24
         for _, c in ipairs(CAT_LIST) do
             if not used[c.id] then
                 local key = 'addpick:' .. c.id
-                if ui.hover == key then rect(LX, y, LW, RH - 1, color(40, 52, 64), 951) end
-                text(c.name, LX + 10, y + 4, 16, WHITE, LW - 20)
+                if ui.hover == key then rect(LX, y, LW, RH - 1, CARD_HI, 951); rect(LX, y, 3, RH - 1, ACCENT, 952) end
+                text(c.name, 22, y + 5, 15, ui.hover == key and TEXT or MUTED, LW - 40)
                 region(key, LX, y, LW, RH - 1)
                 y = y + RH
             end
         end
-        button('addcancel', 'Cancel', LX, H - 50, 120, 32, true)
+        button('addcancel', 'Cancel', 22, H - 48, 110, 30, true)
+        local X1, RW1 = LW + 22, W - LW - 44
+        text('A second stack', X1, 116, 22, TEXT, RW1)
+        text('Each armor passive can carry its own stack. Pick one on the left,', X1, 150, 14, MUTED, RW1)
+        text('then wear any armor that has that passive to get the stack.', X1, 170, 14, MUTED, RW1)
+        text('Example: Med-Kit armor for a tank build, Siege-Ready armor for a gunner build.', X1, 200, 13, DIM, RW1)
     elseif not p then
-        text('No stack yet.', LX + 4, LY + 4, 18, WHITE)
-        text('Click "+ Armor" and pick the armor passive', LX + 4, LY + 34, 15, MUTED, LW)
-        text('your armor has (e.g. Med-Kit).', LX + 4, LY + 54, 15, MUTED, LW)
+        text('No stack yet.', 22, LY + 6, 18, TEXT)
+        text('Click "+ Armor" and pick the armor passive', 22, LY + 36, 14, MUTED, LW - 40)
+        text('your armor has (e.g. Med-Kit).', 22, LY + 54, 14, MUTED, LW - 40)
     else
-        local res = last_result[p.perk] and last_result[p.perk].res
-        text('Tick passives to stack onto', LX + 4, LY, 14, MUTED, LW)
-        local y = LY + 22
+        local n_on = 0
+        for _ in pairs(p.enabled) do n_on = n_on + 1 end
+        small_caps('PASSIVES', 22, LY, MUTED)
+        text(n_on .. ' on', LW - 18, LY - 1, 12, n_on > 0 and ACCENT or DIM, nil, true)
+        local y = LY + 20
         -- the armor's own passive first
         local base_key = 'sel:' .. p.perk
-        if ui.sel == p.perk then rect(LX, y, LW, RH - 1, color(90, 74, 8), 951)
-        elseif ui.hover == base_key then rect(LX, y, LW, RH - 1, color(40, 52, 64), 951) end
-        text('* ' .. CAT[p.perk].name .. ' (base)', LX + 10, y + 4, 16, GOLD, LW - 20)
-        region(base_key, LX, y, LW, RH - 1)
-        y = y + RH + 4
+        if ui.sel == p.perk then rect(LX, y, LW, RH, CARD_HI, 951); rect(LX, y, 3, RH, ACCENT, 952)
+        elseif ui.hover == base_key then rect(LX, y, LW, RH, CARD, 951) end
+        rect(22, y + 5, 36, 15, ACCENT_SOFT, 952)
+        text('BASE', 26, y + 7, 11, ACCENT)
+        text(CAT[p.perk].name, 66, y + 5, 15, TEXT, LW - 90)
+        region(base_key, LX, y, LW, RH)
+        y = y + RH + 6
         for _, c in ipairs(CAT_LIST) do
             if c.id ~= p.perk then
                 local on = p.enabled[c.id] == true
                 local key = 'sel:' .. c.id
-                if ui.sel == c.id then rect(LX, y, LW, RH - 1, color(90, 74, 8), 951)
-                elseif ui.hover == key then rect(LX, y, LW, RH - 1, color(40, 52, 64), 951) end
-                region(key, LX + 34, y, LW - 34, RH - 1)
-                tickbox('tick:' .. c.id, LX + 8, y + 2, on)
+                if ui.sel == c.id then rect(LX, y, LW, RH - 1, CARD_HI, 951); rect(LX, y, 3, RH - 1, ACCENT, 952)
+                elseif ui.hover == key then rect(LX, y, LW, RH - 1, CARD, 951) end
+                region(key, LX + 62, y, LW - 62, RH - 1)
+                switch('tick:' .. c.id, 22, y + 4, on)
                 local tweaked = false
                 for k in pairs(p.tweaks) do if k:match('^' .. c.id .. '%.') then tweaked = true break end end
-                text(c.name .. (tweaked and on and ' *' or ''), LX + 38, y + 4, 16, on and WHITE or MUTED, LW - 48)
+                text(c.name, 66, y + 5, 15, on and TEXT or MUTED, LW - 96)
+                if tweaked and on then rect(LW - 16, y + 9, 6, 6, ACCENT, 952) end
                 y = y + RH
             end
         end
     end
-    rect(LX + LW + 8, 100, 2, H - 116, LINE, 951)
 
-    -- right side: the chosen passive
-    local X0, RW = LX + LW + 20, W - (LX + LW + 20) - 16
+    -- right: the chosen passive
+    local X0, RW = LW + 22, W - LW - 44
     if p and not ui.adding then
         if not ui.sel then ui.sel = p.perk end
         local sel = ui.sel and CAT[ui.sel] or nil
-        if not sel then
-            text(CAT[p.perk].name .. ' armor', X0, 100, 22, GOLD, RW)
-            text('Wear any armor with the ' .. CAT[p.perk].name .. ' passive (Armor Transmog', X0, 136, 16, WHITE, RW)
-            text('lets you pick its look). Tick passives on the left to add them.', X0, 158, 16, WHITE, RW)
-            text('Click a passive\'s name to change its values.', X0, 190, 16, MUTED, RW)
-        else
+        if sel then
             local is_base = sel.id == p.perk
-            text(sel.name .. (is_base and ' (base perk)' or ''), X0, 100, 22, GOLD, RW - 150)
+            local on = is_base or p.enabled[sel.id] == true
+            text(sel.name, X0, 116, 22, TEXT, RW - 170)
+            -- status pill
+            local pill = is_base and 'BASE PERK' or on and 'STACKED' or 'NOT STACKED'
+            local pc = is_base and ACCENT or on and GOOD or DIM
+            rect(X0, 146, #pill * 8 + 16, 18, color(40, 46, 56), 951)
+            text(pill, X0 + 8, 149, 11, pc)
             if is_base then
-                text('The armor\'s own passive. Values here REPLACE its own.', X0, 128, 15, MUTED, RW)
-                text('Tick passives on the left to stack them; click a name to edit it.', X0, 146, 14, DIM, RW)
+                text('Your armor\'s own passive. Values here replace its own.', X0 + #pill * 8 + 26, 148, 13, MUTED, RW - #pill * 8 - 30)
             else
-                local on = p.enabled[sel.id] == true
-                button('tick:' .. sel.id, on and 'ON: stacked' or 'OFF: click to add', W - 16 - 170, 96, 170, 32, true, on)
-                text(on and ('Stacked onto ' .. CAT[p.perk].name .. ' armor.') or 'Not stacked. Values you set are kept for when you turn it on.',
-                     X0, 132, 15, on and GOOD or MUTED, RW)
+                button('tick:' .. sel.id, on and 'Remove from stack' or 'Add to stack', W - 22 - 160, 114, 160, 30, true, not on)
+                text(on and ('On ' .. CAT[p.perk].name .. ' armor.') or 'Values you set are kept for when you add it.',
+                     X0 + #pill * 8 + 26, 148, 13, MUTED, RW - #pill * 8 - 30)
             end
-            local y = 166
+            local y = 178
             for n, e in ipairs(sel.effects) do
                 local v = value_of(p, sel.id, e)
                 local tweaked = v ~= e.def
-                rect(X0, y - 4, RW, 58, color(16, 20, 26), 950)
-                text(label_of(e) .. (e.hint:find('%?') and ' ?' or ''), X0 + 8, y, 17, WHITE, 300)
-                text(e.hint, X0 + 8, y + 22, 13, MUTED, 300)
-                local bx = X0 + 318
+                rect(X0, y, RW, 56, CARD, 950)
+                rect(X0, y, 3, 56, tweaked and ACCENT or LINE, 951)
+                text(label_of(e) .. (e.hint:find('%?') and '  ?' or ''), X0 + 14, y + 8, 16, TEXT, 290)
+                text(e.hint, X0 + 14, y + 30, 12, DIM, 290)
+                local bx = X0 + RW - 290
                 local typing = ui.value and ui.value.pid == sel.id and ui.value.n == n
                 local vkey = 'value:' .. n
-                rect(bx, y, 92, 30, typing and color(20, 26, 34) or color(24, 30, 38), 951)
-                outline(bx, y, 92, 30, (typing or ui.hover == vkey) and GOLD or LINE)
+                rect(bx, y + 10, 96, 30, typing and color(12, 14, 18) or color(18, 21, 26), 951)
+                rect(bx, y + 38, 96, 2, (typing or ui.hover == vkey) and ACCENT or LINE, 952)
                 if typing then
-                    text(ui.value.text .. '_', bx + 8, y + 6, 17, ui.value.fresh and MUTED or WHITE, 78)
+                    text(ui.value.text .. '_', bx + 8, y + 16, 17, ui.value.fresh and MUTED or TEXT, 80)
                 else
-                    text(fmt(v), bx + 84, y + 6, 17, tweaked and GOLD or WHITE, 78, true)
+                    text(fmt(v), bx + 88, y + 16, 17, tweaked and ACCENT or TEXT, 80, true)
                 end
-                region(vkey, bx, y, 92, 30)
-                local ax = bx + 98
+                region(vkey, bx, y + 10, 96, 30)
+                local ax = bx + 104
                 for _, b in ipairs({ { 'dec_big', '--' }, { 'dec', '-' }, { 'inc', '+' }, { 'inc_big', '++' } }) do
-                    button(b[1] .. ':' .. n, b[2], ax, y, 36, 30, true)
-                    ax = ax + 40
+                    local key = b[1] .. ':' .. n
+                    local hovered = ui.hover == key
+                    rect(ax, y + 10, 32, 30, hovered and ACCENT or color(36, 42, 51), 951)
+                    text(b[2], ax + (#b[2] == 1 and 12 or 8), y + 16, 16, hovered and INK or TEXT)
+                    region(key, ax, y + 10, 32, 30)
+                    ax = ax + 36
                 end
-                button('reset:' .. n, 'R', ax, y, 30, 30, tweaked)
-                text(meaning(e, v) .. (tweaked and ('   default ' .. fmt(e.def)) or ''), bx, y + 34, 13, tweaked and GOLD or DIM, 300)
-                y = y + 64
+                local rkey = 'reset:' .. n
+                text('R', ax + 8, y + 16, 15, tweaked and ((ui.hover == rkey) and ACCENT or MUTED) or LINE)
+                region(rkey, ax, y + 10, 28, 30, tweaked)
+                text(meaning(e, v) .. (tweaked and ('   was ' .. fmt(e.def)) or ''), X0 + RW - 290, y + 44, 11,
+                     tweaked and ACCENT or DIM, 280)
+                y = y + 62
             end
-            button('reset_passive', 'Reset ' .. sel.name, X0, y + 4, 260, 30, true)
+            local rp = 'reset_passive'
+            text('Reset ' .. sel.name, X0, y + 6, 13, ui.hover == rp and ACCENT or DIM, RW)
+            region(rp, X0 - 4, y, 240, 26)
         end
 
-        -- overlap rule, summary, actions
-        local by = H - 250
-        rect(X0, by - 10, RW, 2, LINE, 951)
-        text('When two passives change the same thing:', X0, by, 14, MUTED, RW)
-        button('policy:stack', 'Stack all', X0, by + 20, 130, 30, true, p.conflicts ~= 'strongest')
-        button('policy:strongest', 'Strongest only', X0 + 136, by + 20, 160, 30, true, p.conflicts == 'strongest')
+        -- overlap rule (segmented), summary, actions
+        local by = H - 236
+        rect(X0, by - 12, RW, 1, LINE, 951)
+        small_caps('WHEN TWO PASSIVES CHANGE THE SAME THING', X0, by, MUTED)
+        local strongest = p.conflicts == 'strongest'
+        for k, opt in ipairs({ { 'policy:stack', 'Stack all', not strongest }, { 'policy:strongest', 'Strongest only', strongest } }) do
+            local bx = X0 + (k - 1) * 150
+            local hovered = ui.hover == opt[1]
+            rect(bx, by + 20, 148, 30, opt[3] and ACCENT or (hovered and CARD_HI or CARD), 951)
+            text(opt[2], bx + 14, by + 27, 15, opt[3] and INK or (hovered and TEXT or MUTED), 124)
+            region(opt[1], bx, by + 20, 148, 30)
+        end
         local last = last_result[p.perk]
         local res = last and last.res
         if not sites_by_perk[p.perk] then
-            text('This armor passive was not found in the game\'s data yet.', X0, by + 60, 15, WARN, RW)
+            text('This armor passive was not found in the game\'s data yet.', X0, by + 64, 14, WARN, RW)
         elseif sites_by_perk[p.perk][1].foreign then
-            text('Another mod already changed this passive\'s data; Passive Picker leaves it alone.', X0, by + 60, 15, WARN, RW)
+            text('Another mod already changed this passive\'s data; Passive Picker leaves it alone.', X0, by + 64, 14, WARN, RW)
         else
             local added = 0
             for _, site in ipairs(sites_by_perk[p.perk]) do added = math.max(added, site.added or 0) end
             local n_on = res and #res.enabled or 0
+            rect(X0, by + 67, 8, 8, GOOD, 952)
             text(n_on .. ' passive(s) stacked, +' .. added .. ' row(s) in the game\'s data' ..
-                 (res and res.conflicts > 0 and ('; ' .. res.conflicts .. ' overlap(s)') or ''), X0, by + 60, 15, GOOD, RW)
-            if last.error then text(last.error, X0, by + 80, 14, WARN, RW) end
+                 (res and res.conflicts > 0 and (' - ' .. res.conflicts .. ' overlap(s)') or ''), X0 + 16, by + 63, 14, TEXT, RW - 16)
+            if last.error then text(last.error, X0, by + 84, 13, WARN, RW) end
         end
         local sure = ui.confirm and ui.confirm.kind
-        button('clear', sure == 'clear' and 'Sure? Click again' or 'Untick all', X0, H - 150, 190, 32, true, sure == 'clear')
-        button('revert', sure == 'revert' and 'Sure? Click again' or 'Back to installed build', X0 + 200, H - 150, 250, 32, true, sure == 'revert')
+        button('clear', sure == 'clear' and 'Click again' or 'Turn all off', X0, H - 128, 170, 30, true)
+        button('revert', sure == 'revert' and 'Click again' or 'Back to installed build', X0 + 178, H - 128, 230, 30, true)
     end
 
     -- footer
     local path = save_path()
-    text(path and 'Saved automatically to PassivePicker\\loadout.ini' or 'Cannot save (no LOCALAPPDATA)', X0, H - 100, 14, DIM, RW)
-    text('Changes apply at once. Re-equip the armor if you do not see them.', X0, H - 80, 14, DIM, RW)
-    text('Single-player / private lobbies only.', X0, H - 60, 14, DIM, RW)
-    if ui.message then text(ui.message.text, X0, H - 36, 15, GOLD, RW) end
+    rect(LW + 1, H - 84, W - LW - 2, 1, LINE, 951)
+    text(path and 'Saved automatically to PassivePicker\\loadout.ini' or 'Cannot save (no LOCALAPPDATA)', X0, H - 74, 12, DIM, RW)
+    text('Changes apply at once. Re-equip the armor if you do not see them. Solo / private lobbies only.', X0, H - 56, 12, DIM, RW)
+    if ui.message then
+        rect(X0, H - 36, RW, 24, ACCENT_SOFT, 951)
+        text(ui.message.text, X0 + 10, H - 32, 14, ACCENT, RW - 20)
+    end
     return regions
 end
 
