@@ -1,0 +1,15 @@
+{
+  "Version": 1,
+  "Guid": "e6ba95c4-beaa-54c0-96c2-a2ab56021b87",
+  "Name": "Passive Picker v4",
+  "Description": "Passive Picker v4 by Hung1510, built on Passive Picker v3 by mostlycloudy. Med-Kit armour: +47 rows. Requires Bingus Shared Loader. Single-player / private lobbies only.",
+  "Options": [
+    {
+      "Name": "Passive Picker v4",
+      "Description": "Passive Picker v4 by Hung1510, built on Passive Picker v3 by mostlycloudy. Med-Kit armour: +47 rows. Requires Bingus Shared Loader. Single-player / private lobbies only.",
+      "Include": [
+        "Addon"
+      ]
+    }
+  ]
+}
