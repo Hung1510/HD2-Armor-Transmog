@@ -1,28 +1,30 @@
-<p align="center"><img src="docs/icon.png" width="112" alt=""></p>
+<p align="center"><img src="docs/img/banner.png" alt="Super Earth Armory Forge: armor passive editor for Helldivers 2"></p>
 
-<h1 align="center">Super Earth Armory Forge</h1>
-<p align="center"><i>Ministry of Defense armor requisition terminal for Helldivers 2</i></p>
+<p align="center">
+<a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/actions/workflows/tests.yml"><img src="https://github.com/Hung1510/Super-Earth-Armory-Forge/actions/workflows/tests.yml/badge.svg" alt="tests"></a>
+<a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest"><img src="https://img.shields.io/github/v/release/Hung1510/Super-Earth-Armory-Forge?color=ffe710&labelColor=0b0c0d" alt="latest release"></a>
+<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-downloads.json" alt="AyakaMods downloads"></a>
+<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-views.json" alt="AyakaMods views"></a>
+<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-rating.json" alt="rating"></a>
+<a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases"><img src="https://img.shields.io/github/downloads/Hung1510/Super-Earth-Armory-Forge/total?label=GitHub%20downloads&color=ffe710&labelColor=0b0c0d&cacheSeconds=3600" alt="GitHub downloads"></a>
+<a href="TESTING.md"><img src="https://img.shields.io/badge/armor%20passives-31%2F31-ffe710?labelColor=0b0c0d" alt="passives"></a>
+</p>
 
-[![tests](https://github.com/Hung1510/Super-Earth-Armory-Forge/actions/workflows/tests.yml/badge.svg)](https://github.com/Hung1510/Super-Earth-Armory-Forge/actions/workflows/tests.yml)
-[![latest release](https://img.shields.io/github/v/release/Hung1510/Super-Earth-Armory-Forge)](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest)
-[![AyakaMods downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-downloads.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
-[![AyakaMods views](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-views.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
-[![rating](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-rating.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
-[![GitHub downloads](https://img.shields.io/github/downloads/Hung1510/Super-Earth-Armory-Forge/total?label=GitHub%20downloads)](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases)
-[![passives](https://img.shields.io/badge/armor%20passives-31%2F31-f4d21f)](TESTING.md)
+**Install it, then press <kbd>F7</kbd> in game.** Tick passives, type values like `75%` or `+50 armor`, save loadouts and swap them with <kbd>F9</kbd>. Everything applies at once. Prefer to plan ahead? Use the **[web builder](https://hung1510.github.io/Super-Earth-Armory-Forge/)**.
 
-Forge your own armor: stack any of the 31 Helldivers 2 armor passives onto the armor you wear and set every value yourself.
-
-**Install it, then press F7 in game.** Tick passives, type values like `75%` or `+50 armor`, save loadouts and swap them with **F9**. Everything applies at once. Prefer to plan ahead? Use the **[web builder](https://hung1510.github.io/Super-Earth-Armory-Forge/)**. No Python, nothing to set up.
-
-<p align="center"><img src="docs/img/panel-preview.png" width="640" alt="In-game panel"><br>
-<sub>The F7 armory terminal, drawn by the offline test harness (the game uses its own UI font).</sub></p>
+<table>
+<tr>
+<td width="33%"><img src="docs/img/panel-preview.png" alt="F7 panel"><br><sub><b>F7 in game.</b> Tick passives, edit values live.</sub></td>
+<td width="33%"><img src="docs/img/panel-presets.png" alt="Presets tab"><br><sub><b>Presets.</b> Standard loadouts and your own; <kbd>F9</kbd> swaps them.</sub></td>
+<td width="33%"><img src="docs/img/web-builder.png" alt="Web builder"><br><sub><b>Web builder.</b> Optional: plan a build in the browser.</sub></td>
+</tr>
+</table>
 
 Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3](https://ayakamods.com/mods/modular-armor-passives.4350/) by mostlycloudy**, and its memory-patching core, archive format and passive data still come from that mod (engine credit also to SHODAN). The in-game terminal, loadouts, config layer and web builder are Armory Forge's own. See [CREDITS.txt](CREDITS.txt).
 
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
-- AyakaMods page: https://ayakamods.com/mods/passive-picker-v4.4359/
+- AyakaMods page: https://ayakamods.com/mods/super-earth-armory-forge.4359/
 
 ## Ways to use it
 
@@ -32,8 +34,6 @@ Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3
 | A ready-made build | Same zip, then F7, then **Presets**: *Kitchen Sink, Tank, Stealth, Survivor, Demolitionist, Gunner* |
 | Plan a build before playing | **[Web builder](https://hung1510.github.io/Super-Earth-Armory-Forge/)**, then *Download mod (.zip)* |
 | Scripting / version control | `python tools\picker.py build loadout.ini --zip "My Stack.zip"` (below) |
-
-<p align="center"><img src="docs/img/web-builder.png" width="720" alt="Web builder"></p>
 
 Then:
 1. Remove Passive Picker v3 if you have it. Passive Picker v4 is this mod under its old name; the update replaces it and keeps your saved builds.
@@ -54,7 +54,6 @@ Then:
 - The key is set with `hotkey = F7` in `[settings]` (the web builder has a dropdown). SHODAN Stat Editor uses F8, and its panel sits on the right while this one sits on the left.
 - If a change doesn't show, re-equip the armor or start a mission.
 
-<p align="center"><img src="docs/img/panel-presets.png" width="560" alt="Presets tab"></p>
 
 ## What Armory Forge adds over Passive Picker v3
 

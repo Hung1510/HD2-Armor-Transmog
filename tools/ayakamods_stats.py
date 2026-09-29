@@ -15,8 +15,8 @@ import re
 import sys
 import urllib.request
 
-PAGE = "https://ayakamods.com/mods/passive-picker-v4.4359/"
-COLOR = "f4d21f"
+PAGE = "https://ayakamods.com/mods/super-earth-armory-forge.4359/"
+COLOR = "ffe710"
 
 
 def fetch(url):
@@ -102,7 +102,7 @@ def stats(page):
 
 def badge(label, message):
     return {"schemaVersion": 1, "label": label, "message": message, "color": COLOR,
-            "labelColor": "333", "cacheSeconds": 3600}
+            "labelColor": "0b0c0d", "cacheSeconds": 3600}
 
 
 def main():
