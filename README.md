@@ -4,6 +4,11 @@
 
 [![tests](https://github.com/Hung1510/HD2-Armor-Transmog/actions/workflows/tests.yml/badge.svg)](https://github.com/Hung1510/HD2-Armor-Transmog/actions/workflows/tests.yml)
 [![latest release](https://img.shields.io/github/v/release/Hung1510/HD2-Armor-Transmog)](https://github.com/Hung1510/HD2-Armor-Transmog/releases/latest)
+[![AyakaMods downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FHD2-Armor-Transmog%2Fbadges%2Fayakamods-downloads.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
+[![AyakaMods views](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FHD2-Armor-Transmog%2Fbadges%2Fayakamods-views.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
+[![rating](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FHD2-Armor-Transmog%2Fbadges%2Fayakamods-rating.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
+[![GitHub downloads](https://img.shields.io/github/downloads/Hung1510/HD2-Armor-Transmog/total?label=GitHub%20downloads)](https://github.com/Hung1510/HD2-Armor-Transmog/releases)
+[![passives](https://img.shields.io/badge/armor%20passives-31%2F31-f4d21f)](TESTING.md)
 
 Stack any of the 31 Helldivers 2 armor passives onto your armor and tune every value.
 
