@@ -95,8 +95,18 @@
         return pid !== sp.perk && sp.enabled.includes(pid);
       }).length;
     if (dups) items.push(["", `${dups} effect(s) are shared by several passives; each applies once.`]);
-    if (!passives && !tweaks) items.unshift(["", "Nothing selected yet. Switch passives on, or load a preset."]);
-    else items.unshift(["good", "Ready to download."]);
+    if (!passives && !tweaks) items.unshift(["", "Nothing ticked yet. Tick passives on the left, or start from a preset."]);
+    const bl = [];
+    for (const sp of state.profiles) {
+      if (state.profiles.length > 1 || sp.enabled.length) bl.push(`<li class="armor">${esc(nameOf(sp.perk))} armor</li>`);
+      const baseEd = Object.keys(sp.tweaks).filter((k) => k.startsWith(sp.perk + ".")).length;
+      if (baseEd) bl.push(`<li><span>${esc(nameOf(sp.perk))} (base)</span><span class="ed">${baseEd} edited</span></li>`);
+      for (const pid of sp.enabled) {
+        const ed = Object.keys(sp.tweaks).filter((k) => k.startsWith(pid + ".")).length;
+        bl.push(`<li><span>${esc(nameOf(pid))}</span>${ed ? `<span class="ed">${ed} edited</span>` : ""}</li>`);
+      }
+    }
+    $("buildList").innerHTML = bl.join("");
     $("sPass").textContent = passives;
     $("sRows").textContent = rows;
     $("sTweaks").textContent = tweaks;
@@ -141,8 +151,8 @@
     const onCount = prof.enabled.length;
 
     $("profileBody").innerHTML = `
-      <div class="row" style="margin-bottom:12px">
-        <div class="field grow"><label for="trigSel">Armor passive that gets the stack</label>
+      <div class="row" style="margin-bottom:6px">
+        <div class="field grow"><label for="trigSel">Stack onto armor with this passive</label>
           <select id="trigSel">${triggerOpts}</select></div>
         <div class="field"><label>When passives overlap</label>
           <div class="seg" role="group" aria-label="Conflict policy">
@@ -150,39 +160,45 @@
             <button type="button" data-policy="strongest" aria-pressed="${prof.conflicts === "strongest"}">Strongest only</button>
           </div></div>
       </div>
-      <p class="hint" style="margin:-4px 0 14px">Wear any armor with <b>${esc(nameOf(prof.perk))}</b>. Use Armor Transmog if you want a different look.
+      <p class="hint" style="margin:0">Wear any armor with ${esc(nameOf(prof.perk))} to get this stack (Armor Transmog changes the look).
         ${prof.conflicts === "stack" ? "Overlapping effects multiply or add together." : "Overlapping effects keep only the biggest one."}</p>
 
       <div class="base">
-        <h3>${esc(nameOf(prof.perk))}: base perk values</h3>
-        <p class="hint" style="margin:0 0 8px">Changing these <b>replaces</b> the armor's own values.</p>
+        <h3>${esc(nameOf(prof.perk))} (the armor's own passive)</h3>
+        <p class="hint" style="margin:0">Values here replace the originals.</p>
         <div class="effects" style="border:0; padding:0">${baseEffects.map((e) => effEditor(prof.perk, e, prof)).join("")}</div>
       </div>
 
       <div class="toolbar">
-        <input type="search" id="search" placeholder="Filter passives or effects…" value="${esc(search)}" class="grow" aria-label="Filter">
-        <button class="btn small" type="button" id="allOn">All on</button>
-        <button class="btn small" type="button" id="allOff">All off</button>
-        <span class="hint">${onCount} on</span>
+        <input type="search" id="search" placeholder="Search passives or effects" value="${esc(search)}" class="grow" aria-label="Filter">
+        <span class="hint">${onCount} of ${cat.list.length - 1} ticked</span>
+        <button class="link-btn" type="button" id="allOn">tick all</button>
+        <button class="link-btn" type="button" id="allOff">clear</button>
       </div>
       <div class="grid">
         ${cards.map((c) => {
           const on = prof.enabled.includes(c.id);
           const effs = core.effectsOf(cat, c.id);
           const isOpen = open.has(active + ":" + c.id);
-          const chips = effs.map((e) => {
-            const k = c.id + "." + e.key;
-            const ch = Object.prototype.hasOwnProperty.call(prof.tweaks, k);
-            return `<span class="chip${ch ? " changed" : ""}">${esc(human(e.key))}${e.kind === "stat" ? " (stat)" : ""}${ch ? " ✎" : ""}</span>`;
-          }).join("");
+          // effects as plain text; ones you changed are highlighted
+          const seen = new Set();
+          const sum = effs.filter((e) => {
+            const n = human(e.key);
+            if (seen.has(n)) return false;
+            seen.add(n);
+            return true;
+          }).map((e) => {
+            const ch = Object.keys(prof.tweaks).some((k) => k.startsWith(c.id + ".") && human(k.split(".")[1]) === human(e.key));
+            return ch ? `<span class="changed">${esc(human(e.key))}</span>` : esc(human(e.key));
+          }).join(", ");
           return `<div class="pcard${on ? " on" : ""}">
             <div class="top" data-open="${c.id}" aria-expanded="${isOpen}">
-              <button class="switch" type="button" role="switch" aria-checked="${on}" data-toggle="${c.id}" aria-label="${esc(c.name)}"></button>
+              <button class="switch" type="button" role="checkbox" aria-checked="${on}" data-toggle="${c.id}" aria-label="${esc(c.name)}"></button>
               <span class="name">${esc(c.name)}</span>
-              <span class="hint">${isOpen ? "▴" : "▾"}</span>
+              <span class="sum">${sum}</span>
+              <span class="chev">${isOpen ? "&#9652;" : "&#9662;"}</span>
             </div>
-            <div class="sum">${chips}</div>
-            ${isOpen ? `<div class="effects">${on ? "" : `<p class="hint" style="margin:0">Switch it on to apply these values.</p>`}${effs.map((e) => effEditor(c.id, e, prof)).join("")}</div>` : ""}
+            ${isOpen ? `<div class="effects">${on ? "" : `<p class="hint" style="margin:0">Tick it to apply these values.</p>`}${effs.map((e) => effEditor(c.id, e, prof)).join("")}</div>` : ""}
           </div>`;
         }).join("") || `<div class="empty">No passive matches “${esc(search)}”.</div>`}
       </div>`;

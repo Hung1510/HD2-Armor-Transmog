@@ -4,301 +4,288 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Super Earth Armory Forge</title>
-<meta name="description" content="Super Earth Armory Forge: build a Helldivers 2 armor passive stack in your browser: pick passives, tune values, download a ready-to-install mod zip. No Python needed.">
+<meta name="description" content="Super Earth Armory Forge web builder: plan a Helldivers 2 armor passive stack and download it as a mod. Optional: the mod has the same editor in game on F7.">
 <link rel="icon" href="icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Super Earth Armory Forge: Ministry of Defense requisition terminal.
-   Navy steel, Super Earth gold, ember for forged (changed) values, reticle corners. */
 :root {
-  --bg: #0a121d;
-  --panel: #0f1a29;
-  --panel-2: #132135;
-  --line: #243a55;
-  --text: #e9e4d4;
-  --muted: #92a0b2;
-  --accent: #e9b949;
-  --accent-hi: #ffd26e;
-  --accent-ink: #0a101a;
-  --ember: #ff7a2f;
-  --good: #5cc9aa;
-  --warn: #ff7a2f;
-  --bad: #ff5d5d;
-  --info: #6fa8dc;
-  --radius: 2px;
-  --display: "Oxanium", "Bahnschrift", "Segoe UI", system-ui, sans-serif;
-  --shadow: 0 10px 30px rgba(0,0,0,.35);
-  --grid: rgba(233,185,73,.035);
+  --bg: #121314;
+  --surface: #1a1c1f;
+  --surface-2: #212428;
+  --border: #2d3136;
+  --text: #e7e4dc;
+  --muted: #8e9298;
+  --accent: #f2d31b;
+  --accent-ink: #17150a;
+  --changed: #f2d31b;
+  --ok: #7cc48b;
+  --warn: #e5a54b;
+  --bad: #ef6b63;
+  --head: "Barlow Semi Condensed", "Bahnschrift SemiCondensed", "Arial Narrow", sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #ece5d3; --panel: #f7f2e4; --panel-2: #efe7d2; --line: #cfc3a4;
-    --text: #13213a; --muted: #5a6275; --accent: #c8931f; --accent-hi: #dba733; --accent-ink: #0d1626;
-    --ember: #d2531a; --shadow: 0 6px 18px rgba(40,30,0,.10); --grid: rgba(19,33,58,.035);
+    --bg: #f3f2ee; --surface: #ffffff; --surface-2: #f7f6f2; --border: #dedbd2;
+    --text: #1d1e20; --muted: #6a6e75; --accent: #e7c500; --accent-ink: #17150a; --changed: #a07f00;
   }
 }
 :root[data-theme="light"] {
-  --bg: #ece5d3; --panel: #f7f2e4; --panel-2: #efe7d2; --line: #cfc3a4;
-  --text: #13213a; --muted: #5a6275; --accent: #c8931f; --accent-hi: #dba733; --accent-ink: #0d1626;
-  --ember: #d2531a; --shadow: 0 6px 18px rgba(40,30,0,.10); --grid: rgba(19,33,58,.035);
+  --bg: #f3f2ee; --surface: #ffffff; --surface-2: #f7f6f2; --border: #dedbd2;
+  --text: #1d1e20; --muted: #6a6e75; --accent: #e7c500; --accent-ink: #17150a; --changed: #a07f00;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body {
-  background-color: var(--bg); color: var(--text);
-  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 32px 32px;
-  font: 14px/1.5 "IBM Plex Sans", system-ui, -apple-system, Segoe UI, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-a { color: var(--accent); }
-h1, h2, h3 { font-family: var(--display); letter-spacing: .04em; margin: 0; }
-code, .mono { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: 12.5px; }
-button, input, select, textarea { font: inherit; color: inherit; }
+body { background: var(--bg); color: var(--text); font: 15px/1.45 Barlow, system-ui, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-underline-offset: 3px; }
+h1, h2, h3 { font-family: var(--head); font-weight: 600; margin: 0; letter-spacing: .01em; }
+code { font-family: var(--mono); font-size: 12.5px; }
+button, input, select { font: inherit; color: inherit; }
+input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-.wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
-header.top { border-bottom: 1px solid var(--line); border-top: 3px solid var(--accent); background: var(--panel); }
-header.top .wrap { display: flex; align-items: center; gap: 16px; padding-top: 16px; padding-bottom: 16px; flex-wrap: wrap; }
-.brand { display: flex; align-items: center; gap: 14px; margin-right: auto; min-width: 0; }
-.brand img { width: 48px; height: 48px; }
-.brand h1 { font-size: 23px; text-transform: uppercase; color: var(--accent); font-weight: 700; }
-.brand p { margin: 0; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-.links { display: flex; gap: 8px; flex-wrap: wrap; }
-.links a, .ghost {
-  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: var(--radius);
-  border: 1px solid var(--line); background: var(--panel-2); color: var(--text); text-decoration: none; font-size: 13px; cursor: pointer;
-}
-.links a:hover, .ghost:hover { border-color: var(--accent); color: var(--accent); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
 
-.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
-.step { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 10px 12px; display: flex; gap: 12px; align-items: center; }
-.step b { font-family: var(--display); color: var(--accent); font-size: 22px; font-weight: 700; flex: none; min-width: 28px; }
-.step span { font-size: 13px; color: var(--muted); }
-.step strong { color: var(--text); font-weight: 600; }
+/* header */
+.top { border-bottom: 1px solid var(--border); background: var(--surface); }
+.top .wrap { display: flex; align-items: center; gap: 12px; min-height: 58px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; text-decoration: none; min-width: 0; }
+.brand img { width: 30px; height: 30px; flex: none; }
+.brand h1 { font-size: 21px; }
+.brand span { color: var(--muted); font-size: 14px; }
+.nav { display: flex; align-items: center; gap: 18px; font-size: 14px; flex-wrap: wrap; }
+.nav a { text-decoration: none; color: var(--muted); }
+.nav a:hover { color: var(--text); }
+.icon-btn { background: none; border: 1px solid var(--border); border-radius: 4px; width: 30px; height: 30px; cursor: pointer; color: var(--muted); }
+.icon-btn:hover { color: var(--text); }
 
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; padding-bottom: 40px; }
-.card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.card::before, .card::after { content: ""; position: absolute; width: 14px; height: 14px; pointer-events: none; border-color: var(--accent); border-style: solid; }
-.card::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
-.card::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
-.card > .hd { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.card > .hd h2 { font-size: 14px; text-transform: uppercase; margin-right: auto; color: var(--accent); letter-spacing: .1em; }
-.card > .hd h2::before { content: "// "; opacity: .7; }
-.card > .bd { padding: 14px 16px; }
-.stack { display: grid; gap: 18px; }
+/* intro */
+.intro { display: flex; gap: 16px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; padding: 22px 0 18px; }
+.intro p { margin: 0; max-width: 700px; color: var(--muted); }
+.intro p b { color: var(--text); font-weight: 600; }
+.kbd { display: inline-block; font-family: var(--mono); font-size: 12px; padding: 0 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; background: var(--surface); color: var(--text); }
 
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; padding-bottom: 48px; }
+.layout > * { min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+.panel + .panel { margin-top: 16px; }
+.panel-h { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.panel-h h2 { font-size: 18px; margin-right: auto; }
+.panel-b { padding: 14px 16px; }
+
+/* form bits */
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
 .field { display: grid; gap: 4px; min-width: 0; }
-.field select, .field input { width: 100%; max-width: 100%; }
-.field label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
-input[type=text], input[type=number], input[type=search], select {
-  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; min-width: 0;
-}
-input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.field label { font-size: 13px; color: var(--muted); }
 .grow { flex: 1 1 200px; }
-
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius);
-  padding: 10px 14px; font-weight: 600; cursor: pointer; background: var(--panel-2); border: 1px solid var(--line);
+.field select, .field input { width: 100%; }
+input[type=text], input[type=number], input[type=search], select {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 7px 9px; min-width: 0;
 }
-.btn:hover { border-color: var(--accent); }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25);
-  font-family: var(--display); text-transform: uppercase; letter-spacing: .08em; font-size: 15px; font-weight: 700; }
-.btn.primary:hover { background: var(--accent-hi); }
+.hint { color: var(--muted); font-size: 13.5px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; font-weight: 500; font-size: 14px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-family: var(--head); font-weight: 700; font-size: 17px; padding: 10px 14px; letter-spacing: .02em; }
+.btn.primary:hover { filter: brightness(1.06); }
 .btn.primary:disabled { opacity: .45; cursor: not-allowed; }
 .btn.block { width: 100%; }
-.btn.small { padding: 6px 10px; font-size: 12.5px; font-weight: 500; }
+.btn.small { padding: 5px 10px; font-size: 13.5px; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--muted); cursor: pointer; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+.link-btn:hover { color: var(--text); }
 
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.seg button { border: 0; background: var(--panel-2); padding: 7px 12px; cursor: pointer; font-size: 13px; }
-.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.seg button { border: 0; background: var(--bg); padding: 6px 12px; cursor: pointer; font-size: 14px; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--surface-2); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
 
-.tabs { display: flex; gap: 4px; flex-wrap: wrap; padding: 12px 16px 0; }
-.tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 0; border: 1px solid transparent; border-bottom: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; }
+/* armor tabs */
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; padding: 0 16px; border-bottom: 1px solid var(--border); }
+.tab { display: inline-flex; align-items: center; gap: 6px; padding: 11px 12px 9px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); cursor: pointer; font-size: 15px; font-family: var(--head); font-weight: 600; margin-bottom: -1px; }
 .tab:hover { color: var(--text); }
-.tab[aria-selected="true"] { background: var(--panel-2); color: var(--text); font-weight: 600; border-color: var(--line); box-shadow: inset 0 2px 0 var(--accent); }
-.tab .x { opacity: .6; padding: 0 2px; }
-.tab .x:hover { opacity: 1; color: var(--ember); }
-.tabline { border-top: 1px solid var(--line); }
+.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+.tab .x { color: var(--muted); padding: 0 2px; font-weight: 400; }
+.tab .x:hover { color: var(--bad); }
+.tabline { display: none; }
 
-.hint { color: var(--muted); font-size: 12.5px; }
-.base { background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 12px; margin-bottom: 14px; }
-.base h3 { font-size: 13px; text-transform: uppercase; margin-bottom: 6px; color: var(--accent); letter-spacing: .08em; }
+/* base perk */
+.base { border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin: 14px 0 18px; background: var(--surface-2); }
+.base h3 { font-size: 16px; margin-bottom: 2px; }
 
-.toolbar input[type=search] { min-width: 0; flex: 1 1 160px; }
-.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; align-items: start; counter-reset: pc; }
-.pcard { counter-increment: pc; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); transition: border-color .15s; }
-.pcard.on { border-color: var(--accent); }
-.pcard .top { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; user-select: none; }
-.pcard .top::after { content: counter(pc, decimal-leading-zero); order: -1; font: 500 11px "IBM Plex Mono", monospace; color: var(--muted); opacity: .6; }
-.pcard .name { font-weight: 600; margin-right: auto; }
-.pcard:not(.on) .name { color: var(--muted); }
-.pcard .sum { padding: 0 12px 10px; display: flex; flex-wrap: wrap; gap: 4px; }
-.chip { font-size: 11.5px; padding: 1px 7px; border-radius: var(--radius); border: 1px solid var(--line); color: var(--muted); }
-.chip.changed { border-color: var(--ember); color: var(--ember); }
-/* requisition box (was a toggle switch) */
-.switch { width: 18px; height: 18px; border-radius: 0; background: transparent; position: relative; flex: none; border: 1.5px solid var(--muted); cursor: pointer; padding: 0; order: -2; }
-.switch::after { content: ""; position: absolute; inset: 4px; background: transparent; }
-.switch:hover { border-color: var(--accent); }
+/* passive list */
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.toolbar input[type=search] { flex: 1 1 180px; }
+.grid { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.pcard { border-top: 1px solid var(--border); }
+.pcard:first-child { border-top: 0; }
+.pcard .top { display: grid; grid-template-columns: 20px minmax(130px, 220px) minmax(0, 1fr) 16px; gap: 12px; align-items: center; padding: 8px 12px; cursor: pointer; user-select: none; }
+.pcard .top:hover { background: var(--surface-2); }
+.pcard .name { font-weight: 500; color: var(--muted); }
+.pcard.on .name { color: var(--text); font-weight: 600; }
+.pcard .sum { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pcard .sum .changed { color: var(--changed); }
+.pcard .chev { color: var(--muted); font-size: 12px; text-align: right; }
+.pcard .top[aria-expanded="true"] { background: var(--surface-2); }
+.switch { width: 18px; height: 18px; border: 1.5px solid var(--muted); border-radius: 3px; background: transparent; cursor: pointer; padding: 0; position: relative; }
+.switch:hover { border-color: var(--text); }
 .switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
-.switch[aria-checked="true"]::after { background: var(--accent-ink); }
+.switch[aria-checked="true"]::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.empty { color: var(--muted); padding: 18px; text-align: center; }
 
-.effects { border-top: 1px solid var(--line); padding: 8px 12px 12px; display: grid; gap: 8px; }
-.eff { display: grid; grid-template-columns: minmax(0,1fr) 92px 26px; gap: 6px 8px; align-items: center; border-left: 3px solid transparent; padding-left: 8px; margin-left: -11px; }
-.eff .lbl { min-width: 0; }
-.eff .lbl b { font-weight: 500; font-size: 13px; }
-.eff .lbl small { display: block; color: var(--muted); font-size: 11.5px; overflow-wrap: anywhere; }
-.eff input { width: 92px; padding: 6px 8px; text-align: right; font-family: "IBM Plex Mono", monospace; }
+/* value editors */
+.effects { padding: 6px 12px 12px 44px; display: grid; gap: 10px; background: var(--surface-2); }
+.base .effects { padding: 6px 0 0; background: none; }
+.eff { display: grid; grid-template-columns: minmax(0, 1fr) 96px 22px; gap: 2px 10px; align-items: center; }
+.eff .lbl b { font-weight: 500; font-size: 14px; }
+.eff .lbl small { display: block; color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.eff input { width: 96px; text-align: right; font-family: var(--mono); font-size: 13.5px; padding: 5px 8px; }
 .eff .reset { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 0; }
 .eff .reset:disabled { visibility: hidden; }
-.eff .meaning { grid-column: 1 / -1; font-size: 11.5px; color: var(--accent); margin-top: -4px; }
-.eff.changed { border-left-color: var(--ember); }
-.eff.changed input { border-color: var(--ember); color: var(--ember); }
-.eff.changed .meaning { color: var(--ember); }
+.eff .meaning { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); }
+.eff.changed input { border-color: var(--changed); }
+.eff.changed .meaning { color: var(--changed); }
 
-aside { position: sticky; top: 14px; display: grid; gap: 14px; min-width: 0; }
-.layout > * { min-width: 0; }
-.install code { overflow-wrap: anywhere; word-break: break-all; }
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-.stat { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px; text-align: center; }
-.stat b { display: block; font-family: var(--display); font-size: 24px; color: var(--accent); font-weight: 700; }
-.stat span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 260px; overflow: auto; }
-.notes li { font-size: 12.5px; padding: 6px 8px 6px 10px; border-left: 3px solid var(--info); background: var(--panel-2); overflow-wrap: anywhere; }
-.notes li.warn { border-color: var(--warn); }
-.notes li.bad { border-color: var(--bad); color: var(--bad); }
-.notes li.good { border-color: var(--good); }
-details.ini summary { cursor: pointer; color: var(--muted); font-size: 13px; }
-details.ini pre { max-height: 280px; overflow: auto; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; font-size: 12px; white-space: pre; }
-.install ol { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
-.credit { font-size: 12.5px; color: var(--muted); }
-.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--panel); color: var(--text); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 10px 16px; font-weight: 600; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); }
+/* sidebar */
+aside { position: sticky; top: 16px; }
+.counts { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
+.counts b { color: var(--text); font-weight: 600; }
+.build { list-style: none; margin: 0 0 12px; padding: 0; font-size: 14px; }
+.build li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed var(--border); }
+.build li:last-child { border-bottom: 0; }
+.build .armor { font-family: var(--head); font-weight: 600; font-size: 15px; border: 0; padding-top: 6px; }
+.build .ed { color: var(--changed); font-size: 12.5px; white-space: nowrap; }
+.notes { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+.notes li { padding-left: 14px; position: relative; overflow-wrap: anywhere; }
+.notes li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.notes li.good::before { background: var(--ok); }
+.notes li.warn::before { background: var(--warn); }
+.notes li.bad { color: var(--bad); }
+.notes li.bad::before { background: var(--bad); }
+.actions { display: grid; gap: 8px; }
+.actions .row { gap: 8px; }
+.actions .row .btn { flex: 1; }
+details { font-size: 14px; }
+details summary { cursor: pointer; color: var(--muted); }
+details summary:hover { color: var(--text); }
+details pre { max-height: 280px; overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px; font: 12px/1.4 var(--mono); white-space: pre; }
+.install ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+.install code { overflow-wrap: anywhere; }
+.credit { font-size: 13px; color: var(--muted); margin: 14px 2px 0; }
+
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 9px 14px; border-radius: 4px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); }
 .toast.show { opacity: 1; }
-.empty { color: var(--muted); padding: 20px; text-align: center; }
-dialog { border: 1px solid var(--line); border-top: 3px solid var(--accent); border-radius: var(--radius); background: var(--panel); color: var(--text); padding: 0; max-width: min(520px, calc(100% - 32px)); }
-dialog::backdrop { background: rgba(0,0,0,.6); }
-dialog .bd { padding: 16px; display: grid; gap: 12px; }
-footer { border-top: 1px solid var(--line); padding: 18px 0 30px; color: var(--muted); font-size: 12.5px; }
+dialog { border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); padding: 0; max-width: min(460px, calc(100% - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.55); }
+dialog .panel-b { display: grid; gap: 12px; }
+footer { border-top: 1px solid var(--border); padding: 18px 0 30px; color: var(--muted); font-size: 13px; }
 
-@media (max-width: 980px) {
+@media (max-width: 960px) {
   .layout { grid-template-columns: 1fr; }
   aside { position: static; }
-  .steps { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 520px) {
-  .steps { grid-template-columns: 1fr; }
-  .grid { grid-template-columns: 1fr; }
-  .brand h1 { font-size: 18px; }
+@media (max-width: 560px) {
+  .pcard .top { grid-template-columns: 20px minmax(0, 1fr) 16px; }
+  .pcard .sum { display: none; }
+  .effects { padding-left: 12px; }
+  .brand span { display: none; }
 }
 </style>
 </head>
 <body>
 <header class="top">
   <div class="wrap">
-    <div class="brand">
-      <img src="icon.png" alt="" width="44" height="44">
-      <div>
-        <h1>Super Earth Armory Forge</h1>
-        <p>Ministry of Defense &middot; armor requisition terminal &middot; Helldivers 2</p>
-      </div>
-    </div>
-    <nav class="links">
-      <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge" target="_blank" rel="noopener">GitHub</a>
+    <a class="brand" href="./">
+      <img src="icon.png" alt="" width="30" height="30">
+      <h1>Super Earth Armory Forge</h1>
+      <span>web builder</span>
+    </a>
+    <nav class="nav">
       <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest" target="_blank" rel="noopener">Download the mod</a>
+      <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge" target="_blank" rel="noopener">GitHub</a>
       <a href="https://ayakamods.com/mods/passive-picker-v4.4359/" target="_blank" rel="noopener">AyakaMods</a>
-      <button class="ghost" id="themeBtn" type="button" aria-label="Toggle theme">&#9680;</button>
+      <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light / dark">&#9680;</button>
     </nav>
   </div>
 </header>
 
 <main class="wrap">
-  <div class="steps" aria-label="How it works">
-    <div class="step"><b>01</b><span><strong>Pick your armor's passive</strong><br>that armor gets the stack</span></div>
-    <div class="step"><b>02</b><span><strong>Switch passives on</strong><br>or load a preset</span></div>
-    <div class="step"><b>03</b><span><strong>Tune any value</strong><br>open a card to edit</span></div>
-    <div class="step"><b>04</b><span><strong>Download &amp; install</strong><br>add the zip to your mod manager</span></div>
+  <div class="intro">
+    <p>Plan an armor passive stack here and download it as a ready-to-install mod. <b>You don't need this page</b>: the mod has the same editor in game. Install it and press <span class="kbd">F7</span>.</p>
   </div>
 
   <div class="layout">
-    <div class="stack">
-      <section class="card">
-        <div class="hd"><h2>Stack</h2>
+    <div>
+      <section class="panel">
+        <div class="panel-h"><h2>Build</h2>
           <button class="btn small" id="importBtn" type="button">Import loadout.ini</button>
           <input type="file" id="importFile" accept=".ini,.txt" hidden>
           <button class="btn small" id="resetBtn" type="button">Start over</button>
         </div>
-        <div class="bd">
+        <div class="panel-b">
           <div class="row">
-            <div class="field grow"><label for="modName">Mod name (shown in your mod manager)</label>
+            <div class="field grow"><label for="modName">Name in your mod manager</label>
               <input type="text" id="modName" maxlength="60"></div>
-            <div class="field grow"><label for="presetSel">Load a preset</label>
-              <select id="presetSel"><option value="">Choose a preset…</option></select></div>
-            <div class="field"><label for="hotkeySel">In-game panel key</label>
+            <div class="field grow"><label for="presetSel">Start from a preset</label>
+              <select id="presetSel"><option value="">Choose…</option></select></div>
+            <div class="field"><label for="hotkeySel">Panel key</label>
               <select id="hotkeySel"><option>F1</option><option>F2</option><option>F3</option><option>F4</option><option>F5</option><option>F6</option><option>F7</option><option>F8</option><option>F9</option><option>F10</option><option>F11</option><option>F12</option></select></div>
-            <div class="field"><label for="swapSel">Quick-swap key</label>
+            <div class="field"><label for="swapSel">Swap key</label>
               <select id="swapSel"><option>F1</option><option>F2</option><option>F3</option><option>F4</option><option>F5</option><option>F6</option><option>F7</option><option>F8</option><option>F9</option><option>F10</option><option>F11</option><option>F12</option><option value="OFF">Off</option></select></div>
           </div>
-          <p class="hint" style="margin:10px 0 0">Everything here can also be changed in game: press the panel key (default <b>F7</b>); the quick-swap key (default <b>F9</b>) cycles your presets.</p>
         </div>
       </section>
 
-      <section class="card" id="profileCard">
+      <section class="panel" id="profileCard">
         <div class="tabs" role="tablist" id="tabs"></div>
         <div class="tabline"></div>
-        <div class="bd" id="profileBody"></div>
+        <div class="panel-b" id="profileBody"></div>
       </section>
     </div>
 
     <aside>
-      <section class="card">
-        <div class="hd"><h2>Summary</h2></div>
-        <div class="bd">
-          <div class="stats">
-            <div class="stat"><b id="sPass">0</b><span>passives on</span></div>
-            <div class="stat"><b id="sRows">0</b><span>rows added</span></div>
-            <div class="stat"><b id="sTweaks">0</b><span>values changed</span></div>
-          </div>
+      <section class="panel">
+        <div class="panel-h"><h2>Your build</h2></div>
+        <div class="panel-b">
+          <p class="counts"><b id="sPass">0</b> passives &middot; <b id="sRows">0</b> rows added &middot; <b id="sTweaks">0</b> values changed</p>
+          <ul class="build" id="buildList"></ul>
           <ul class="notes" id="notes"></ul>
-        </div>
-      </section>
-      <section class="card">
-        <div class="bd" style="display:grid; gap:10px">
-          <button class="btn primary block" id="dlZip" type="button">Download mod (.zip)</button>
-          <div class="row">
-            <button class="btn small grow" id="dlIni" type="button">Save loadout.ini</button>
-            <button class="btn small grow" id="shareBtn" type="button">Copy share link</button>
+          <div class="actions">
+            <button class="btn primary block" id="dlZip" type="button">Download mod (.zip)</button>
+            <div class="row">
+              <button class="btn small" id="shareBtn" type="button">Copy share link</button>
+              <button class="btn small" id="dlIni" type="button">Save loadout.ini</button>
+            </div>
+            <details class="ini"><summary>Show loadout.ini</summary><pre id="iniView"></pre></details>
           </div>
-          <details class="ini"><summary>Show loadout.ini</summary><pre id="iniView"></pre></details>
         </div>
       </section>
-      <section class="card install">
-        <div class="hd"><h2>Install</h2></div>
-        <div class="bd">
-          <ol>
-            <li>Install <a href="https://ayakamods.com/mods/bingus-shared-loader.3861/" target="_blank" rel="noopener">Bingus Shared Loader</a>.</li>
-            <li>Remove Passive Picker v3 if you have it. Older Passive Picker v4 / Armory Forge builds are replaced automatically.</li>
-            <li>Add the downloaded zip to your mod manager and deploy.</li>
-            <li>Fully restart the game, then wear armor with the passive you picked.</li>
-            <li>Check <code>%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ArmoryForge-STATUS.txt</code> says <b>OK - perk stacked</b>.</li>
-          </ol>
-          <p class="hint" style="margin:10px 0 0">Single-player / private lobbies only.</p>
+      <section class="panel install">
+        <div class="panel-b">
+          <details open>
+            <summary>How to install</summary>
+            <ol>
+              <li>Install <a href="https://ayakamods.com/mods/bingus-shared-loader.3861/" target="_blank" rel="noopener">Bingus Shared Loader</a>.</li>
+              <li>Remove Passive Picker v3 if you have it.</li>
+              <li>Add the zip to your mod manager and deploy.</li>
+              <li>Restart the game and wear armor with the passive you picked.</li>
+              <li>Change anything later in game with <span class="kbd">F7</span>.</li>
+            </ol>
+            <p class="hint" style="margin:10px 0 0">Not working? Check <code>%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ArmoryForge-STATUS.txt</code>. Single-player and private lobbies only.</p>
+          </details>
         </div>
       </section>
-      <p class="credit">Engine, archive format and passive data by <b>mostlycloudy</b> (engine credit also SHODAN). Armory Forge (config layer, in-game panel, builder) by Hung1510. Effect names are inferred; ones marked <b>?</b> are guesses.</p>
+      <p class="credit">Engine, archive format and passive data from mostlycloudy's Passive Picker v3 (engine credit also SHODAN). Effect names are inferred from the game; ones marked <b>?</b> are guesses.</p>
     </aside>
   </div>
 </main>
 
 <dialog id="addDlg">
-  <form method="dialog" class="bd">
-    <h2 style="font-size:16px">Add another armor</h2>
-    <p class="hint" style="margin:0">Armor that has this passive gets its own separate stack.</p>
+  <form method="dialog" class="panel-b">
+    <h2 style="font-size:18px">Add another armor</h2>
+    <p class="hint" style="margin:0">Armor with this passive gets its own separate stack.</p>
     <select id="addSel"></select>
     <div class="row" style="justify-content:flex-end">
       <button class="btn small" value="cancel">Cancel</button>
-      <button class="btn small primary" value="ok" id="addOk">Add</button>
+      <button class="btn small primary" value="ok" id="addOk" style="font-size:15px;padding:5px 14px">Add</button>
     </div>
   </form>
 </dialog>
@@ -307,10 +294,10 @@ footer { border-top: 1px solid var(--line); padding: 18px 0 30px; color: var(--m
 
 <footer>
   <div class="wrap">
-    Super Earth Armory Forge &middot; <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge">source</a> &middot;
-    engine started from <a href="https://ayakamods.com/mods/modular-armor-passives.4350/">Modular Armor Passives v3</a> by mostlycloudy &middot;
-    Found a wrong effect name? <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/issues/new/choose">Report it</a>.
-    Not affiliated with Arrowhead Game Studios.
+    Super Earth Armory Forge by Hung1510 &middot; <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge">source</a> &middot;
+    <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/issues/new/choose">report a wrong effect name</a> &middot;
+    started from <a href="https://ayakamods.com/mods/modular-armor-passives.4350/">Passive Picker v3</a> by mostlycloudy &middot;
+    not affiliated with Arrowhead Game Studios.
   </div>
 </footer>
 
