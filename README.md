@@ -3,17 +3,17 @@
 <h1 align="center">Super Earth Armory Forge</h1>
 <p align="center"><i>Ministry of Defense armor requisition terminal for Helldivers 2</i></p>
 
-[![tests](https://github.com/Hung1510/HD2-Armor-Transmog/actions/workflows/tests.yml/badge.svg)](https://github.com/Hung1510/HD2-Armor-Transmog/actions/workflows/tests.yml)
-[![latest release](https://img.shields.io/github/v/release/Hung1510/HD2-Armor-Transmog)](https://github.com/Hung1510/HD2-Armor-Transmog/releases/latest)
-[![AyakaMods downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FHD2-Armor-Transmog%2Fbadges%2Fayakamods-downloads.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
-[![AyakaMods views](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FHD2-Armor-Transmog%2Fbadges%2Fayakamods-views.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
-[![rating](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FHD2-Armor-Transmog%2Fbadges%2Fayakamods-rating.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
-[![GitHub downloads](https://img.shields.io/github/downloads/Hung1510/HD2-Armor-Transmog/total?label=GitHub%20downloads)](https://github.com/Hung1510/HD2-Armor-Transmog/releases)
+[![tests](https://github.com/Hung1510/Super-Earth-Armory-Forge/actions/workflows/tests.yml/badge.svg)](https://github.com/Hung1510/Super-Earth-Armory-Forge/actions/workflows/tests.yml)
+[![latest release](https://img.shields.io/github/v/release/Hung1510/Super-Earth-Armory-Forge)](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest)
+[![AyakaMods downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-downloads.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
+[![AyakaMods views](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-views.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
+[![rating](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-rating.json)](https://ayakamods.com/mods/passive-picker-v4.4359/)
+[![GitHub downloads](https://img.shields.io/github/downloads/Hung1510/Super-Earth-Armory-Forge/total?label=GitHub%20downloads)](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases)
 [![passives](https://img.shields.io/badge/armor%20passives-31%2F31-f4d21f)](TESTING.md)
 
 Forge your own armor: stack any of the 31 Helldivers 2 armor passives onto the armor you wear and set every value yourself.
 
-**Install it, then press F7 in game.** Tick passives, type values like `75%` or `+50 armor`, save loadouts and swap them with **F9**. Everything applies at once. Prefer to plan ahead? Use the **[web builder](https://hung1510.github.io/HD2-Armor-Transmog/)**. No Python, nothing to set up.
+**Install it, then press F7 in game.** Tick passives, type values like `75%` or `+50 armor`, save loadouts and swap them with **F9**. Everything applies at once. Prefer to plan ahead? Use the **[web builder](https://hung1510.github.io/Super-Earth-Armory-Forge/)**. No Python, nothing to set up.
 
 <p align="center"><img src="docs/img/panel-preview.png" width="640" alt="In-game panel"><br>
 <sub>The F7 armory terminal, drawn by the offline test harness (the game uses its own UI font).</sub></p>
@@ -28,9 +28,9 @@ Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3
 
 | You want | Do this |
 |---|---|
-| Build in game (most people) | Download **[Super-Earth-Armory-Forge.zip](https://github.com/Hung1510/HD2-Armor-Transmog/releases/latest)**, add it to your mod manager (there are no options to pick), start the game, press **F7** |
+| Build in game (most people) | Download **[Super-Earth-Armory-Forge.zip](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest)**, add it to your mod manager (there are no options to pick), start the game, press **F7** |
 | A ready-made build | Same zip, then F7, then **Presets**: *Kitchen Sink, Tank, Stealth, Survivor, Demolitionist, Gunner* |
-| Plan a build before playing | **[Web builder](https://hung1510.github.io/HD2-Armor-Transmog/)**, then *Download mod (.zip)* |
+| Plan a build before playing | **[Web builder](https://hung1510.github.io/Super-Earth-Armory-Forge/)**, then *Download mod (.zip)* |
 | Scripting / version control | `python tools\picker.py build loadout.ini --zip "My Stack.zip"` (below) |
 
 <p align="center"><img src="docs/img/web-builder.png" width="720" alt="Web builder"></p>
@@ -71,7 +71,7 @@ Then:
 
 ## What's confirmed in game
 
-Effect names are **inferred** from the passive descriptions; the game only stores hashes. The mod itself is confirmed to load and patch in game. Most individual effects are still **untested**. See **[TESTING.md](TESTING.md)** for the status of each one and how to test it. Report results with an [Effect test result](https://github.com/Hung1510/HD2-Armor-Transmog/issues/new?template=effect_report.yml) issue.
+Effect names are **inferred** from the passive descriptions; the game only stores hashes. The mod itself is confirmed to load and patch in game. Most individual effects are still **untested**. See **[TESTING.md](TESTING.md)** for the status of each one and how to test it. Report results with an [Effect test result](https://github.com/Hung1510/Super-Earth-Armory-Forge/issues/new?template=effect_report.yml) issue.
 
 Known limits:
 - `death_save = 2.0` = 100% is a best guess.
@@ -81,8 +81,8 @@ Known limits:
 ## Command line (Python 3.8+)
 
 ```powershell
-git clone https://github.com/Hung1510/HD2-Armor-Transmog.git
-cd HD2-Armor-Transmog
+git clone https://github.com/Hung1510/Super-Earth-Armory-Forge.git
+cd Super-Earth-Armory-Forge
 pip install lupa                                   # optional: Lua syntax check
 
 python tools\picker.py list                        # every passive, effect, default

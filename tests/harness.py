@@ -262,7 +262,11 @@ class FakeGame:
         return [c[5].decode("utf-8", "replace") for c in self.draw_calls() if c[0] == b"text"]
 
     def render(self, path, width=1920, height=1080, crop=True):
-        from PIL import Image, ImageDraw, ImageFont
+        """Screenshot of what the mod drew. Optional: skipped when Pillow isn't installed (CI)."""
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+        except ImportError:
+            return False
         img = Image.new("RGB", (width, height), (60, 70, 60))
         dr = ImageDraw.Draw(img, "RGBA")
         calls = sorted(self.draw_calls(), key=lambda c: c[3])

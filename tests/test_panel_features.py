@@ -140,7 +140,7 @@ check(2.0 in values(g, 7, 0xAFAE3B47), "earlier changes are still there after un
 # ------------------------------------------------------------------ 3. share codes
 g.click("copy")
 code = g.clipboard() or ""
-check(code.startswith("https://hung1510.github.io/HD2-Armor-Transmog/#ini="), "Copy code puts a web-builder link on the clipboard")
+check(code.startswith("https://hung1510.github.io/Super-Earth-Armory-Forge/#ini="), "Copy code puts a web-builder link on the clipboard")
 ini = base64.urlsafe_b64decode(code.split("#ini=")[1] + "=" * (-len(code.split("#ini=")[1]) % 4)).decode()
 check(live_matches(g, ini), "picker.py reads the copied code back to exactly the game's rows")
 rc, out = node("""
@@ -156,7 +156,7 @@ rc, link = node("""
 const core=require('./docs/core.js'); const data=require('./docs/data.json'); const cat=core.makeCatalog(data);
 const ini=core.serializeIni(cat, core.stateFromText(cat, %s));
 const b64=Buffer.from(ini,'utf8').toString('base64').replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
-console.log('https://hung1510.github.io/HD2-Armor-Transmog/#ini='+b64);""" % json.dumps(stealth))
+console.log('https://hung1510.github.io/HD2-Armor-Transmog/#ini='+b64);   // an old (pre-rename) link still pastes""" % json.dumps(stealth))
 g.clipboard(link)
 g.click("paste")
 check(live_matches(g, stealth), "Paste code with a web-builder share link loads it into the game")

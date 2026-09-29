@@ -119,6 +119,21 @@ g4.click("presets")
 check(any("Old Friend" in t for t in g4.texts()), "presets saved by 4.4 show up")
 check(not any("forge your armor" in t for t in g4.texts()), "no F7 hint when something is already stacked")
 
+# ------------------------------------------------------------------ 4. a real 4.4 save, same build
+# tests/fixtures/save-4.4-kitchen-sink.ini was written by the 4.4 engine (Kitchen Sink,
+# Inflammable raised to 80%). A 5.x build of the same loadout must keep it.
+fx = tempfile.mkdtemp()
+pp44 = os.path.join(fx, "CowboyBingus", "Helldivers2", "PassivePicker")
+os.makedirs(pp44)
+with open(os.path.join(HERE, "fixtures", "save-4.4-kitchen-sink.ini"), "rb") as src, \
+        open(os.path.join(pp44, "loadout.ini"), "wb") as dst:
+    dst.write(src.read())
+g5 = FakeGame(sink_lua, appdata=fx)
+g5.tick(420)
+fire = [v for m, t, v, _ in g5.rows(7) if m == 0x4DF29271]
+check(any(abs(v - 0.2) < 1e-6 for v in fire),
+      "a 4.4 panel save is kept by the same build in 5.x (fingerprint unchanged by the rename)")
+
 if failed:
     print("\n%d FAILED" % len(failed))
     sys.exit(1)

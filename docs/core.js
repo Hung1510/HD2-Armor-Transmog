@@ -506,7 +506,7 @@
   function serializeIni(cat, state) {
     const L = [];
     L.push("; Super Earth Armory Forge loadout - made with the web builder");
-    L.push("; https://hung1510.github.io/HD2-Armor-Transmog/");
+    L.push("; https://hung1510.github.io/Super-Earth-Armory-Forge/");
     L.push("");
     L.push("[settings]");
     L.push(`name   = ${(state.name || "My Armory Build").replace(/[;#\r\n]/g, " ").trim()}`);

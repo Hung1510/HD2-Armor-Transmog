@@ -11,7 +11,7 @@ Engine lineage ..... mostlycloudy, with credit to SHODAN (as noted in v3)
 In-game panel ...... drawing, input and font handling techniques adapted from
                      SHODAN Stat Editor v1.4.1 by SHODAN (public domain / Unlicense)
                      https://github.com/SHODAN-HORAI/SHODAN-Stat-Editor
-Source ............. https://github.com/Hung1510/HD2-Armor-Transmog
+Source ............. https://github.com/Hung1510/Super-Earth-Armory-Forge
 Web builder ........ uses JSZip (MIT) - docs/vendor/
 Loader ............. Bingus Shared Loader (required)
                      https://ayakamods.com/mods/bingus-shared-loader.3861/

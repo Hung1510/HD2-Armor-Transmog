@@ -551,7 +551,7 @@ end
 local function serialize(l, base_key)
     local L = {
         '; Super Earth Armory Forge loadout, saved by the in-game panel (' .. (l.hotkey or 'F7') .. ').',
-        '; Same format as the web builder: https://hung1510.github.io/HD2-Armor-Transmog/',
+        '; Same format as the web builder: https://hung1510.github.io/Super-Earth-Armory-Forge/',
         '',
         '[settings]',
         'name   = ' .. tostring(l.name or MOD.title):gsub('[;#\r\n]', ' '),
@@ -658,6 +658,11 @@ local function fingerprint(l)
     -- settings lines added in later versions are left out, so updating the mod keeps
     -- the panel's saved edits
     local text = serialize(l, nil):gsub('swap_hotkey = [^\r\n]*\r\n', '')
+    -- the comment header is hashed as 4.x wrote it, so renaming the mod or its web
+    -- address never resets anyone's saved edits
+    text = text:gsub('^;[^\r\n]*\r\n;[^\r\n]*\r\n',
+        '; Passive Picker loadout, saved by the in-game panel (' .. (l.hotkey or 'F7') .. ').\r\n' ..
+        '; Same format as the web builder: https://hung1510.github.io/HD2-Armor-Transmog/\r\n', 1)
     local h = 5381
     for i = 1, #text do h = (h * 33 + text:byte(i)) % 4294967296 end
     return string.format('%08x', h)

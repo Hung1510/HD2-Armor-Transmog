@@ -294,7 +294,7 @@ end
 -- ---------------------------------------------------------------- share codes
 -- A code is the web builder's share link: the loadout as base64url after #ini=. It opens
 -- in the web builder, and Paste code reads it (or the bare code, or plain loadout text).
-PP.SITE = 'https://hung1510.github.io/HD2-Armor-Transmog/#ini='
+PP.SITE = 'https://hung1510.github.io/Super-Earth-Armory-Forge/#ini='
 local B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
 
 function PP.b64(s)

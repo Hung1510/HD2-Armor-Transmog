@@ -1,6 +1,6 @@
 # Testing effects in game
 
-Effect names come from the passive descriptions; the game only stores hashes. This page tracks what has actually been **confirmed in game**. If you test one, open an [Effect test result](https://github.com/Hung1510/HD2-Armor-Transmog/issues/new?template=effect_report.yml) issue and it gets marked here.
+Effect names come from the passive descriptions; the game only stores hashes. This page tracks what has actually been **confirmed in game**. If you test one, open an [Effect test result](https://github.com/Hung1510/Super-Earth-Armory-Forge/issues/new?template=effect_report.yml) issue and it gets marked here.
 
 ## How to test
 

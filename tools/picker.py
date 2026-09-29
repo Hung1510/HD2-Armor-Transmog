@@ -714,7 +714,7 @@ def cmd_release(args):
         "Version": 1, "Guid": guid, "Name": TITLE,
         "Description": "v%s. Press %s in game to open the armory: tick any armor passives, "
                        "change their values live, save and swap loadouts (%s). Or build one at "
-                       "https://hung1510.github.io/HD2-Armor-Transmog/ . %s"
+                       "https://hung1510.github.io/Super-Earth-Armory-Forge/ . %s"
                        % (VERSION, DEFAULT_HOTKEY, DEFAULT_SWAP_HOTKEY, CREDIT),
     }
     icon = os.path.join(root, "docs", "icon.png")

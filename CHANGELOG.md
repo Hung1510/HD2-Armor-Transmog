@@ -7,6 +7,7 @@ Passive Picker v4 has a new name and its own identity. Includes everything liste
 - **The release keeps what you make in the panel,** even your edits from 4.x made under another preset. Web-builder zips still install their own build.
 - Files moved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\` (`loadout.ini`, `my-presets.txt`, `passives-dump.txt`). Saves in the old `PassivePicker` folder are read until the first new save. The status file is now `Logs\ArmoryForge-STATUS.txt`.
 - Same mod GUID, so the mod manager updates it in place.
+- The repository and web builder moved to `github.com/Hung1510/Super-Earth-Armory-Forge` and `hung1510.github.io/Super-Earth-Armory-Forge`. Share links from the old address still paste into the panel.
 - README badges show AyakaMods downloads, views and rating, refreshed every 6 hours.
 
 ## 4.4 (2026-09-30, shipped as part of 5.0)
@@ -33,7 +34,7 @@ Passive Picker v4 has a new name and its own identity. Includes everything liste
 - Panel drawing/input technique adapted from SHODAN Stat Editor v1.4.1 (public domain).
 
 ## 4.1 (2026-09-30)
-- **Web builder** (https://hung1510.github.io/HD2-Armor-Transmog/): pick passives, tune values, download a ready-to-install zip in the browser. No Python. Share builds with a link, import/export `loadout.ini`.
+- **Web builder** (https://hung1510.github.io/Super-Earth-Armory-Forge/): pick passives, tune values, download a ready-to-install zip in the browser. No Python. Share builds with a link, import/export `loadout.ini`.
 - **Presets in one zip**: Kitchen Sink, Tank, Stealth, Survivor, Demolitionist, Gunner. Pick one in your mod manager.
 - Mod icon in the mod manager.
 - `picker.py release` (presets zip) and `picker.py export-web` (builder data).

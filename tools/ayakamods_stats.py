@@ -21,7 +21,7 @@ COLOR = "f4d21f"
 
 def fetch(url):
     req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (badge updater; +https://github.com/Hung1510/HD2-Armor-Transmog)",
+        "User-Agent": "Mozilla/5.0 (badge updater; +https://github.com/Hung1510/Super-Earth-Armory-Forge)",
         "Accept": "text/html"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return r.read().decode("utf-8", "replace")
