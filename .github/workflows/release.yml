@@ -22,8 +22,7 @@ jobs:
       - run: pip install lupa
       - run: python tools/picker.py export-web --check
       - run: |
-          python tools/picker.py build examples/two-profiles.ini --dump-lua build/test.lua
-          python tests/test_engine.py build/test.lua
+          python tests/test_ingame.py
           node tests/test_web_parity.js
       - run: python tools/picker.py release --zip dist/Passive-Picker-v4.zip
       - uses: softprops/action-gh-release@v2

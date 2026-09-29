@@ -26,10 +26,8 @@ jobs:
             echo "== $f"; python tools/picker.py build "$f" > /dev/null
           done
 
-      - name: Engine against a fake perk table (LuaJIT)
-        run: |
-          python tools/picker.py build examples/two-profiles.ini --dump-lua build/test.lua
-          python tests/test_engine.py build/test.lua
+      - name: Engine + in-game panel against a fake game (LuaJIT)
+        run: python tests/test_ingame.py
 
       - name: Web builder produces identical bytes to Python
         run: node tests/test_web_parity.js

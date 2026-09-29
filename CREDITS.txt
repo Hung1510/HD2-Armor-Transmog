@@ -6,6 +6,9 @@ Original mod ....... mostlycloudy - Passive Picker v3 / Modular Armor Passives
                      (the author invited edits: "feel free to mess with the files
                      yourself and maybe you can make a better version")
 Engine lineage ..... mostlycloudy, with credit to SHODAN (as noted in v3)
+In-game panel ...... drawing, input and font handling adapted from SHODAN Stat
+                     Editor v1.4.1 by SHODAN (public domain / Unlicense)
+                     https://github.com/SHODAN-HORAI/SHODAN-Stat-Editor
 Source ............. https://github.com/Hung1510/HD2-Armor-Transmog
 Web builder ........ uses JSZip (MIT) - docs/vendor/
 Loader ............. Bingus Shared Loader (required)

@@ -1,7 +1,7 @@
 -- ================================================================ passive-picker engine
 -- Shared by every MostlyCloudy tuning mod (credit to SHODAN); the MOD table above says what to change.
 --
--- This engine extends one armour PERK's modifier list. It is not a stat patcher:
+-- This engine extends armour PERK modifier lists. It is not a stat patcher:
 -- instead of overwriting a field, it grows a variable-length array inside a live
 -- game record and repoints the record's descriptor at the enlarged copy.
 --
@@ -15,42 +15,42 @@
 --   +32 DLArray StatModifiers       <- also grown when the perk is a stat user
 --   +48 u32     SomeHash
 --
--- In the FILE the DLArray holds a relative offset (always 56, i.e. the modifier
--- rows sit inline right after the 56-byte record). In MEMORY it holds an absolute
--- pointer. We detect which one we are looking at by checking whether the pointer
--- equals record+56; that is the only form we rewrite. Anything else means another
--- mod has already replaced the array, so we leave it alone rather than fight.
+-- In the FILE the DLArray holds a relative offset (the modifier rows sit inline right
+-- after the 56-byte record). In MEMORY it holds an absolute pointer. We only take a
+-- record over when both arrays still point at their inline rows; anything else means
+-- another mod has already replaced the array, so we leave it alone rather than fight.
 --
 -- Every write is read back and the descriptor is checked, or it is rolled back.
--- Changes live in memory only.
+-- Changes live in memory only; the game files are never touched.
 --
--- ---- v4 changes (community edit, built on mostlycloudy's v3) --------------------
---   * MULTIPLE PROFILES: MOD.profiles holds one stack per trigger perk, so e.g.
---     Med-Kit armour and Siege-Ready armour can carry different stacks at once.
---     Each profile owns its own destination buffers.
---   * OVERRIDES: a profile can REPLACE the value of the trigger perk's own rows
---     (matched on modifier id + type, or stat id), so the base perk is tunable
---     too -- v3 could only append, which stacked a second copy on top.
---   * The old single trigger_perk / rows / stat_rows layout is still accepted.
+-- ---- v5 (community edit, built on mostlycloudy's v3) ------------------------------
+--   * The loadout (which passives, which values) is resolved HERE at runtime, so the
+--     in-game panel (F7) can change it live. tools/picker.py and the web builder only
+--     store the loadout; tests/test_lua_resolver.py checks this resolver against them.
+--   * Every perk record is snapshotted when first found. Each apply rebuilds the
+--     arrays from the record's own inline rows, so unticking a passive restores the
+--     game's data exactly (the descriptor is put back byte for byte).
+--   * The inline rows are re-read on every apply, so values another mod edits in place
+--     (e.g. SHODAN Stat Editor's Armors tab) are kept.
+--   * The panel's changes are saved to %LOCALAPPDATA%\CowboyBingus\Helldivers2\
+--     PassivePicker\loadout.ini (same format as the web builder). Installing a build
+--     with a different built-in loadout starts from that loadout again.
+--
+-- ---- v4 -----------------------------------------------------------------------------
+--   * Multiple profiles (one stack per trigger perk) and overrides of the trigger
+--     perk's own values.
 --
 -- ---- v3 changes -----------------------------------------------------------------
 --   * ROWS ARE SKIPPED WHEN ALREADY PRESENT, compared on identity (modifier id +
---     type + value). v3 lists EVERY passive including the base perk, so without
---     this the base perk would be applied twice. Identity, not the whole row,
---     because we write description=0 while the game's own rows carry a hash.
---   * AN ABSENT ARRAY IS NOW CREATED, not refused. A perk that ships zero stat
---     rows stores offset -1; the old code called that "foreign" and returned
---     'partial: stat array ...' AFTER the passive array had already been repointed.
---     add_site() counts that as refused, so the mod mutated the record and still
---     reported "perk not found". That hit 25 of the 31 passives.
---   * Conflicting rows are KEPT, not deduplicated: two passives sharing a modifier
---     id at different values both apply. Only exact repeats are collapsed.
+--     type + value), so listing the base perk never applies it twice.
+--   * AN ABSENT ARRAY IS CREATED, not refused (a perk with zero stat rows).
+--   * Conflicting rows are KEPT: two passives sharing a modifier id at different
+--     values both apply (unless the loadout says conflicts = strongest).
 --
 -- Safety rules, learned from the previous implementation of this idea:
 --   * the pointer and the count are written as ONE 16-byte store, so the game can
 --     never observe a fresh pointer with a stale count;
---   * a record whose array is already relocated is treated as another mod's work;
---   * retire = true patches once and unregisters, so nothing races an armour swap.
+--   * a record whose array is already relocated is treated as another mod's work.
 
 if rawget(_G, MOD.global) then return end
 
@@ -65,7 +65,10 @@ local SELF_MARGIN = 4096
 local MAX_ROUNDS = 12
 local ROUND_DELAY_SECONDS = 10
 local ENFORCE_SECONDS = 5
+local SAVE_DELAY_SECONDS = 1
 local MAX_LOG_LINES = 400
+local PM_BUFFER = 16384      -- bytes of our passive-row copy per record (1024 rows)
+local SM_BUFFER = 8192       -- bytes of our stat-row copy per record (682 rows)
 
 -- record layout offsets, from FileDiver datalibrary/passive_bonuses.go
 local REC_ID = 0
@@ -74,11 +77,9 @@ local REC_SM = 32            -- DLArray for StatModifiers
 local REC_HEAD = 56          -- rows sit inline at record+56 in the shipped form
 local ROW_BYTES = 16         -- one passive modifier
 local STAT_BYTES = 12        -- one stat modifier
--- Row IDENTITY, used to decide "this row is already present". The description
--- field is deliberately excluded from a passive row's identity: we write 0 there
--- while the game's own rows carry a real hash, so a whole-row compare would never
--- match the base perk's rows -- and v3's tables list the base perk, so that would
--- apply it twice.
+-- Row IDENTITY, used to decide "this row is already present". The description field
+-- is excluded from a passive row's identity: we write 0 there while the game's own
+-- rows carry a real hash.
 local ROW_IDENT = ROW_BYTES - 4    -- modifier id + type + value
 local STAT_IDENT = STAT_BYTES      -- stat + unk1 + unk2 (no description field)
 
@@ -126,6 +127,12 @@ local ffi_ok, ffi = pcall(require, 'ffi')
 local api = nil
 local REGION_TYPE = MOD.global .. 'Region'
 
+local function f32(value)
+    local cell = ffi.new('float[1]')
+    cell[0] = value
+    return ffi.string(cell, 4)
+end
+
 local function build_api()
     for _, declaration in ipairs({
         'void *GetCurrentProcess(void);',
@@ -136,6 +143,9 @@ local function build_api()
         'void *VirtualAllocEx(void *process, void *address, size_t size, uint32_t type, uint32_t protect);',
         'int CreateDirectoryA(const char *path, void *security);',
         'uint32_t GetLastError(void);',
+        'int QueryPerformanceCounter(int64_t *count);',
+        'int QueryPerformanceFrequency(int64_t *frequency);',
+        'void *GetModuleHandleA(const char *name);',
     }) do
         pcall(ffi.cdef, declaration)
     end
@@ -238,10 +248,24 @@ local function build_api()
         return kernel.CreateDirectoryA(path, nil) ~= 0 or kernel.GetLastError() == 183
     end
 
+    local ticks, frequency = ffi.new('int64_t[1]'), ffi.new('int64_t[1]')
+    kernel.QueryPerformanceFrequency(frequency)
+    local per_second = tonumber(frequency[0])
+    function self.now()   -- seconds, high resolution
+        kernel.QueryPerformanceCounter(ticks)
+        return tonumber(ticks[0]) / per_second
+    end
+
+    function self.module_base(name)
+        local base = kernel.GetModuleHandleA(name)
+        if base == nil then return nil end
+        return tonumber(ffi.cast('uintptr_t', base))
+    end
+
     return self
 end
 
--- ---------------------------------------------------------------- log
+-- ---------------------------------------------------------------- files and log
 local log_path, status_path, log_lines, log_counts = nil, nil, {}, {}
 local last_status_seen = nil
 local write_status
@@ -250,23 +274,37 @@ local function write_file(path, text)
     if not path then return false end
     local ok, handle = pcall(io.open, path, 'wb')
     if not ok or not handle then return false end
-    pcall(function() handle:write(text) end)
+    local wrote = pcall(function() handle:write(text) end)
     pcall(function() handle:close() end)
-    return true
+    return wrote
 end
 
-local function ensure_path(file)
+local function read_file(path)
+    if not path then return nil end
+    local ok, handle = pcall(io.open, path, 'rb')
+    if not ok or not handle then return nil end
+    local text = handle:read('*a')
+    handle:close()
+    return text
+end
+
+local function data_dir(leaf)
     local ok, resolved = pcall(function()
         local base = os.getenv('LOCALAPPDATA')
         if not base or base == '' then return nil end
-        for _, part in ipairs({ 'CowboyBingus', 'Helldivers2', 'Logs' }) do
+        for _, part in ipairs({ 'CowboyBingus', 'Helldivers2', leaf }) do
             base = base .. '/' .. part
             if not api.mkdir(base) then return nil end
         end
-        return base .. '/' .. file
+        return base
     end)
-    if ok and resolved then return resolved end
+    if ok then return resolved end
     return nil
+end
+
+local function ensure_path(file)
+    local dir = data_dir('Logs')
+    return dir and (dir .. '/' .. file) or nil
 end
 
 local function ensure_log_path()
@@ -316,262 +354,506 @@ end
 
 local function hex(n) return string.format('0x%X', n) end
 
--- ---------------------------------------------------------------- the rows
--- v4: MOD.profiles is a list, one entry per trigger perk. Each profile carries
---   rows           passive rows to APPEND   { modifier_id, type, value }
---   stat_rows      stat rows to APPEND      { stat, unk1, unk2 }
---   overrides      REPLACE the value of the perk's OWN rows, matched on
---                  modifier id + type        { modifier_id, type, value }
---   stat_overrides REPLACE the perk's own stat rows, matched on stat id
---                                            { stat, unk1, unk2 }
--- Everything is validated once at load and packed into byte blobs.
-local PROFILES = {}      -- perk id -> prepared profile
-local PROFILE_LIST = {}  -- same profiles, in config order
-local row_count = 0
-local stat_count = 0
+-- ---------------------------------------------------------------- catalog
+-- CATALOG / EFFECT_NAMES / STAT_NAMES / ALIASES are generated above this engine by
+-- tools/picker.py. Each passive gets an ordered effect list: its rows, then its stats.
+local CAT, CAT_LIST, BY_NAME = {}, {}, {}
 
-local function f32(value)
-    local cell = ffi.new('float[1]')
-    cell[0] = value
-    return ffi.string(cell, 4)
+local function norm(s) return (s:lower():gsub('[^a-z0-9]', '')) end
+
+for _, c in ipairs(CATALOG) do
+    local entry = { id = c.id, name = c.name, rows = c.rows, stats = c.stats, effects = {}, by_key = {} }
+    for _, r in ipairs(c.rows) do
+        local names = EFFECT_NAMES[r[1]]
+        local e = { key = names[1], hint = names[2], kind = 'row', a = r[1], b = r[2], def = r[3], type = r[2] }
+        entry.effects[#entry.effects + 1] = e
+        entry.by_key[e.key] = e
+    end
+    for _, s in ipairs(c.stats) do
+        local names = STAT_NAMES[s[1]]
+        local e = { key = names[1], hint = names[2], kind = 'stat', a = s[1], b = s[2], def = s[3], type = 2 }
+        entry.effects[#entry.effects + 1] = e
+        entry.by_key[e.key] = e
+    end
+    CAT[c.id] = entry
+    CAT_LIST[#CAT_LIST + 1] = entry
+    BY_NAME[norm(c.name)] = c.id
+end
+for k, v in pairs(ALIASES) do BY_NAME[k] = v end
+
+local function find_perk(text)
+    local t = text:match('^%s*(.-)%s*$')
+    if t:match('^%d+$') and CAT[tonumber(t)] then return tonumber(t) end
+    return BY_NAME[norm(t)]
 end
 
-local function check_row(where, id, kind, value)
-    assert(type(id) == 'number' and id >= 0 and id <= 4294967295,
-           where .. ' modifier id is not a u32')
-    assert(type(kind) == 'number' and kind >= 0 and kind <= 3,
-           where .. ' type must be 0..3 (0 Set, 1 Add, 2 Multiply, 3 Time)')
-    assert(type(value) == 'number', where .. ' value is not a number')
+-- ---------------------------------------------------------------- loadout
+-- A loadout: { name, retire, hotkey, profiles = { profile... } }
+-- profile:   { perk, conflicts = 'stack'|'strongest', enabled = { [pid] = true },
+--              tweaks = { ['pid.key'] = value }, raw = { {id,type,value} }, raw_stats = { {stat,u1,u2} } }
+local function copy_profile(p)
+    local out = { perk = p.perk, conflicts = p.conflicts or 'stack', enabled = {}, tweaks = {},
+                  raw = {}, raw_stats = {} }
+    for k, v in pairs(p.enabled or {}) do out.enabled[k] = v end
+    for k, v in pairs(p.tweaks or {}) do out.tweaks[k] = v end
+    for _, r in ipairs(p.raw or {}) do out.raw[#out.raw + 1] = { r[1], r[2], r[3] } end
+    for _, r in ipairs(p.raw_stats or {}) do out.raw_stats[#out.raw_stats + 1] = { r[1], r[2], r[3] } end
+    return out
 end
 
-local function check_stat(where, stat, unk1, unk2)
-    assert(type(stat) == 'number' and stat >= 0 and stat <= 4294967295,
-           where .. ' stat is not a u32')
-    assert(type(unk1) == 'number' and type(unk2) == 'number',
-           where .. ' values must be numbers')
+-- MOD.default (generated) -> loadout
+local function default_loadout()
+    local l = { name = MOD.name or MOD.title, retire = MOD.retire, hotkey = MOD.hotkey or 'F7', profiles = {} }
+    for _, d in ipairs(MOD.default or {}) do
+        local p = { perk = d.perk, conflicts = d.conflicts, enabled = {}, tweaks = {},
+                    raw = d.raw, raw_stats = d.raw_stats }
+        for _, pid in ipairs(d.enabled or {}) do p.enabled[pid] = true end
+        for _, t in ipairs(d.tweaks or {}) do p.tweaks[t[1] .. '.' .. t[2]] = t[3] end
+        l.profiles[#l.profiles + 1] = copy_profile(p)
+    end
+    return l
 end
 
-local function prepare_profile(index, p)
-    local tag = 'profiles[' .. index .. ']'
-    assert(type(p.perk) == 'number', tag .. '.perk is not a number')
-    assert(not PROFILES[p.perk], tag .. ': perk ' .. p.perk .. ' is listed twice')
-
-    local blob = {}
-    for i, row in ipairs(p.rows or {}) do
-        check_row(tag .. '.rows[' .. i .. ']', row[1], row[2], row[3])
-        blob[#blob + 1] = u32_bytes(row[1]) .. u32_bytes(row[2]) .. f32(row[3]) .. u32_bytes(0)
+local function sorted_enabled(p)
+    local list = {}
+    for pid, on in pairs(p.enabled) do
+        if on and pid ~= p.perk and CAT[pid] then list[#list + 1] = pid end
     end
-    local sblob = {}
-    for i, row in ipairs(p.stat_rows or {}) do
-        check_stat(tag .. '.stat_rows[' .. i .. ']', row[1], row[2], row[3])
-        sblob[#sblob + 1] = u32_bytes(row[1]) .. f32(row[2]) .. f32(row[3])
-    end
-    -- overrides: key = the bytes that identify a row, repl = the bytes that follow it
-    local ovr = { key_len = 8, map = {}, n = 0 }
-    for i, row in ipairs(p.overrides or {}) do
-        check_row(tag .. '.overrides[' .. i .. ']', row[1], row[2], row[3])
-        ovr.map[u32_bytes(row[1]) .. u32_bytes(row[2])] = f32(row[3])
-        ovr.n = ovr.n + 1
-    end
-    local sovr = { key_len = 4, map = {}, n = 0 }
-    for i, row in ipairs(p.stat_overrides or {}) do
-        check_stat(tag .. '.stat_overrides[' .. i .. ']', row[1], row[2], row[3])
-        sovr.map[u32_bytes(row[1])] = f32(row[2]) .. f32(row[3])
-        sovr.n = sovr.n + 1
-    end
-
-    local prof = {
-        perk = p.perk, name = p.name or ('perk ' .. p.perk),
-        ROWS = table.concat(blob), STATS = table.concat(sblob),
-        OVR = ovr, SOVR = sovr, sites = 0,
-    }
-    assert(#prof.ROWS % ROW_BYTES == 0, tag .. ': row blob is not whole 16-byte rows')
-    assert(#prof.STATS % STAT_BYTES == 0, tag .. ': stat blob is not whole 12-byte rows')
-    PROFILES[p.perk] = prof
-    PROFILE_LIST[#PROFILE_LIST + 1] = prof
-    row_count = row_count + #prof.ROWS / ROW_BYTES
-    stat_count = stat_count + #prof.STATS / STAT_BYTES
+    table.sort(list)
+    return list
 end
 
-local function prepare_rows()
-    -- v3 compatibility: a single trigger_perk + rows/stat_rows still works.
-    local list = MOD.profiles
-    if not list then
-        list = { { perk = MOD.trigger_perk, rows = MOD.rows, stat_rows = MOD.stat_rows } }
+local function strength(typ, v)
+    if typ == 2 then
+        if v <= 0 then return math.huge end
+        return math.abs(math.log(v))
     end
-    for i, p in ipairs(list) do prepare_profile(i, p) end
-    return row_count, stat_count
+    return math.abs(v)
 end
 
--- Each profile gets its own private block per array: two perks can hold
--- different stacks, so they cannot share one destination buffer.
-local function alloc_buffers()
-    for _, prof in ipairs(PROFILE_LIST) do
-        prof.buffer = api.alloc(#prof.ROWS + 4096)
-        assert(prof.buffer, 'could not allocate the passive buffer for ' .. prof.name)
-        if #prof.STATS > 0 or prof.SOVR.n > 0 then
-            prof.stat_buffer = api.alloc(#prof.STATS + 4096)
-            assert(prof.stat_buffer, 'could not allocate the stat buffer for ' .. prof.name)
+-- Exact duplicates collapse to one; rows sharing an identity at different values all
+-- apply ('stack') or only the strongest does. Same rules and order as picker.py resolve().
+local function collapse(rows, policy, ident, typ_of)
+    local groups, order = {}, {}
+    for _, r in ipairs(rows) do
+        local g = ident(r)
+        if not groups[g] then groups[g] = {}; order[#order + 1] = g end
+        local list = groups[g]
+        list[#list + 1] = r
+    end
+    local out, conflicts = {}, 0
+    for _, g in ipairs(order) do
+        local uniq = {}
+        for _, r in ipairs(groups[g]) do
+            local dup = false
+            for _, u in ipairs(uniq) do if u[3] == r[3] then dup = true break end end
+            if not dup then uniq[#uniq + 1] = r end
+        end
+        if #uniq > 1 then
+            conflicts = conflicts + 1
+            if policy == 'strongest' then
+                local best = uniq[1]
+                for k = 2, #uniq do
+                    if strength(typ_of(uniq[k]), uniq[k][3]) > strength(typ_of(best), best[3]) then best = uniq[k] end
+                end
+                uniq = { best }
+            end
+        end
+        for _, u in ipairs(uniq) do out[#out + 1] = u end
+    end
+    return out, conflicts
+end
+
+-- profile -> the rows to append and the base-perk values to replace
+local function resolve_profile(p)
+    local rows, stats = {}, {}
+    local function value_of(pid, e)
+        local v = p.tweaks[pid .. '.' .. e.key]
+        if v == nil then return e.def end
+        return v
+    end
+    local enabled = sorted_enabled(p)
+    for _, pid in ipairs(enabled) do
+        local c = CAT[pid]
+        for _, e in ipairs(c.effects) do
+            local src = c.name .. '.' .. e.key
+            if e.kind == 'row' then rows[#rows + 1] = { e.a, e.b, value_of(pid, e), src }
+            else stats[#stats + 1] = { e.a, e.b, value_of(pid, e), src } end
         end
     end
+    for _, r in ipairs(p.raw or {}) do rows[#rows + 1] = { r[1], r[2], r[3], 'raw' } end
+    for _, r in ipairs(p.raw_stats or {}) do stats[#stats + 1] = { r[1], r[2], r[3], 'raw_stats' } end
+
+    local overrides, stat_overrides = {}, {}
+    local base = CAT[p.perk]
+    if base then
+        for _, e in ipairs(base.effects) do
+            local v = value_of(p.perk, e)
+            if v ~= e.def then
+                local list = e.kind == 'row' and overrides or stat_overrides
+                list[#list + 1] = { e.a, e.b, v, base.name .. '.' .. e.key }
+            end
+        end
+    end
+    local c1, c2
+    rows, c1 = collapse(rows, p.conflicts, function(r) return r[1] .. '|' .. r[2] end, function(r) return r[2] end)
+    stats, c2 = collapse(stats, p.conflicts, function(r) return tostring(r[1]) end, function() return 2 end)
+    return { rows = rows, stats = stats, overrides = overrides, stat_overrides = stat_overrides,
+             enabled = enabled, conflicts = c1 + c2 }
 end
 
--- ---------------------------------------------------------------- record location
--- The perk block's payload is one record, so the perk id is the first u32.
-local function locate_perk(blob)
-    return PROFILES[u32(blob, REC_ID)]
+local LOADOUT = nil          -- the live loadout
+local DEFAULT_KEY = nil      -- fingerprint of MOD.default, stored in the save file
+
+local function profile_for(perk)
+    if not LOADOUT then return nil end
+    for _, p in ipairs(LOADOUT.profiles) do if p.perk == perk then return p end end
+    return nil
+end
+
+-- ---------------------------------------------------------------- loadout file (ini)
+local function fmt_num(v)
+    if v == math.floor(v) and math.abs(v) < 1e15 then return string.format('%d', v) .. '.0' end
+    local s = string.format('%.10g', v)
+    if tonumber(s) ~= v then s = string.format('%.17g', v) end
+    return s
+end
+
+local function serialize(l, base_key)
+    local L = {
+        '; Passive Picker loadout, saved by the in-game panel (' .. (l.hotkey or 'F7') .. ').',
+        '; Same format as the web builder: https://hung1510.github.io/HD2-Armor-Transmog/',
+        '',
+        '[settings]',
+        'name   = ' .. tostring(l.name or MOD.title):gsub('[;#\r\n]', ' '),
+        'retire = ' .. (l.retire and 'true' or 'false'),
+        'hotkey = ' .. (l.hotkey or 'F7'),
+    }
+    if base_key then L[#L + 1] = 'base   = ' .. base_key end
+    for _, p in ipairs(l.profiles) do
+        local c = CAT[p.perk]
+        L[#L + 1] = ''
+        L[#L + 1] = '[profile: ' .. c.name .. ']'
+        L[#L + 1] = 'conflicts = ' .. (p.conflicts or 'stack')
+        for _, e in ipairs(CAT_LIST) do
+            if e.id ~= p.perk then
+                L[#L + 1] = string.format('%-34s = %s', e.name, p.enabled[e.id] and 'on' or 'off')
+            end
+        end
+        local keys = {}
+        for k in pairs(p.tweaks) do keys[#keys + 1] = k end
+        table.sort(keys)
+        for _, k in ipairs(keys) do
+            local pid, key = k:match('^(%d+)%.(.+)$')
+            pid = tonumber(pid)
+            if CAT[pid] and (pid == p.perk or p.enabled[pid]) then
+                L[#L + 1] = string.format('%-34s = %s', CAT[pid].name .. '.' .. key, fmt_num(p.tweaks[k]))
+            end
+        end
+        local raw = {}
+        for _, r in ipairs(p.raw or {}) do raw[#raw + 1] = string.format('0x%08X %d %s', r[1], r[2], fmt_num(r[3])) end
+        if #raw > 0 then L[#L + 1] = 'raw       = ' .. table.concat(raw, ', ') end
+        raw = {}
+        for _, r in ipairs(p.raw_stats or {}) do raw[#raw + 1] = string.format('%d %s %s', r[1], fmt_num(r[2]), fmt_num(r[3])) end
+        if #raw > 0 then L[#L + 1] = 'raw_stats = ' .. table.concat(raw, ', ') end
+    end
+    return table.concat(L, '\r\n') .. '\r\n'
+end
+
+local TRUE_WORDS = { on = true, yes = true, ['true'] = true, ['1'] = true, y = true }
+
+-- Lenient reader: anything it does not understand is skipped (and logged), never fatal.
+local function parse_loadout(text)
+    local l = { profiles = {} }
+    local section, prof = nil, nil
+    for raw_line in (text .. '\n'):gmatch('([^\n]*)\n') do
+        local line = raw_line:gsub('\r$', '')
+        local s = line:match('^%s*(.-)%s*$')
+        if s ~= '' and not s:match('^[;#]') then
+            local v = line:gsub('%s[;#].*$', ''):match('^%s*(.-)%s*$')
+            local head = v:match('^%[(.+)%]$')
+            if head then
+                section, prof = head, nil
+                local name = head:match('^%s*[Pp][Rr][Oo][Ff][Ii][Ll][Ee]%s*:%s*(.-)%s*$')
+                if name then
+                    local perk = find_perk(name)
+                    if perk then
+                        prof = { perk = perk, conflicts = 'stack', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
+                        l.profiles[#l.profiles + 1] = prof
+                    else
+                        log('loadout: unknown armor passive [' .. head .. '], skipped')
+                    end
+                end
+            else
+                local k, val = v:match('^(.-)%s*=%s*(.*)$')
+                if k and section == 'settings' then
+                    if k == 'name' then l.name = val
+                    elseif k == 'retire' then l.retire = TRUE_WORDS[val:lower()] or false
+                    elseif k == 'hotkey' then l.hotkey = val:upper()
+                    elseif k == 'base' then l.base = val end
+                elseif k and prof then
+                    local lk = k:lower()
+                    if lk == 'conflicts' then
+                        prof.conflicts = (val:lower() == 'strongest') and 'strongest' or 'stack'
+                    elseif lk == 'raw' or lk == 'raw_stats' then
+                        for chunk in val:gmatch('[^,]+') do
+                            local a, b, c = chunk:match('^%s*(%S+)%s+(%S+)%s+(%S+)%s*$')
+                            local na, nb, nc = a and tonumber(a), b and tonumber(b), c and tonumber(c)
+                            if na and nb and nc then
+                                local list = lk == 'raw' and prof.raw or prof.raw_stats
+                                list[#list + 1] = { na, nb, nc }
+                            end
+                        end
+                    elseif k:find('%.') then
+                        local pname, key = k:match('^(.*)%.([^%.]+)$')
+                        local pid = pname and find_perk(pname)
+                        local n = tonumber(val)
+                        if pid and n and CAT[pid].by_key[key] then prof.tweaks[pid .. '.' .. key] = n
+                        else log('loadout: skipped ' .. k) end
+                    else
+                        local pid = find_perk(k)
+                        if pid and pid ~= prof.perk then prof.enabled[pid] = TRUE_WORDS[val:lower()] or nil
+                        elseif not pid then log('loadout: unknown passive ' .. k .. ', skipped') end
+                    end
+                end
+            end
+        end
+    end
+    return l
+end
+
+-- djb2 over the canonical text of the built-in loadout
+local function fingerprint(l)
+    local text = serialize(l, nil)
+    local h = 5381
+    for i = 1, #text do h = (h * 33 + text:byte(i)) % 4294967296 end
+    return string.format('%08x', h)
+end
+
+local function save_path()
+    local dir = data_dir('PassivePicker')
+    return dir and (dir .. '/loadout.ini') or nil
+end
+
+local save_at = nil
+local function save_now()
+    save_at = nil
+    local path = save_path()
+    if not path then return false end
+    local ok = write_file(path, serialize(LOADOUT, DEFAULT_KEY))
+    if not ok then log('could not save ' .. path) end
+    return ok
+end
+
+local function load_loadout()
+    local def = default_loadout()
+    DEFAULT_KEY = fingerprint(def)
+    local path = save_path()
+    local text = read_file(path)
+    if text then
+        local ok, saved = pcall(parse_loadout, text)
+        if ok and saved.base == DEFAULT_KEY and #saved.profiles > 0 then
+            saved.name = saved.name or def.name
+            if saved.retire == nil then saved.retire = def.retire end
+            saved.hotkey = saved.hotkey or def.hotkey
+            log('loadout: using the panel save ' .. path)
+            return saved, 'saved'
+        elseif ok and saved.base ~= DEFAULT_KEY then
+            log('loadout: a different build is installed; starting from its built-in loadout')
+        else
+            log('loadout: could not read ' .. tostring(path) .. ': ' .. tostring(saved))
+        end
+    end
+    return def, 'built-in'
 end
 
 -- ---------------------------------------------------------------- sites
-local sites = {}
+-- One site per perk record found in memory (every perk, not only the profiles', so the
+-- panel can stack onto any armor). The arrays' original descriptors are kept to put
+-- the game's data back exactly.
+local sites = {}             -- list
+local sites_by_perk = {}     -- perk -> list of sites
+local perks_found = 0
 
--- Rewrite rows already present whose identity key is in ovr.map. Only the value
--- bytes change; the game's own description hash (and everything else) is kept.
--- Returns the new blob and whether anything changed.
-local function apply_overrides(existing, row_bytes, ovr)
-    if not ovr or ovr.n == 0 or #existing == 0 then return existing, false end
-    local parts, changed = {}, false
+local function apply_overrides(existing, row_bytes, key_len, map)
+    if not map or #existing == 0 then return existing end
+    local parts = {}
     for i = 0, #existing / row_bytes - 1 do
         local row = existing:sub(i * row_bytes + 1, (i + 1) * row_bytes)
-        local key = row:sub(1, ovr.key_len)
-        local repl = ovr.map[key]
-        if repl then
-            local new = key .. repl .. row:sub(ovr.key_len + #repl + 1)
-            if new ~= row then row, changed = new, true end
-        end
+        local key = row:sub(1, key_len)
+        local repl = map[key]
+        if repl then row = key .. repl .. row:sub(key_len + #repl + 1) end
         parts[#parts + 1] = row
     end
-    return table.concat(parts), changed
+    return table.concat(parts)
 end
 
--- Grow ONE array and repoint its descriptor. Both arrays share this logic; only
--- the row width, the descriptor offset, the inline offset, the appended rows,
--- the overrides and the destination buffer differ.
---
--- inline_off matters: the shipped form points each array at its OWN inline
--- position. The passive rows start at record+56; the stat rows start after them.
--- Returns: 'applied', before_n, after_n | 'already' | 'foreign...' | reason
-local function grow_array(record, pointer, count, desc_off, inline_off, row_bytes, ident_bytes, rows, ovr, dest)
-    local pointer_off = record + desc_off
-    local inline = record + inline_off
-
-    --   count == 0            the perk ships no rows in this array: CREATE it.
-    --   pointer == dest       we already own it; read back what we wrote.
-    --   pointer == inline     the shipped inline form.
-    -- Anything else is another mod's array, which we leave alone rather than fight.
-    local existing
-    if count == 0 then
-        existing = ''
-    elseif pointer == dest then
-        existing = api.read(pointer, count * row_bytes)
-        if not existing or #existing ~= count * row_bytes then return 'our buffer unreadable' end
-    elseif pointer == inline then
-        existing = api.read(pointer, count * row_bytes)
-        if not existing then return 'inline rows unreadable' end
-        if #existing ~= count * row_bytes then return 'inline rows truncated' end
-    else
-        return 'foreign pointer ' .. hex(pointer)
-    end
-
-    -- v4: overrides first, so the base perk's own values can be changed. This is
-    -- idempotent: once our buffer holds the new value, a re-check changes nothing.
-    local changed
-    existing, changed = apply_overrides(existing, row_bytes, ovr)
-
-    -- A row is skipped ONLY when an identical row is already present, compared on
-    -- IDENTITY (modifier id + type + value), never on the description field.
+local function append_rows(existing, row_bytes, ident_bytes, rows)
     local seen = {}
     for i = 0, #existing / row_bytes - 1 do
         seen[existing:sub(i * row_bytes + 1, i * row_bytes + ident_bytes)] = true
     end
-    local kept = {}
-    for i = 0, #rows / row_bytes - 1 do
-        local row = rows:sub(i * row_bytes + 1, (i + 1) * row_bytes)
+    local kept = { existing }
+    for _, row in ipairs(rows) do
         local key = row:sub(1, ident_bytes)
-        if not seen[key] then
-            seen[key] = true
-            kept[#kept + 1] = row
-        end
+        if not seen[key] then seen[key] = true; kept[#kept + 1] = row end
     end
-    if #kept == 0 and not changed then
-        return 'already'
-    end
+    return table.concat(kept)
+end
 
-    local total = existing .. table.concat(kept)
-    if #total > 65536 then return 'array would be too large' end
-    if #total > #rows + 4096 then return 'array larger than our buffer' end
-    if not api.write(dest, total) then return 'dest write failed' end
-    if api.read(dest, #total) ~= total then return 'dest read-back failed' end
-    -- ONE 16-byte store: pointer and count together.
-    local new_count = #existing / row_bytes + #kept
-    local descriptor = u64_bytes(dest) .. u64_bytes(new_count)
-    local before = api.read(pointer_off, 16)
-    if not before then return 'descriptor unreadable before write' end
-    if not api.write(pointer_off, descriptor) then return 'descriptor write failed' end
-    local after = api.read(pointer_off, 16)
-    if after ~= descriptor then
-        api.write(pointer_off, before)              -- roll back
+-- the arrays a site should hold for a resolved profile (nil profile = the game's own)
+local function desired(site, res, inline_pm, inline_sm)
+    if not res then return inline_pm, inline_sm end
+    local omap, smap = {}, {}
+    for _, r in ipairs(res.overrides) do omap[u32_bytes(r[1]) .. u32_bytes(r[2])] = f32(r[3]) end
+    for _, r in ipairs(res.stat_overrides) do smap[u32_bytes(r[1])] = f32(r[2]) .. f32(r[3]) end
+    local prow, srow = {}, {}
+    for _, r in ipairs(res.rows) do prow[#prow + 1] = u32_bytes(r[1]) .. u32_bytes(r[2]) .. f32(r[3]) .. u32_bytes(0) end
+    for _, r in ipairs(res.stats) do srow[#srow + 1] = u32_bytes(r[1]) .. f32(r[2]) .. f32(r[3]) end
+    local pm = append_rows(apply_overrides(inline_pm, ROW_BYTES, 8, omap), ROW_BYTES, ROW_IDENT, prow)
+    local sm = append_rows(apply_overrides(inline_sm, STAT_BYTES, 4, smap), STAT_BYTES, STAT_IDENT, srow)
+    return pm, sm
+end
+
+-- Point one array at `blob`: the original descriptor when blob is the game's own rows,
+-- else our buffer. Returns 'same' | 'applied' | reason.
+local function set_array(site, which, blob, inline)
+    local desc_off = which == 'pm' and REC_PM or REC_SM
+    local row_bytes = which == 'pm' and ROW_BYTES or STAT_BYTES
+    local original = site[which .. '_desc0']
+    local want
+    local at = site.record + desc_off
+    local now = api.read(at, 16)
+    if not now then return 'descriptor unreadable' end
+    if blob == inline then
+        want = original
+    else
+        -- Two buffers per array, used in turn: the new rows go into the one the game is
+        -- NOT reading, then one 16-byte store switches the game over. The game never
+        -- sees a half-written array.
+        local cap = which == 'pm' and PM_BUFFER or SM_BUFFER
+        if #blob > cap then return 'too many rows for the buffer' end
+        local bufs = site[which .. '_bufs']
+        if not bufs then
+            local a, b = api.alloc(cap), api.alloc(cap)
+            if not a or not b then return 'could not allocate a buffer' end
+            bufs = { a, b }
+            site[which .. '_bufs'] = bufs
+        end
+        local count = u64_bytes(#blob / row_bytes)
+        -- already showing exactly this? nothing to do
+        for _, buf in ipairs(bufs) do
+            if now == u64_bytes(buf) .. count and api.read(buf, #blob) == blob then return 'same' end
+        end
+        local buf = (u64(now, 0) == bufs[1]) and bufs[2] or bufs[1]
+        if not api.write(buf, blob) then return 'buffer write failed' end
+        if api.read(buf, #blob) ~= blob then return 'buffer read-back failed' end
+        want = u64_bytes(buf) .. count
+    end
+    if now == want then return 'same' end
+    if not api.write(at, want) then return 'descriptor write failed' end
+    if api.read(at, 16) ~= want then
+        api.write(at, now)
         return 'descriptor read-back did not match'
     end
-    return 'applied', count, new_count
+    return 'applied'
 end
 
--- Grow BOTH arrays of one record for one profile. Returns:
---   'applied', pm_before, pm_after | 'already' | 'partial: ...' | reason
-local function apply_stack(record, prof)
-    if not prof or not prof.buffer then return 'no buffer' end
-    local head = api.read(record, REC_HEAD)
-    if not head then return 'unreadable' end
-    local id = u32(head, REC_ID)
-    if id ~= prof.perk then return 'not our perk (' .. tostring(id) .. ')' end
-
-    local pm_ptr, pm_cnt = u64(head, REC_PM), u64(head, REC_PM + 8)
-    if not pm_ptr or not pm_cnt then return 'passive descriptor unreadable' end
-
-    local before_n, after_n = pm_cnt, pm_cnt
-    local final_res = 'already'
-    if #prof.ROWS > 0 or prof.OVR.n > 0 then
-        local res
-        res, before_n, after_n = grow_array(
-            record, pm_ptr, pm_cnt, REC_PM, REC_HEAD, ROW_BYTES, ROW_IDENT,
-            prof.ROWS, prof.OVR, prof.buffer)
-        if res ~= 'applied' and res ~= 'already' then return res end
-        if res == 'applied' then final_res = res else before_n, after_n = pm_cnt, pm_cnt end
-    end
-
-    if prof.stat_buffer then
-        local head2 = api.read(record, REC_HEAD)
-        if not head2 then return 'partial: record unreadable' end
-        local sm_ptr, sm_cnt = u64(head2, REC_SM), u64(head2, REC_SM + 8)
-        if not sm_ptr or not sm_cnt then return 'partial: stat descriptor unreadable' end
-        -- The stat rows sit inline AFTER the shipped passive rows. pm_cnt is read
-        -- before the passive grow, so on the first patch this is exact; on later
-        -- re-checks the stat array already points at our buffer and this is unused.
-        local inline_stat = record + REC_HEAD + pm_cnt * ROW_BYTES
-        local sres = grow_array(
-            record, sm_ptr, sm_cnt, REC_SM, inline_stat - record,
-            STAT_BYTES, STAT_IDENT, prof.STATS, prof.SOVR, prof.stat_buffer)
-        if sres ~= 'applied' and sres ~= 'already' then
-            return 'partial: stat array ' .. tostring(sres)
-        end
-        if sres == 'applied' then final_res = 'applied' end
-    end
-    return final_res, before_n, after_n
+local function site_intact(site)
+    local header = api.read(site.block, HEADER_BYTES)
+    return header and header:sub(1, 8) == NEEDLE and u32(header, 8) == MOD.type_passive
+        and u32(api.read(site.record, 4) or '', 0) == site.perk
 end
 
-local function complete()
-    for _, prof in ipairs(PROFILE_LIST) do
-        if prof.sites == 0 then return false end
-    end
-    return #PROFILE_LIST > 0
+-- Apply the live loadout to one site. The game's inline rows are re-read every time,
+-- so edits other mods make in place are kept.
+local function apply_site(site, res)
+    if site.foreign then return 'foreign' end
+    if not site_intact(site) then return 'gone' end
+    local pm = site.pm_count0 > 0 and api.read(site.record + REC_HEAD, site.pm_count0 * ROW_BYTES) or ''
+    local sm = site.sm_count0 > 0 and api.read(site.sm_inline, site.sm_count0 * STAT_BYTES) or ''
+    if not pm or not sm then return 'inline rows unreadable' end
+    local want_pm, want_sm = desired(site, res, pm, sm)
+    local r1 = set_array(site, 'pm', want_pm, pm)
+    if r1 ~= 'same' and r1 ~= 'applied' then return r1 end
+    local r2 = set_array(site, 'sm', want_sm, sm)
+    if r2 ~= 'same' and r2 ~= 'applied' then return 'stat array: ' .. r2 end
+    site.rows_now = #want_pm / ROW_BYTES
+    site.stats_now = #want_sm / STAT_BYTES
+    site.added = site.rows_now - site.pm_count0 + site.stats_now - site.sm_count0
+    if r1 == 'applied' or r2 == 'applied' then return 'applied' end
+    return 'same'
 end
+
+local last_result = {}       -- perk -> { res = resolved, text = status }
+
+local function apply_perk(perk, quiet)
+    local list = sites_by_perk[perk]
+    if not list then return nil end
+    local prof = profile_for(perk)
+    local res = prof and resolve_profile(prof) or nil
+    local worst, changed = nil, false
+    for _, site in ipairs(list) do
+        local r = apply_site(site, res)
+        if r == 'applied' then changed = true
+        elseif r ~= 'same' then worst = r end
+    end
+    last_result[perk] = { res = res, error = worst }
+    if changed then
+        state.applied = state.applied + 1
+        if not quiet then log('applied ' .. CAT[perk].name .. (res and (': ' .. #res.enabled .. ' passive(s)') or ': restored')) end
+    end
+    if worst and worst ~= 'gone' then log(CAT[perk].name .. ': ' .. worst) end
+    return changed
+end
+
+local function apply_all()
+    for perk in pairs(sites_by_perk) do apply_perk(perk) end
+end
+
+local function capture(record, block, blob)
+    for _, s in ipairs(sites) do if s.record == record then return end end
+    local perk = u32(blob, REC_ID)
+    if not CAT[perk] then return end
+    local pm_ptr, pm_cnt = u64(blob, REC_PM), u64(blob, REC_PM + 8)
+    local sm_ptr, sm_cnt = u64(blob, REC_SM), u64(blob, REC_SM + 8)
+    if not (pm_ptr and pm_cnt and sm_ptr and sm_cnt) or pm_cnt > 64 or sm_cnt > 64 then return end
+    local site = { record = record, block = block, perk = perk, pm_count0 = pm_cnt, sm_count0 = sm_cnt,
+                   pm_desc0 = blob:sub(REC_PM + 1, REC_PM + 16), sm_desc0 = blob:sub(REC_SM + 1, REC_SM + 16),
+                   sm_inline = record + REC_HEAD + pm_cnt * ROW_BYTES }
+    local pm_ok = pm_cnt == 0 or pm_ptr == record + REC_HEAD
+    local sm_ok = sm_cnt == 0 or sm_ptr == site.sm_inline
+    if not (pm_ok and sm_ok) then
+        site.foreign = true
+        state.refused = state.refused + 1
+        log(CAT[perk].name .. ' at ' .. hex(record) .. ' is already changed by another mod; left alone')
+    end
+    sites[#sites + 1] = site
+    if not sites_by_perk[perk] then
+        sites_by_perk[perk] = {}
+        perks_found = perks_found + 1
+    end
+    local list = sites_by_perk[perk]
+    list[#list + 1] = site
+    if not site.foreign then apply_perk(perk) end
+end
+
+-- ---------------------------------------------------------------- status file
+local function complete() return perks_found >= #CAT_LIST end
 
 local function summary()
     local parts = {}
-    for _, prof in ipairs(PROFILE_LIST) do
-        parts[#parts + 1] = prof.name .. ' (perk ' .. prof.perk .. '): ' ..
-            (prof.sites > 0 and ('stacked on ' .. prof.sites .. ' record(s)') or 'not found yet')
+    for _, p in ipairs(LOADOUT and LOADOUT.profiles or {}) do
+        local name = CAT[p.perk].name
+        local list = sites_by_perk[p.perk]
+        if not list then parts[#parts + 1] = name .. ' (perk ' .. p.perk .. '): not found yet'
+        else
+            local added = 0
+            for _, s in ipairs(list) do added = math.max(added, s.added or 0) end
+            parts[#parts + 1] = name .. ' (perk ' .. p.perk .. '): stacked on ' .. #list .. ' record(s), +' .. added .. ' rows'
+        end
     end
+    if #parts == 0 then return 'no stacks set (open the panel with ' .. (LOADOUT and LOADOUT.hotkey or 'F7') .. ')' end
     return table.concat(parts, '; ')
 end
 
@@ -579,12 +861,12 @@ write_status = function()
     local path = ensure_status_path()
     if not path then return false end
     local verdict
-    if state.phase == 'done' or state.phase == 'active' then
-        verdict = complete() and 'OK - perk stacked' or 'PARTIAL - perk not found yet'
+    local stacked = false
+    for _, p in ipairs(LOADOUT and LOADOUT.profiles or {}) do if sites_by_perk[p.perk] then stacked = true end end
+    if state.phase == 'ready' then
+        verdict = stacked and 'OK - perk stacked' or 'OK - ready (no stack found yet)'
     elseif state.phase == 'gave_up' then
         verdict = 'FAILED - ' .. tostring(state.status)
-    elseif state.phase == 'waiting' then
-        verdict = 'WAITING - ' .. tostring(state.status)
     else
         verdict = 'WORKING - ' .. tostring(state.status)
     end
@@ -593,41 +875,24 @@ write_status = function()
         'mod=' .. MOD.id,
         'version=' .. MOD.version .. ' author=' .. MOD.author,
         'phase=' .. tostring(state.phase) .. ' frame=' .. tostring(state.frame),
-        'applied=' .. state.applied .. ' re-applied=' .. state.reapplied
-            .. ' refused=' .. state.refused,
-        'rows_appended=' .. tostring(row_count) .. ' passive, ' .. tostring(stat_count) .. ' stat',
-        'records_patched=' .. tostring(#sites),
+        'applied=' .. state.applied .. ' re-applied=' .. state.reapplied .. ' refused=' .. state.refused,
+        'armor passives found=' .. perks_found .. ' of ' .. #CAT_LIST,
+        'loadout=' .. tostring(state.loadout_source) .. ' (panel: ' .. (LOADOUT and LOADOUT.hotkey or 'F7') .. ')',
         'profiles: ' .. summary(),
-        'revision=' .. MOD.version .. '+v4',
         '',
-        'Per-record detail:',
+        'Bingus Shared Loader: see BingusSharedLoader.log first line for loader-vN; API N',
+        'Log: ' .. tostring(ensure_log_path() or '(log path unavailable)'),
+        'Saved loadout: ' .. tostring(save_path() or '(unavailable)'),
     }
-    for i, s in ipairs(sites) do
-        lines[#lines + 1] = string.format('  [%d] record=0x%X block=0x%X', i, s.record, s.block)
-    end
-    lines[#lines + 1] = ''
-    lines[#lines + 1] = 'Bingus Shared Loader: see BingusSharedLoader.log first line for loader-vN; API N'
-    lines[#lines + 1] = 'Log: ' .. tostring(ensure_log_path() or '(log path unavailable)')
-    lines[#lines + 1] = ''
-    lines[#lines + 1] = 'This file is rewritten only when the mod changes state.'
     return write_file(path, table.concat(lines, '\r\n') .. '\r\n')
 end
 
-local function add_site(record, block, prof)
-    for _, s in ipairs(sites) do
-        if s.record == record then return end
-    end
-    local result, before_n, after_n = apply_stack(record, prof)
-    if result == 'applied' or result == 'already' then
-        sites[#sites + 1] = { record = record, block = block, prof = prof }
-        prof.sites = prof.sites + 1
-        state.applied = state.applied + 1
-        log('stacked at ' .. hex(record) .. ' rows ' ..
-            tostring(before_n or '?') .. ' -> ' .. tostring(after_n or '?'))
-    else
-        state.refused = state.refused + 1
-        log('record at ' .. hex(record) .. ' left alone: ' .. tostring(result))
-    end
+-- The panel calls this after every change: apply at once, save a moment later.
+local function loadout_changed(perks)
+    for _, perk in ipairs(perks or {}) do apply_perk(perk) end
+    if not perks then apply_all() end
+    save_at = (api.now and api.now() or os.clock()) + SAVE_DELAY_SECONDS
+    pcall(write_status)
 end
 
 -- ---------------------------------------------------------------- scanning
@@ -648,10 +913,7 @@ local function handle_block(address)
     -- read the payload only, so our own copy carries no LDLD header for a later sweep
     local blob = api.read(address + HEADER_BYTES, payload)
     if not blob then return end
-    local prof = locate_perk(blob)
-    if prof then
-        add_site(address + HEADER_BYTES, address, prof)
-    end
+    capture(address + HEADER_BYTES, address, blob)
 end
 
 local function scan_chunk(addr, size)
@@ -716,110 +978,36 @@ local function scan_step()
 end
 
 -- ---------------------------------------------------------------- keeping values applied
+-- Re-applies when the game reloads a record (or another mod edits its inline rows).
 local function enforce()
-    local kept = {}
+    local kept, gone = {}, false
     for _, site in ipairs(sites) do
-        local header = api.read(site.block, HEADER_BYTES)
-        if header and header:sub(1, 8) == NEEDLE and u32(header, 8) == MOD.type_passive then
-            local result = apply_stack(site.record, site.prof)
-            if result == 'applied' then
-                state.reapplied = state.reapplied + 1
-                log('was changed by something else; restacked at ' .. hex(site.record))
-                pcall(flush_log)
-            elseif result ~= 'already' then
-                log('no longer fits: ' .. tostring(result))
-            end
+        if site_intact(site) then
             kept[#kept + 1] = site
         else
-            log('perk table at ' .. hex(site.block) .. ' is gone')
-            site.prof.sites = site.prof.sites - 1
+            gone = true
+            log(CAT[site.perk].name .. ': perk table at ' .. hex(site.block) .. ' is gone')
         end
     end
-    sites = kept
-end
-
--- ---------------------------------------------------------------- tick
-local BUS = nil
-local next_action = 0
-
-local function tick()
-    state.frame = state.frame + 1
-    if state.frame < START_FRAME or state.phase == 'gave_up' then return end
-    local now = os.time()
-
-    if state.phase == 'searching' then
-        local ok, finished = pcall(scan_step)
-        if not ok then
-            set_status('gave_up', 'scan error: ' .. tostring(finished))
-            if BUS then BUS.jobs[MOD.global] = nil end
-            return
+    if gone then
+        sites, sites_by_perk, perks_found = kept, {}, 0
+        for _, s in ipairs(kept) do
+            if not sites_by_perk[s.perk] then sites_by_perk[s.perk] = {}; perks_found = perks_found + 1 end
+            local list = sites_by_perk[s.perk]
+            list[#list + 1] = s
         end
-        if not finished then return end
-        if complete() then
-            set_status(MOD.retire and 'done' or 'active', 'perk stacked (' .. summary() .. ')')
-            next_action = now + ENFORCE_SECONDS
-        elseif state.rounds >= MAX_ROUNDS then
-            set_status(MOD.retire and 'done' or 'active', 'perk not found (' .. summary() .. ')')
-            next_action = now + ENFORCE_SECONDS
-        end
-        if state.phase == 'done' then
-            if BUS then BUS.jobs[MOD.global] = nil end
-            return
-        end
-        if state.phase ~= 'active' then
-            set_status('waiting', 'round ' .. state.rounds .. ' incomplete (' .. summary() .. ')')
-            next_action = now + ROUND_DELAY_SECONDS
-        end
-        return
     end
-
-    if now < next_action then return end
-    if state.phase == 'active' then
-        pcall(enforce)
-        next_action = now + ENFORCE_SECONDS
-        if complete() or state.rounds >= MAX_ROUNDS then return end
-        state.rounds = 0
+    for perk in pairs(sites_by_perk) do
+        if apply_perk(perk, true) then
+            state.reapplied = state.reapplied + 1
+            log('was changed by something else; re-applied ' .. CAT[perk].name)
+            pcall(flush_log)
+        end
     end
-    begin_round()
-    state.phase = 'searching'
+    return gone
 end
 
--- ---------------------------------------------------------------- startup
-local ok, failure = pcall(function()
-    local loader = rawget(_G, 'CowboyBingusModLoader')
-    assert(type(loader) == 'table' and type(loader.api) == 'number' and loader.api >= 1,
-           'Bingus Shared Loader v15 or newer (API 1) is required')
-    assert(ffi_ok and ffi, 'LuaJIT FFI is unavailable')
-    assert(ffi.abi('64bit'), 'Windows x64 is required')
-    assert(type(update) == 'function', 'the game update hook is unavailable')
-    api = build_api()
-    row_count, stat_count = prepare_rows()
-    alloc_buffers()
-    self_addresses = { api.address_of(NEEDLE) }
-    skip_low = (self_addresses[1] or LUA_HEAP_LIMIT) < LUA_HEAP_LIMIT
-end)
+-- ---------------------------------------------------------------- panel hook
+-- tools/panel.lua (appended after this engine) replaces this with the in-game panel.
+local panel_tick = function(now) end
 
-if not ok then
-    state.phase, state.status = 'gave_up', tostring(failure)
-    print('[' .. MOD.global .. '] ' .. tostring(failure))
-    if api then pcall(flush_log) end
-    return
-end
-
-set_status('starting', 'waiting for the game to settle')
-
-BUS = rawget(_G, 'OCLAW_UPDATE_BUS')
-if not BUS then
-    BUS = { jobs = {}, base = update }
-    if type(BUS.base) ~= 'function' then return end
-    local dispatcher
-    dispatcher = function(...)
-        local ok, first, second = pcall(BUS.base, ...)
-        for _, job in pairs(BUS.jobs) do pcall(job) end
-        if ok then return first, second end
-    end
-    BUS.dispatcher = dispatcher
-    _G.OCLAW_UPDATE_BUS = BUS
-    update = dispatcher
-end
-BUS.jobs[MOD.global] = tick
