@@ -21,6 +21,11 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Mouse clicks and typing work in the panel | ❔ | v4.2 |
 | A change applies without re-equipping the armor | ❔ | v4.2; unknown when the game re-reads passives |
 | Panel save survives a game restart | ❔ | v4.2; offline test passes |
+| Presets tab: load / save / rename / delete | ❔ | v4.4; offline test passes |
+| F9 quick-swap changes build and shows the card | ❔ | v4.4; offline test passes |
+| Undo and Ctrl+Z | ❔ | v4.4; offline test passes |
+| Copy code / Paste code use the Windows clipboard | ❔ | v4.4; clipboard mocked offline |
+| `%` and `+` signs show in the panel font | ❔ | v4.4 |
 | Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Passive Picker leaves that passive alone |
 
 ## Effects

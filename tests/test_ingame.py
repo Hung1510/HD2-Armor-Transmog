@@ -138,10 +138,10 @@ g.click("inc:1")
 ds = [v for m, t, v, _ in g.rows(7) if m == 0xCB814D05]
 check(ds == [f32(1.55)], "+ button raises Democracy Protects death_save 1.5 -> 1.55 live")
 g.click("value:1")
-g.type_text("2")
+g.type_text("100")
 g.key(ENTER)
 ds = [v for m, t, v, _ in g.rows(7) if m == 0xCB814D05]
-check(ds == [2.0], "typing 2 + Enter sets death_save to 2")
+check(ds == [2.0], "typing +100 (%) + Enter sets death_save to x2.0")
 
 g.click("sel:7")
 g.click("value:1")
@@ -191,9 +191,10 @@ check(g3.state[b"loadout_source"] == b"built-in", "a different installed build i
 
 g2.key(F7)
 g2.tick(120)
-g2.click("revert")
-g2.click("revert")
-check(matches(g2, 7, profiles[0]), "Back to installed build restores the preset's rows")
+g2.click("presets")
+g2.click("pre:installed:0")
+g2.click("pload")
+check(matches(g2, 7, profiles[0]), "Presets > Installed build restores the preset's rows")
 
 # ------------------------------------------------------------------ 3. enforcement
 g4 = FakeGame(path, retire=False)

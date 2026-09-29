@@ -35,9 +35,10 @@ ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "panel.lua", "main
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "PassivePickerV4"
 TITLE = "Passive Picker v4"
-VERSION = "4.3"
+VERSION = "4.4"
 AUTHOR = "mostlycloudy (original v3), Hung1510 (v4 edit)"
 DEFAULT_HOTKEY = "F7"
+DEFAULT_SWAP_HOTKEY = "F9"     # F6 = Refresh Operations, F8 = SHODAN Stat Editor
 
 # --------------------------------------------------------------------------- catalog
 # type: 0 Set, 1 Add, 2 Multiply, 3 Time
@@ -216,7 +217,7 @@ def load_config_text(text, source="<loadout>"):
     cp.optionxform = str
     cp.read_string(text, source)
 
-    settings = {"retire": True, "name": None, "hotkey": None}
+    settings = {"retire": True, "name": None, "hotkey": None, "swap_hotkey": None}
     if cp.has_section("settings"):
         s = cp["settings"]
         for k, v in s.items():
@@ -229,11 +230,18 @@ def load_config_text(text, source="<loadout>"):
                 if not re.match(r"^F([1-9]|1[0-2])$", hk):
                     raise ConfigError("[settings]: hotkey must be F1..F12, got '%s'" % v.strip())
                 settings["hotkey"] = hk
+            elif k == "swap_hotkey":
+                hk = v.strip().upper()
+                if not re.match(r"^(F([1-9]|1[0-2])|OFF)$", hk):
+                    raise ConfigError("[settings]: swap_hotkey must be F1..F12 or off, got '%s'" % v.strip())
+                settings["swap_hotkey"] = hk
             elif k == "base":
                 pass            # written by the in-game panel; only the game reads it
             else:
                 raise ConfigError("[settings]: unknown key '%s'" % k)
 
+    if settings["swap_hotkey"] and settings["swap_hotkey"] == (settings["hotkey"] or DEFAULT_HOTKEY):
+        raise ConfigError("[settings]: swap_hotkey and hotkey must be different keys")
     profiles = []
     for sec in cp.sections():
         if sec == "settings":
@@ -461,6 +469,7 @@ def generate_lua(settings, profiles):
     L.append("    name = %s," % lua_str(settings["name"] or TITLE))
     L.append("    retire = %s," % ("true" if settings["retire"] else "false"))
     L.append("    hotkey = '%s'," % (settings.get("hotkey") or DEFAULT_HOTKEY))
+    L.append("    swap_hotkey = '%s'," % (settings.get("swap_hotkey") or DEFAULT_SWAP_HOTKEY))
     L.append("    type_passive = 0x63CE0FEB,   -- HelldiverCustomizationPassiveBonusSettings")
     L.append("    type_kit     = 0xD9A55AA0,   -- HelldiverCustomizationKit")
     L.append("    -- the loadout this build starts with; the in-game panel starts from it")
@@ -484,9 +493,33 @@ def generate_lua(settings, profiles):
         L.append("            },")
         L.append("        },")
     L.append("    },")
+    L.append("    -- built-in presets: the panel's Presets tab and the quick-swap key")
+    L.append("    presets = {")
+    for name, text in builtin_presets():
+        L.append("        { name = %s, text = [==[" % lua_str(name))
+        L.append(text.rstrip("\n"))
+        L.append("]==] },")
+    L.append("    },")
     L.append("}")
     L.append("")
     return "\n".join(L) + "\n" + engine_text()
+
+
+PRESET_NAME = re.compile(r"^[ \t]*name[ \t]*=[ \t]*([^;#\r\n]+)", re.M)
+
+
+def builtin_presets():
+    """[(name, ini text)] from presets/*.ini, in file order (same rule in docs/core.js)."""
+    out = []
+    for path in preset_files(os.path.join(os.path.dirname(HERE), "presets")):
+        with open(path, encoding="utf-8") as f:
+            text = f.read().replace("\r\n", "\n")
+        m = PRESET_NAME.search(text)
+        name = m.group(1).strip() if m else os.path.splitext(os.path.basename(path))[0]
+        if "]==]" in text:
+            raise ConfigError("%s contains ']==]', which the Lua long string cannot hold" % path)
+        out.append((name, text))
+    return out
 
 
 # --------------------------------------------------------------------------- archive
@@ -732,7 +765,7 @@ def cmd_export_web(args):
     root = os.path.dirname(HERE)
     data = {
         "mod_id": MOD_ID, "global": GLOBAL, "title": TITLE, "version": VERSION,
-        "default_hotkey": DEFAULT_HOTKEY,
+        "default_hotkey": DEFAULT_HOTKEY, "default_swap_hotkey": DEFAULT_SWAP_HOTKEY,
         "author": AUTHOR, "credit": CREDIT, "guid": str(uuid.uuid5(GUID_NS, MOD_ID)),
         "catalog": [{"id": pid, "name": n, "rows": [list(r) for r in rows],
                      "stats": [list(s) for s in stats]}
@@ -918,6 +951,7 @@ def cmd_init(args):
     L.append("name   = My Passive Stack   ; name shown in the mod manager")
     L.append("retire = true               ; true: patch once. false: re-check every 5s")
     L.append("hotkey = F7                 ; opens the in-game panel (F1..F12)")
+    L.append("swap_hotkey = F9            ; cycles your presets in game (F1..F12 or off)")
     L.append("")
     L.append("; One [profile: <passive>] per armour passive you want to boost.")
     L.append("; Wear armour that HAS that passive and it gets everything set 'on'.")

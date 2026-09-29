@@ -29,6 +29,9 @@ jobs:
       - name: Engine + in-game panel against a fake game (LuaJIT)
         run: python tests/test_ingame.py
 
+      - name: Panel presets, quick-swap, undo, share codes, units
+        run: python tests/test_panel_features.py
+
       - name: Web builder produces identical bytes to Python
         run: node tests/test_web_parity.js
 

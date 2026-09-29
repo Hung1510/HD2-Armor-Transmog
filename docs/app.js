@@ -40,13 +40,13 @@
   }
 
   function blankProfile(perk) { return { perk, conflicts: "stack", enabled: [], tweaks: {} }; }
-  function blankState() { return { name: "My Passive Stack", retire: true, hotkey: "F7", profiles: [blankProfile(7)] }; }
+  function blankState() { return { name: "My Passive Stack", retire: true, hotkey: "F7", swap_hotkey: "F9", profiles: [blankProfile(7)] }; }
 
   // tweaks on passives that are off are kept in state (so toggling back restores them)
   // but left out of the ini so they don't produce "ignored" notes
   function effectiveState() {
     return {
-      name: state.name, retire: state.retire, hotkey: state.hotkey,
+      name: state.name, retire: state.retire, hotkey: state.hotkey, swap_hotkey: state.swap_hotkey,
       profiles: state.profiles.map((p) => {
         const tw = {};
         for (const [k, v] of Object.entries(p.tweaks)) {
@@ -191,6 +191,7 @@
   function render() {
     $("modName").value = state.name;
     $("hotkeySel").value = state.hotkey || "F7";
+    $("swapSel").value = state.swap_hotkey || "F9";
     renderTabs();
     renderProfile();
     compile();
@@ -200,6 +201,7 @@
   function bind() {
     $("modName").addEventListener("input", (e) => { state.name = e.target.value; compile(); });
     $("hotkeySel").addEventListener("change", (e) => { state.hotkey = e.target.value; compile(); });
+    $("swapSel").addEventListener("change", (e) => { state.swap_hotkey = e.target.value; compile(); });
 
     $("presetSel").addEventListener("change", (e) => {
       const p = data.presets.find((x) => x.file === e.target.value);

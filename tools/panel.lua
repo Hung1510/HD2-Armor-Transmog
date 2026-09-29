@@ -3,18 +3,34 @@
 -- v1.4.1 by SHODAN (public domain / Unlicense, https://github.com/SHODAN-HORAI/SHODAN-Stat-Editor),
 -- adapted for armor passives. Hotkey F7 by default (loadout.ini: [settings] hotkey = F7).
 --
--- Layout: armor tabs across the top (one per stack); on the left every passive with a
--- tick box (ticked = stacked onto this armor); on the right the chosen passive's values
--- with -- - + ++ and reset, or click a value to type it. Every change applies at once
--- and is saved to PassivePicker\loadout.ini.
+-- Layout: armor tabs across the top (one per stack) and a Presets tab; on the left every
+-- passive with an on/off switch; on the right the chosen passive's values in plain units
+-- (75% resist, +30%, +50 armor) with -- - + ++ and reset, or click a value to type it.
+-- Every change applies at once and is saved to PassivePicker\loadout.ini.
+-- Quick-swap key (F9 by default) cycles presets without opening the panel.
+
+-- The whole panel lives in one function: Lua allows 200 locals per function, and the
+-- engine above uses most of the main chunk's. panel_tick / setup_panel are the way in.
+local setup_panel
+local function build_panel()
 
 local sr, input = nil, nil
 local VK = { Up = 0x26, Down = 0x28, Left = 0x25, Right = 0x27, PageUp = 0x21, PageDown = 0x22,
              Delete = 0x2E, Shift = 0x10, Enter = 0x0D, Backspace = 0x08, Escape = 0x1B, Ctrl = 0x11 }
 for n = 1, 12 do VK['F' .. n] = 0x6F + n end
+-- typing a value: digits, decimal point, sign
 local DIGIT_KEYS = {}
 for n = 0, 9 do DIGIT_KEYS[#DIGIT_KEYS + 1] = { 0x30 + n, tostring(n) }; DIGIT_KEYS[#DIGIT_KEYS + 1] = { 0x60 + n, tostring(n) } end
-for _, k in ipairs({ { 0xBE, '.' }, { 0x6E, '.' }, { 0xBC, '.' }, { 0xBD, '-' }, { 0x6D, '-' } }) do DIGIT_KEYS[#DIGIT_KEYS + 1] = k end
+for _, k in ipairs({ { 0xBE, '.' }, { 0x6E, '.' }, { 0xBC, '.' }, { 0xBD, '-' }, { 0x6D, '-' },
+                     { 0x6B, '+' }, { 0xBB, '+' } }) do DIGIT_KEYS[#DIGIT_KEYS + 1] = k end
+-- typing a preset name: letters (Shift = capital), digits, space, - and _
+local NAME_KEYS = {}
+for c = 0x41, 0x5A do NAME_KEYS[#NAME_KEYS + 1] = { c, string.char(c + 32), string.char(c) } end
+for n = 0, 9 do
+    NAME_KEYS[#NAME_KEYS + 1] = { 0x30 + n, tostring(n), tostring(n) }
+    NAME_KEYS[#NAME_KEYS + 1] = { 0x60 + n, tostring(n), tostring(n) }
+end
+for _, k in ipairs({ { 0x20, ' ', ' ' }, { 0xBD, '-', '_' }, { 0x6D, '-', '-' } }) do NAME_KEYS[#NAME_KEYS + 1] = k end
 
 -- ---------------------------------------------------------------- windows input
 local function build_input()
@@ -29,9 +45,18 @@ local function build_input()
         'int ShowCursor(int show);',
         'int ClipCursor(const void *rect);',
         'int GetClipCursor(void *rect);',
+        'int OpenClipboard(void *owner);',
+        'int CloseClipboard(void);',
+        'int EmptyClipboard(void);',
+        'void *SetClipboardData(uint32_t format, void *data);',
+        'void *GetClipboardData(uint32_t format);',
+        'void *GlobalAlloc(uint32_t flags, size_t bytes);',
+        'void *GlobalLock(void *mem);',
+        'int GlobalUnlock(void *mem);',
     }) do pcall(ffi.cdef, declaration) end
     local user = ffi.load('user32')
-    local own_pid = ffi.load('kernel32').GetCurrentProcessId()
+    local kernel = ffi.load('kernel32')
+    local own_pid = kernel.GetCurrentProcessId()
     local point, rect, pid = ffi.new('int32_t[2]'), ffi.new('int32_t[4]'), ffi.new('uint32_t[1]')
     local self = {}
     function self.window()
@@ -58,19 +83,55 @@ local function build_input()
         return r
     end
     function self.set_clip(r) user.ClipCursor(r and ffi.cast('const void *', r) or nil) end
+    -- Windows clipboard, plain text (share codes are ASCII)
+    function self.set_clipboard(text)
+        if user.OpenClipboard(nil) == 0 then return false end
+        local ok = false
+        user.EmptyClipboard()
+        local h = kernel.GlobalAlloc(0x0002, #text + 1)          -- GMEM_MOVEABLE
+        if h ~= nil then
+            local p = kernel.GlobalLock(h)
+            if p ~= nil then
+                ffi.copy(p, text)                                 -- copies the terminating 0 too
+                kernel.GlobalUnlock(h)
+                ok = user.SetClipboardData(1, h) ~= nil           -- CF_TEXT
+            end
+        end
+        user.CloseClipboard()
+        return ok
+    end
+    function self.get_clipboard()
+        if user.OpenClipboard(nil) == 0 then return nil end
+        local text = nil
+        local h = user.GetClipboardData(1)
+        if h ~= nil then
+            local p = kernel.GlobalLock(h)
+            if p ~= nil then
+                text = ffi.string(p)
+                kernel.GlobalUnlock(h)
+            end
+        end
+        user.CloseClipboard()
+        return text
+    end
     return self
 end
 
 -- ---------------------------------------------------------------- state
 local ui = { open = false, tab = 1, sel = nil, hover = nil, gui = nil, world = nil, signature = nil,
              regions = {}, version = 0, errors = 0, value = nil, adding = false, message = nil,
-             confirm = nil }
+             confirm = nil, presets = false, psel = nil, naming = nil, history = {}, last_text = nil,
+             swap_at = 0 }
 local W, H = 1000, 940
 local font = nil
 local held, mouse_was_down, armed = {}, nil, nil
-local hotkey_was_down = false
+local keys_was = {}          -- hotkeys: pressed this frame but not last
+local toast = { text = nil, sub = nil, till = 0, gui = nil, world = nil }
+-- presets, share codes and units live in one table to keep the chunk's local count low
+local PP = { user = nil }
 
 local function hotkey() return (LOADOUT and LOADOUT.hotkey) or MOD.hotkey or 'F7' end
+local function swap_key() return (LOADOUT and LOADOUT.swap_hotkey) or MOD.swap_hotkey or 'F9' end
 local function now_s() return api.now() end
 
 local function say(text, seconds)
@@ -91,17 +152,7 @@ local function value_of(p, pid, e)
     return v
 end
 
-local function steps(e)
-    if e.type == 0 then return 1, 1 end
-    if e.type == 3 then return 0.5, 2 end
-    if e.type == 1 then
-        if math.abs(e.def) >= 10 then return 5, 20 end
-        if e.key == 'armor_rating' then return 0.1, 0.5 end
-        return 1, 2
-    end
-    return 0.05, 0.25
-end
-
+-- raw value limits (what the game gets)
 local function limits(e)
     if e.type == 2 then return 0, 20 end
     if e.type == 3 then return 0, 600 end
@@ -115,20 +166,6 @@ local function fmt(v)
     return (string.format('%.2f', v):gsub('0+$', ''):gsub('%.$', ''))
 end
 
-local function meaning(e, v)
-    if e.type == 2 then
-        if v == 0 then return 'x0 (removes it)' end
-        local pct = math.floor((v - 1) * 1000 + 0.5) / 10
-        return 'x' .. fmt(v) .. ' (' .. (pct >= 0 and '+' or '') .. fmt(pct) .. '%)'
-    end
-    if e.type == 1 then
-        if e.key == 'armor_rating' then return '+' .. fmt(v) .. ' (about +' .. fmt(math.floor(v * 50 + 0.5)) .. ' armor)' end
-        return (v >= 0 and '+' or '') .. fmt(v)
-    end
-    if e.type == 3 then return fmt(v) .. ' s' end
-    return 'set to ' .. fmt(v)
-end
-
 local function label_of(e)
     local s = e.key:gsub('^stat_', ''):gsub('_', ' ')
     s = s:sub(1, 1):upper() .. s:sub(2)
@@ -136,11 +173,94 @@ local function label_of(e)
     return s
 end
 
--- ---------------------------------------------------------------- changes
+-- ---------------------------------------------------------------- plain-language units
+-- The game stores multipliers (x0.25), additions (+1.0 armor = +50) and seconds. The
+-- panel shows and edits what they mean: 75% resist, +30%, +50 armor, +2, 2 s.
+function PP.unit(e)
+    if e.kind == 'stat' then return 'pct' end
+    if e.type == 2 then return e.key:find('_damage_taken$') and 'resist' or 'pct' end
+    if e.type == 1 then return e.key == 'armor_rating' and 'armor' or 'count' end
+    if e.type == 3 then return 'time' end
+    return 'set'
+end
+function PP.to_friendly(u, v)
+    if u == 'resist' then return (1 - v) * 100 end
+    if u == 'pct' then return (v - 1) * 100 end
+    if u == 'armor' then return v * 50 end
+    return v
+end
+function PP.from_friendly(u, f)
+    if u == 'resist' then return 1 - f / 100 end
+    if u == 'pct' then return 1 + f / 100 end
+    if u == 'armor' then return f / 50 end
+    return f
+end
+function PP.steps(u)
+    if u == 'time' then return 0.5, 2 end
+    if u == 'set' then return 1, 1 end
+    if u == 'count' then return 1, 5 end
+    return 5, 25                     -- percent and armor points
+end
+local function round1(x) return math.floor(x * 10 + 0.5) / 10 end
+-- the value as shown in the box
+function PP.text(e, v)
+    local u = PP.unit(e)
+    local f = round1(PP.to_friendly(u, v))
+    local sign = f >= 0 and '+' or ''
+    if u == 'resist' then return fmt(f) .. '%' end
+    if u == 'pct' then return sign .. fmt(f) .. '%' end
+    if u == 'armor' or u == 'count' then return sign .. fmt(f) end
+    if u == 'time' then return fmt(f) .. ' s' end
+    return fmt(f)
+end
+-- what the number means, under the label
+PP.WHAT = { resist = 'damage resist (100% = none taken)', pct = 'change from normal',
+            armor = 'armor rating', count = 'extra', time = 'seconds', set = 'value (flag)' }
+function PP.raw_text(e, v)
+    if e.type == 2 or e.kind == 'stat' then return 'x' .. fmt(v) end
+    if e.type == 1 then return (v >= 0 and '+' or '') .. fmt(v) end
+    if e.type == 3 then return fmt(v) .. ' s' end
+    return '= ' .. fmt(v)
+end
+
+-- ---------------------------------------------------------------- changes and undo
+-- Every change goes through changed(): the loadout as it was is pushed on the undo list,
+-- the game is updated, and the file is saved a moment later.
+local function snapshot() return serialize(LOADOUT, nil) end
+
 local function changed(perk, text)
+    local now_text = snapshot()
+    if ui.last_text and ui.last_text ~= now_text then
+        ui.history[#ui.history + 1] = ui.last_text
+        if #ui.history > 30 then table.remove(ui.history, 1) end
+    end
+    ui.last_text = now_text
     ui.version = ui.version + 1
     loadout_changed(perk and { perk } or nil)
     if text then say(text) end
+end
+
+-- Swap in a whole loadout (preset, share code, undo). The player's own keys and
+-- retire setting stay unless `exact` (undo).
+function PP.replace(l, text, exact)
+    if not exact and LOADOUT then
+        l.hotkey, l.swap_hotkey, l.retire = LOADOUT.hotkey, LOADOUT.swap_hotkey, LOADOUT.retire
+    end
+    l.name = l.name or (LOADOUT and LOADOUT.name) or MOD.title
+    l.hotkey, l.swap_hotkey = l.hotkey or MOD.hotkey or 'F7', l.swap_hotkey or MOD.swap_hotkey or 'F9'
+    if l.retire == nil then l.retire = MOD.retire end
+    LOADOUT = l
+    ui.tab, ui.sel, ui.value, ui.adding = 1, nil, nil, false
+    changed(nil, text)
+end
+
+function PP.undo()
+    local prev = table.remove(ui.history)
+    if not prev then say('Nothing to undo'); return end
+    local ok, l = pcall(parse_loadout, prev)
+    if not ok or not l then say('Could not undo'); return end
+    ui.last_text = nil                      -- an undo is not itself undoable
+    PP.replace(l, 'Undone (' .. #ui.history .. ' more)', true)
 end
 
 local function set_value(p, pid, e, v)
@@ -163,12 +283,184 @@ local function finish_value(keep)
     ui.value = nil
     ui.version = ui.version + 1
     if not keep or not v then return end
-    local n = tonumber((v.text:gsub(',', '.')))
+    local n = tonumber((v.text:gsub(',', '.'):gsub('^%+', '')))
     local p = current()
     if not n or not p then say('Not a number: ' .. v.text); return end
     local c = CAT[v.pid]
     local e = c and c.effects[v.n]
-    if e then set_value(p, v.pid, e, n) end
+    if e then set_value(p, v.pid, e, PP.from_friendly(PP.unit(e), n)) end
+end
+
+-- ---------------------------------------------------------------- share codes
+-- A code is the web builder's share link: the loadout as base64url after #ini=. It opens
+-- in the web builder, and Paste code reads it (or the bare code, or plain loadout text).
+PP.SITE = 'https://hung1510.github.io/HD2-Armor-Transmog/#ini='
+local B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+
+function PP.b64(s)
+    local out = {}
+    for i = 1, #s, 3 do
+        local a, b, c = s:byte(i, i + 2)
+        local n = a * 65536 + (b or 0) * 256 + (c or 0)
+        local d = { math.floor(n / 262144) % 64, math.floor(n / 4096) % 64, math.floor(n / 64) % 64, n % 64 }
+        local keep = c and 4 or b and 3 or 2
+        for k = 1, keep do out[#out + 1] = B64:sub(d[k] + 1, d[k] + 1) end
+    end
+    return table.concat(out)
+end
+
+function PP.unb64(s)
+    local map = {}
+    for i = 1, 64 do map[B64:byte(i)] = i - 1 end
+    map[43], map[47] = 62, 63                         -- '+' '/' (standard alphabet) too
+    s = s:gsub('[=%s]', '')
+    local out = {}
+    for i = 1, #s, 4 do
+        local chunk = s:sub(i, i + 3)
+        if #chunk == 1 then return nil end
+        local n = 0
+        for j = 1, 4 do
+            local v = 0
+            if j <= #chunk then
+                v = map[chunk:byte(j)]
+                if not v then return nil end
+            end
+            n = n * 64 + v
+        end
+        local bytes = { math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256 }
+        for k = 1, #chunk - 1 do out[#out + 1] = string.char(bytes[k]) end
+    end
+    return table.concat(out)
+end
+
+function PP.copy_code()
+    local code = PP.SITE .. PP.b64(snapshot())
+    local ok = input.set_clipboard and input.set_clipboard(code)
+    say(ok and 'Share code copied: paste it in the web builder, or a friend\'s panel' or 'Could not use the clipboard', 4)
+    return code
+end
+
+function PP.paste_code()
+    local clip = input.get_clipboard and input.get_clipboard()
+    if not clip or clip == '' then say('The clipboard is empty'); return end
+    local text
+    if clip:find('%[[Pp]rofile') then
+        text = clip
+    else
+        local code = clip:match('#ini=([%w%-_]+)') or clip:match('^%s*([%w%-_]+)%s*$')
+        text = code and PP.unb64(code)
+    end
+    local ok, l = pcall(parse_loadout, text or '')
+    if not text or not ok or not l or #l.profiles == 0 then
+        say('No Passive Picker code on the clipboard', 4)
+        return
+    end
+    PP.replace(l, 'Loaded the pasted code: ' .. tostring(l.name or 'loadout'))
+end
+
+-- ---------------------------------------------------------------- presets
+-- Built-in presets come with the build (MOD.presets); the player's own are kept in
+-- PassivePicker\my-presets.txt as blocks of loadout text.
+function PP.user_path()
+    local dir = data_dir('PassivePicker')
+    return dir and (dir .. '/my-presets.txt') or nil
+end
+
+function PP.load_user()
+    PP.user = {}
+    local text = read_file(PP.user_path())
+    if not text then return end
+    local name, lines = nil, nil
+    for line in (text .. '\n'):gmatch('([^\n]*)\n') do
+        line = line:gsub('\r$', '')
+        local n = line:match('^### preset: (.+)$')
+        if n then name, lines = n, {}
+        elseif line == '### end' and name then
+            PP.user[#PP.user + 1] = { name = name, text = table.concat(lines, '\n') .. '\n' }
+            name, lines = nil, nil
+        elseif lines then lines[#lines + 1] = line end
+    end
+end
+
+function PP.save_user()
+    local path = PP.user_path()
+    if not path then return false end
+    local L = { '; Passive Picker: your presets, saved by the in-game panel.', '' }
+    for _, p in ipairs(PP.user) do
+        L[#L + 1] = '### preset: ' .. p.name
+        L[#L + 1] = (p.text:gsub('\r', ''):gsub('\n+$', ''))
+        L[#L + 1] = '### end'
+        L[#L + 1] = ''
+    end
+    return write_file(path, table.concat(L, '\r\n'))
+end
+
+-- the list shown in the Presets tab: { kind = 'installed' | 'builtin' | 'user', i, name }
+function PP.entries()
+    if not PP.user then PP.load_user() end
+    local list = { { kind = 'installed', i = 0, name = 'Installed build' } }
+    for i, p in ipairs(MOD.presets or {}) do list[#list + 1] = { kind = 'builtin', i = i, name = p.name } end
+    for i, p in ipairs(PP.user) do list[#list + 1] = { kind = 'user', i = i, name = p.name } end
+    return list
+end
+
+function PP.loadout_of(entry)
+    if entry.kind == 'installed' then return default_loadout() end
+    local src = entry.kind == 'builtin' and (MOD.presets or {})[entry.i] or PP.user[entry.i]
+    if not src then return nil end
+    local ok, l = pcall(parse_loadout, src.text)
+    if ok and l and #l.profiles > 0 then
+        l.name = entry.kind == 'user' and src.name or l.name or src.name
+        return l
+    end
+    return nil
+end
+
+function PP.load(entry)
+    local l = PP.loadout_of(entry)
+    if not l then say('That preset could not be read'); return end
+    PP.replace(l, 'Loaded ' .. entry.name)
+end
+
+-- quick-swap cycles your own presets, or the built-in ones when you have none
+function PP.cycle_list()
+    if not PP.user then PP.load_user() end
+    local list = {}
+    if #PP.user > 0 then
+        for i, p in ipairs(PP.user) do list[#list + 1] = { kind = 'user', i = i, name = p.name } end
+    else
+        for i, p in ipairs(MOD.presets or {}) do list[#list + 1] = { kind = 'builtin', i = i, name = p.name } end
+    end
+    return list
+end
+
+function PP.swap()
+    local list = PP.cycle_list()
+    if #list == 0 then return end
+    ui.swap_index = (ui.swap_index or 0) % #list + 1
+    local entry = list[ui.swap_index]
+    PP.load(entry)
+    toast.text, toast.sub = entry.name, (#PP.user > 0 and 'your preset ' or 'preset ') .. ui.swap_index .. ' of ' .. #list
+    toast.till = now_s() + 2.2
+    if toast.gui then pcall(sr.World.destroy_gui, toast.world, toast.gui) end
+    toast.gui, toast.world = nil, nil
+end
+
+function PP.summary(l)
+    local out = {}
+    for _, p in ipairs(l and l.profiles or {}) do
+        local names = {}
+        for _, c in ipairs(CAT_LIST) do if p.enabled[c.id] and c.id ~= p.perk then names[#names + 1] = c.name end end
+        local tweaks = 0
+        for _ in pairs(p.tweaks) do tweaks = tweaks + 1 end
+        out[#out + 1] = { armor = CAT[p.perk].name, names = names, tweaks = tweaks, policy = p.conflicts }
+    end
+    return out
+end
+
+function PP.clean_name(s)
+    s = (s or ''):gsub('[#\r\n]', ''):gsub('^%s+', ''):gsub('%s+$', '')
+    return s ~= '' and s:sub(1, 28) or nil
 end
 
 -- ---------------------------------------------------------------- font (from SHODAN v1.4.1)
@@ -238,11 +530,12 @@ local function clear_gui()
     ui.gui, ui.world, ui.signature, ui.regions = nil, nil, nil, {}
 end
 
+
 -- ---------------------------------------------------------------- draw
 -- Passive Picker's own look (matches the mod icon and the web builder): a yellow header
--- with a hazard stripe, toggle switches, underlined armor tabs, value cards with an
--- accent bar when changed. Coordinates are panel units from the top left; the gui
--- counts pixels from the bottom left.
+-- with a hazard stripe, toggle switches, underlined tabs, value cards with an accent bar
+-- when changed. Coordinates are panel units from the top left; the gui counts pixels
+-- from the bottom left.
 local function draw(width, height)
     local Gui, Vector3, Vector2, Color = sr.Gui, sr.Vector3, sr.Vector2, sr.Color
     local s = height / 1080 * 0.8
@@ -260,11 +553,12 @@ local function draw(width, height)
         end
         return nil
     end
-    local BG, CARD, CARD_HI = color(15, 17, 21, 238), color(25, 29, 36), color(33, 39, 48)
-    local LINE, TEXT, MUTED, DIM = color(46, 52, 62), color(232, 230, 223), color(154, 160, 170), color(98, 104, 114)
-    local ACCENT, INK = color(244, 210, 31), color(20, 20, 20)
-    local ACCENT_SOFT = color(244, 210, 31, 40)
-    local GOOD, WARN = color(95, 208, 138), color(240, 163, 58)
+    local C = {
+        BG = color(15, 17, 21, 238), CARD = color(25, 29, 36), CARD_HI = color(33, 39, 48),
+        LINE = color(46, 52, 62), TEXT = color(232, 230, 223), MUTED = color(154, 160, 170), DIM = color(98, 104, 114),
+        ACCENT = color(244, 210, 31), INK = color(20, 20, 20), SOFT = color(244, 210, 31, 40),
+        GOOD = color(95, 208, 138), WARN = color(240, 163, 58), SIDE = color(19, 22, 27, 240),
+    }
 
     local function rect(x, y, w, h, c, z)
         Gui.rect(gui, Vector3(ox + x * s, height - oy - (y + h) * s, z or 951), Vector2(w * s, h * s), c)
@@ -284,7 +578,7 @@ local function draw(width, height)
             if limit and measure > limit * s then size = size * limit * s / measure; measure = limit * s end
             if align_right then px = px - measure end
         end
-        Gui.text(gui, value, ink_font, size, ink_material, Vector3(px, height - oy - y * s - size * 0.8, 954), c or TEXT)
+        Gui.text(gui, value, ink_font, size, ink_material, Vector3(px, height - oy - y * s - size * 0.8, 954), c or C.TEXT)
     end
     local function border(x, y, w, h, c, z)
         rect(x, y, w, 1, c, z or 952); rect(x, y + h - 1, w, 1, c, z or 952)
@@ -298,231 +592,302 @@ local function draw(width, height)
     local function button(key, label, x, y, w, h, enabled, filled, ink)
         local hovered = ui.hover == key and enabled ~= false
         if filled then
-            rect(x, y, w, h, hovered and color(255, 226, 70) or ACCENT, 951)
+            rect(x, y, w, h, hovered and color(255, 226, 70) or C.ACCENT, 951)
         else
-            rect(x, y, w, h, hovered and CARD_HI or CARD, 951)
-            border(x, y, w, h, enabled == false and LINE or hovered and ACCENT or LINE)
+            rect(x, y, w, h, hovered and C.CARD_HI or C.CARD, 951)
+            border(x, y, w, h, enabled == false and C.LINE or hovered and C.ACCENT or C.LINE)
         end
-        local c = enabled == false and DIM or filled and INK or ink or TEXT
+        local c = enabled == false and C.DIM or filled and C.INK or ink or C.TEXT
         text(label, x + 10, y + (h - 15) / 2, 15, c, w - 16)
         region(key, x, y, w, h, enabled)
     end
-    -- toggle switch: track + knob, knob right and yellow when on
     local function switch(key, x, y, on, enabled)
         local hovered = ui.hover == key
-        rect(x, y, 32, 16, on and ACCENT or (hovered and color(70, 78, 90) or LINE), 952)
-        rect(on and (x + 18) or (x + 2), y + 2, 12, 12, on and INK or (hovered and TEXT or MUTED), 953)
+        rect(x, y, 32, 16, on and C.ACCENT or (hovered and color(70, 78, 90) or C.LINE), 952)
+        rect(on and (x + 18) or (x + 2), y + 2, 12, 12, on and C.INK or (hovered and C.TEXT or C.MUTED), 953)
         region(key, x - 4, y - 4, 40, 24, enabled)
     end
-    local function small_caps(value, x, y, c) text(value, x, y, 12, c or MUTED) end
+    local function pill(label, x, y, c)
+        rect(x, y, #label * 8 + 16, 18, color(40, 46, 56), 951)
+        text(label, x + 8, y + 3, 11, c)
+        return #label * 8 + 16
+    end
+    local function tab(key, label, x, active, ink)
+        local w = math.min(190, 24 + #label * 8.2)
+        text(label, x, 72, 16, active and C.TEXT or (ui.hover == key and C.TEXT or ink or C.MUTED), w - 8)
+        if active then rect(x, 96, w - 14, 3, C.ACCENT, 952)
+        elseif ui.hover == key then rect(x, 96, w - 14, 1, C.MUTED, 952) end
+        region(key, x - 6, 64, w, 36)
+        return w
+    end
 
     -- frame: dark body, yellow header, hazard stripe
-    rect(0, 0, W, H, BG, 950)
-    rect(0, 0, W, 50, ACCENT, 951)
-    for k = 0, math.floor(W / 24) do
-        rect(k * 24, 50, 12, 6, INK, 952)
-    end
+    rect(0, 0, W, H, C.BG, 950)
+    rect(0, 0, W, 50, C.ACCENT, 951)
+    for k = 0, math.floor(W / 24) do rect(k * 24, 50, 12, 6, C.INK, 952) end
     rect(0, 50, W, 6, color(200, 170, 20), 951)
-    border(0, 0, W, H, LINE, 955)
+    border(0, 0, W, H, C.LINE, 955)
     region('panel', 0, 0, W, H, false)
-    text('PASSIVE PICKER', 18, 13, 24, INK)
+    text('PASSIVE PICKER', 18, 13, 24, C.INK)
     text('armor passive stacker  v' .. tostring(MOD.version), 238, 20, 14, color(70, 60, 10))
-    text(hotkey() .. ' to close', W - 18, 18, 14, INK, nil, true)
+    text(hotkey() .. ' to close', W - 18, 18, 14, C.INK, nil, true)
 
     if state.phase ~= 'ready' then
-        text('Reading the game\'s armor passives... (' .. perks_found .. ' of ' .. #CAT_LIST .. ' found)', 22, 84, 18, TEXT)
-        text('Load into your ship or a mission if this does not finish.', 22, 112, 15, MUTED)
+        text('Reading the game\'s armor passives... (' .. perks_found .. ' of ' .. #CAT_LIST .. ' found)', 22, 84, 18, C.TEXT)
+        text('Load into your ship or a mission if this does not finish.', 22, 112, 15, C.MUTED)
         return regions
     end
 
-    -- armor tabs: underlined text, one per stack
+    -- tabs: one per armor stack, + Armor, Presets
     local p = current()
     local x = 22
     for n, prof in ipairs(LOADOUT.profiles) do
-        local label = CAT[prof.perk].name .. ' armor'
-        local key = 'tab:' .. n
-        local active = n == ui.tab and not ui.adding
-        local w = math.min(190, 24 + #label * 8.2)
-        text(label, x, 72, 16, active and TEXT or (ui.hover == key and TEXT or MUTED), w - 8)
-        if active then rect(x, 96, w - 14, 3, ACCENT, 952)
-        elseif ui.hover == key then rect(x, 96, w - 14, 1, MUTED, 952) end
-        region(key, x - 6, 64, w, 36)
-        x = x + w
-        if x > W - 340 then break end
+        x = x + tab('tab:' .. n, CAT[prof.perk].name .. ' armor', x, n == ui.tab and not ui.adding and not ui.presets)
+        if x > W - 400 then break end
     end
-    local add_key = 'add'
-    text('+ Armor', x + 4, 72, 16, (ui.adding or ui.hover == add_key) and ACCENT or color(220, 190, 40))
-    if ui.adding then rect(x + 4, 96, 70, 3, ACCENT, 952) end
-    region(add_key, x - 2, 64, 90, 36)
-    if p and not ui.adding then
+    x = x + tab('add', '+ Armor', x + 4, ui.adding, color(220, 190, 40)) + 4
+    tab('presets', 'Presets', x + 8, ui.presets, color(220, 190, 40))
+    if p and not ui.adding and not ui.presets then
         local sure = ui.confirm and ui.confirm.kind == 'remove'
-        local label = sure and 'Click again to remove' or 'Remove this armor'
-        text(label, W - 22, 74, 14, (sure or ui.hover == 'remove') and WARN or DIM, nil, true)
+        text(sure and 'Click again to remove' or 'Remove this armor', W - 22, 74, 14,
+             (sure or ui.hover == 'remove') and C.WARN or C.DIM, nil, true)
         region('remove', W - 22 - 180, 64, 180, 36)
     end
-    rect(0, 100, W, 1, LINE, 951)
+    rect(0, 100, W, 1, C.LINE, 951)
 
-    -- left: passives
     local LX, LW, LY, RH = 0, 336, 112, 25
-    rect(LX, 101, LW, H - 101, color(19, 22, 27, 240), 950)
-    rect(LW, 101, 1, H - 101, LINE, 951)
-    if ui.adding then
-        small_caps('CHOOSE THE ARMOR PASSIVE FOR A NEW STACK', 22, LY, ACCENT)
+    local X0, RW = LW + 22, W - LW - 44
+    rect(LX, 101, LW, H - 101, C.SIDE, 950)
+    rect(LW, 101, 1, H - 101, C.LINE, 951)
+
+    -- ============================================================ Presets tab
+    if ui.presets then
+        local list = PP.entries()
+        local y = LY
+        local function row(entry)
+            local key = 'pre:' .. entry.kind .. ':' .. entry.i
+            local chosen = ui.psel and ui.psel.kind == entry.kind and ui.psel.i == entry.i
+            if chosen then rect(LX, y, LW, RH - 1, C.CARD_HI, 951); rect(LX, y, 3, RH - 1, C.ACCENT, 952)
+            elseif ui.hover == key then rect(LX, y, LW, RH - 1, C.CARD, 951) end
+            local naming = ui.naming and ui.naming.i == entry.i and entry.kind == 'user'
+            if naming then
+                text(ui.naming.text .. '_', 22, y + 5, 15, ui.naming.fresh and C.MUTED or C.ACCENT, LW - 40)
+            else
+                text(entry.name, 22, y + 5, 15, chosen and C.TEXT or C.MUTED, LW - 40)
+            end
+            region(key, LX, y, LW, RH - 1)
+            y = y + RH
+        end
+        text('BUILT IN', 22, y, 12, C.MUTED)
+        y = y + 20
+        for _, entry in ipairs(list) do if entry.kind ~= 'user' then row(entry) end end
+        y = y + 10
+        text('YOUR PRESETS', 22, y, 12, C.MUTED)
+        text(#PP.user .. ' saved', LW - 18, y - 1, 12, #PP.user > 0 and C.ACCENT or C.DIM, nil, true)
+        y = y + 20
+        for _, entry in ipairs(list) do if entry.kind == 'user' then row(entry) end end
+        if #PP.user == 0 then text('None yet. Save the current stack below.', 22, y + 4, 13, C.DIM, LW - 40); y = y + 26 end
+        button('psave', '+ Save current stack', 22, y + 8, 220, 30, true, true)
+
+        -- right: the chosen preset
+        local entry = nil
+        for _, e in ipairs(list) do if ui.psel and e.kind == ui.psel.kind and e.i == ui.psel.i then entry = e end end
+        if not entry then
+            text('Presets', X0, 116, 22, C.TEXT, RW)
+            text('Click a preset on the left to see what it stacks, then load it.', X0, 150, 14, C.MUTED, RW)
+            text('Save your own with "+ Save current stack". ' .. (swap_key() ~= 'OFF' and
+                 (swap_key() .. ' in game cycles through your presets (or the built-in ones).') or ''), X0, 170, 14, C.MUTED, RW)
+        else
+            local l = PP.loadout_of(entry)
+            text(entry.name, X0, 116, 22, C.TEXT, RW)
+            local kind = entry.kind == 'installed' and 'INSTALLED BUILD' or entry.kind == 'builtin' and 'BUILT IN' or 'YOUR PRESET'
+            pill(kind, X0, 146, entry.kind == 'user' and C.ACCENT or C.MUTED)
+            local y2 = 180
+            for _, sm in ipairs(PP.summary(l)) do
+                text(sm.armor .. ' armor', X0, y2, 16, C.TEXT, RW)
+                text(#sm.names .. ' passive(s), ' .. sm.tweaks .. ' value(s) changed, ' ..
+                     (sm.policy == 'strongest' and 'strongest only' or 'stack all'), X0, y2 + 20, 13, C.MUTED, RW)
+                y2 = y2 + 42
+                local line = ''
+                for i, nm in ipairs(sm.names) do
+                    local add = (line == '' and '' or ', ') .. nm
+                    if #line + #add > 70 then
+                        text(line .. ',', X0 + 10, y2, 13, C.DIM, RW - 10); y2 = y2 + 18; line = nm
+                    else line = line .. add end
+                    if i == #sm.names then text(line, X0 + 10, y2, 13, C.DIM, RW - 10); y2 = y2 + 18 end
+                end
+                y2 = y2 + 10
+                if y2 > H - 260 then break end
+            end
+            local by = H - 200
+            rect(X0, by - 12, RW, 1, C.LINE, 951)
+            button('pload', 'Load this preset', X0, by, 190, 32, l ~= nil, true)
+            if entry.kind == 'user' then
+                local sure = ui.confirm and ui.confirm.kind
+                button('pover', sure == 'pover' and 'Click again' or 'Save current here', X0 + 200, by, 170, 32, true)
+                button('pren', 'Rename', X0 + 380, by, 100, 32, true)
+                button('pdel', sure == 'pdel' and 'Click again' or 'Delete', X0 + 490, by, 100, 32, true, false,
+                       sure == 'pdel' and C.WARN or nil)
+                if ui.naming then text('Type a name, Enter to keep it, Esc to cancel.', X0, by + 44, 13, C.ACCENT, RW) end
+            end
+            text('Loading replaces your current stacks (Undo brings them back).', X0, by + 64, 12, C.DIM, RW)
+        end
+
+    -- ============================================================ + Armor
+    elseif ui.adding then
+        text('CHOOSE THE ARMOR PASSIVE FOR A NEW STACK', 22, LY, 12, C.ACCENT)
         local used = {}
         for _, prof in ipairs(LOADOUT.profiles) do used[prof.perk] = true end
         local y = LY + 24
         for _, c in ipairs(CAT_LIST) do
             if not used[c.id] then
                 local key = 'addpick:' .. c.id
-                if ui.hover == key then rect(LX, y, LW, RH - 1, CARD_HI, 951); rect(LX, y, 3, RH - 1, ACCENT, 952) end
-                text(c.name, 22, y + 5, 15, ui.hover == key and TEXT or MUTED, LW - 40)
+                if ui.hover == key then rect(LX, y, LW, RH - 1, C.CARD_HI, 951); rect(LX, y, 3, RH - 1, C.ACCENT, 952) end
+                text(c.name, 22, y + 5, 15, ui.hover == key and C.TEXT or C.MUTED, LW - 40)
                 region(key, LX, y, LW, RH - 1)
                 y = y + RH
             end
         end
         button('addcancel', 'Cancel', 22, H - 48, 110, 30, true)
-        local X1, RW1 = LW + 22, W - LW - 44
-        text('A second stack', X1, 116, 22, TEXT, RW1)
-        text('Each armor passive can carry its own stack. Pick one on the left,', X1, 150, 14, MUTED, RW1)
-        text('then wear any armor that has that passive to get the stack.', X1, 170, 14, MUTED, RW1)
-        text('Example: Med-Kit armor for a tank build, Siege-Ready armor for a gunner build.', X1, 200, 13, DIM, RW1)
+        text('A second stack', X0, 116, 22, C.TEXT, RW)
+        text('Each armor passive can carry its own stack. Pick one on the left,', X0, 150, 14, C.MUTED, RW)
+        text('then wear any armor that has that passive to get the stack.', X0, 170, 14, C.MUTED, RW)
+        text('Example: Med-Kit armor for a tank build, Siege-Ready armor for a gunner build.', X0, 200, 13, C.DIM, RW)
+
     elseif not p then
-        text('No stack yet.', 22, LY + 6, 18, TEXT)
-        text('Click "+ Armor" and pick the armor passive', 22, LY + 36, 14, MUTED, LW - 40)
-        text('your armor has (e.g. Med-Kit).', 22, LY + 54, 14, MUTED, LW - 40)
+        text('No stack yet.', 22, LY + 6, 18, C.TEXT)
+        text('Click "+ Armor", or load one from Presets.', 22, LY + 36, 14, C.MUTED, LW - 40)
+
+    -- ============================================================ an armor stack
     else
         local n_on = 0
         for _ in pairs(p.enabled) do n_on = n_on + 1 end
-        small_caps('PASSIVES', 22, LY, MUTED)
-        text(n_on .. ' on', LW - 18, LY - 1, 12, n_on > 0 and ACCENT or DIM, nil, true)
+        text('PASSIVES', 22, LY, 12, C.MUTED)
+        text(n_on .. ' on', LW - 18, LY - 1, 12, n_on > 0 and C.ACCENT or C.DIM, nil, true)
         local y = LY + 20
-        -- the armor's own passive first
         local base_key = 'sel:' .. p.perk
-        if ui.sel == p.perk then rect(LX, y, LW, RH, CARD_HI, 951); rect(LX, y, 3, RH, ACCENT, 952)
-        elseif ui.hover == base_key then rect(LX, y, LW, RH, CARD, 951) end
-        rect(22, y + 5, 36, 15, ACCENT_SOFT, 952)
-        text('BASE', 26, y + 7, 11, ACCENT)
-        text(CAT[p.perk].name, 66, y + 5, 15, TEXT, LW - 90)
+        if ui.sel == p.perk then rect(LX, y, LW, RH, C.CARD_HI, 951); rect(LX, y, 3, RH, C.ACCENT, 952)
+        elseif ui.hover == base_key then rect(LX, y, LW, RH, C.CARD, 951) end
+        rect(22, y + 5, 36, 15, C.SOFT, 952)
+        text('BASE', 26, y + 7, 11, C.ACCENT)
+        text(CAT[p.perk].name, 66, y + 5, 15, C.TEXT, LW - 90)
         region(base_key, LX, y, LW, RH)
         y = y + RH + 6
         for _, c in ipairs(CAT_LIST) do
             if c.id ~= p.perk then
                 local on = p.enabled[c.id] == true
                 local key = 'sel:' .. c.id
-                if ui.sel == c.id then rect(LX, y, LW, RH - 1, CARD_HI, 951); rect(LX, y, 3, RH - 1, ACCENT, 952)
-                elseif ui.hover == key then rect(LX, y, LW, RH - 1, CARD, 951) end
+                if ui.sel == c.id then rect(LX, y, LW, RH - 1, C.CARD_HI, 951); rect(LX, y, 3, RH - 1, C.ACCENT, 952)
+                elseif ui.hover == key then rect(LX, y, LW, RH - 1, C.CARD, 951) end
                 region(key, LX + 62, y, LW - 62, RH - 1)
                 switch('tick:' .. c.id, 22, y + 4, on)
                 local tweaked = false
                 for k in pairs(p.tweaks) do if k:match('^' .. c.id .. '%.') then tweaked = true break end end
-                text(c.name, 66, y + 5, 15, on and TEXT or MUTED, LW - 96)
-                if tweaked and on then rect(LW - 16, y + 9, 6, 6, ACCENT, 952) end
+                text(c.name, 66, y + 5, 15, on and C.TEXT or C.MUTED, LW - 96)
+                if tweaked and on then rect(LW - 16, y + 9, 6, 6, C.ACCENT, 952) end
                 y = y + RH
             end
         end
-    end
 
-    -- right: the chosen passive
-    local X0, RW = LW + 22, W - LW - 44
-    if p and not ui.adding then
         if not ui.sel then ui.sel = p.perk end
-        local sel = ui.sel and CAT[ui.sel] or nil
+        local sel = CAT[ui.sel]
         if sel then
             local is_base = sel.id == p.perk
             local on = is_base or p.enabled[sel.id] == true
-            text(sel.name, X0, 116, 22, TEXT, RW - 170)
-            -- status pill
-            local pill = is_base and 'BASE PERK' or on and 'STACKED' or 'NOT STACKED'
-            local pc = is_base and ACCENT or on and GOOD or DIM
-            rect(X0, 146, #pill * 8 + 16, 18, color(40, 46, 56), 951)
-            text(pill, X0 + 8, 149, 11, pc)
+            text(sel.name, X0, 116, 22, C.TEXT, RW - 170)
+            local label = is_base and 'BASE PERK' or on and 'STACKED' or 'NOT STACKED'
+            local pw = pill(label, X0, 146, is_base and C.ACCENT or on and C.GOOD or C.DIM)
             if is_base then
-                text('Your armor\'s own passive. Values here replace its own.', X0 + #pill * 8 + 26, 148, 13, MUTED, RW - #pill * 8 - 30)
+                text('Your armor\'s own passive. Values here replace its own.', X0 + pw + 10, 148, 13, C.MUTED, RW - pw - 14)
             else
                 button('tick:' .. sel.id, on and 'Remove from stack' or 'Add to stack', W - 22 - 160, 114, 160, 30, true, not on)
                 text(on and ('On ' .. CAT[p.perk].name .. ' armor.') or 'Values you set are kept for when you add it.',
-                     X0 + #pill * 8 + 26, 148, 13, MUTED, RW - #pill * 8 - 30)
+                     X0 + pw + 10, 148, 13, C.MUTED, RW - pw - 14)
             end
-            local y = 178
+            local y2 = 178
             for n, e in ipairs(sel.effects) do
                 local v = value_of(p, sel.id, e)
                 local tweaked = v ~= e.def
-                rect(X0, y, RW, 56, CARD, 950)
-                rect(X0, y, 3, 56, tweaked and ACCENT or LINE, 951)
-                text(label_of(e) .. (e.hint:find('%?') and '  ?' or ''), X0 + 14, y + 8, 16, TEXT, 290)
-                text(e.hint, X0 + 14, y + 30, 12, DIM, 290)
+                local u = PP.unit(e)
+                rect(X0, y2, RW, 56, C.CARD, 950)
+                rect(X0, y2, 3, 56, tweaked and C.ACCENT or C.LINE, 951)
+                text(label_of(e) .. (e.hint:find('%?') and '  ?' or ''), X0 + 14, y2 + 8, 16, C.TEXT, 280)
+                text(PP.WHAT[u] .. (e.hint:find('%?') and '  (name is a guess)' or ''), X0 + 14, y2 + 30, 12, C.DIM, 280)
                 local bx = X0 + RW - 290
                 local typing = ui.value and ui.value.pid == sel.id and ui.value.n == n
                 local vkey = 'value:' .. n
-                rect(bx, y + 10, 96, 30, typing and color(12, 14, 18) or color(18, 21, 26), 951)
-                rect(bx, y + 38, 96, 2, (typing or ui.hover == vkey) and ACCENT or LINE, 952)
+                rect(bx, y2 + 10, 96, 30, typing and color(12, 14, 18) or color(18, 21, 26), 951)
+                rect(bx, y2 + 38, 96, 2, (typing or ui.hover == vkey) and C.ACCENT or C.LINE, 952)
                 if typing then
-                    text(ui.value.text .. '_', bx + 8, y + 16, 17, ui.value.fresh and MUTED or TEXT, 80)
+                    text(ui.value.text .. '_', bx + 8, y2 + 16, 17, ui.value.fresh and C.MUTED or C.TEXT, 80)
                 else
-                    text(fmt(v), bx + 88, y + 16, 17, tweaked and ACCENT or TEXT, 80, true)
+                    text(PP.text(e, v), bx + 88, y2 + 16, 17, tweaked and C.ACCENT or C.TEXT, 80, true)
                 end
-                region(vkey, bx, y + 10, 96, 30)
+                region(vkey, bx, y2 + 10, 96, 30)
                 local ax = bx + 104
                 for _, b in ipairs({ { 'dec_big', '--' }, { 'dec', '-' }, { 'inc', '+' }, { 'inc_big', '++' } }) do
                     local key = b[1] .. ':' .. n
                     local hovered = ui.hover == key
-                    rect(ax, y + 10, 32, 30, hovered and ACCENT or color(36, 42, 51), 951)
-                    text(b[2], ax + (#b[2] == 1 and 12 or 8), y + 16, 16, hovered and INK or TEXT)
-                    region(key, ax, y + 10, 32, 30)
+                    rect(ax, y2 + 10, 32, 30, hovered and C.ACCENT or color(36, 42, 51), 951)
+                    text(b[2], ax + (#b[2] == 1 and 12 or 8), y2 + 16, 16, hovered and C.INK or C.TEXT)
+                    region(key, ax, y2 + 10, 32, 30)
                     ax = ax + 36
                 end
                 local rkey = 'reset:' .. n
-                text('R', ax + 8, y + 16, 15, tweaked and ((ui.hover == rkey) and ACCENT or MUTED) or LINE)
-                region(rkey, ax, y + 10, 28, 30, tweaked)
-                text(meaning(e, v) .. (tweaked and ('   was ' .. fmt(e.def)) or ''), X0 + RW - 290, y + 44, 11,
-                     tweaked and ACCENT or DIM, 280)
-                y = y + 62
+                text('R', ax + 8, y2 + 16, 15, tweaked and ((ui.hover == rkey) and C.ACCENT or C.MUTED) or C.LINE)
+                region(rkey, ax, y2 + 10, 28, 30, tweaked)
+                text('game value ' .. PP.raw_text(e, v) .. (tweaked and ('   was ' .. PP.text(e, e.def)) or ''),
+                     bx, y2 + 44, 11, tweaked and C.ACCENT or C.DIM, 280)
+                y2 = y2 + 62
             end
             local rp = 'reset_passive'
-            text('Reset ' .. sel.name, X0, y + 6, 13, ui.hover == rp and ACCENT or DIM, RW)
-            region(rp, X0 - 4, y, 240, 26)
+            text('Reset ' .. sel.name, X0, y2 + 6, 13, ui.hover == rp and C.ACCENT or C.DIM, RW)
+            region(rp, X0 - 4, y2, 240, 26)
         end
 
-        -- overlap rule (segmented), summary, actions
+        -- overlap rule, status, actions
         local by = H - 236
-        rect(X0, by - 12, RW, 1, LINE, 951)
-        small_caps('WHEN TWO PASSIVES CHANGE THE SAME THING', X0, by, MUTED)
+        rect(X0, by - 12, RW, 1, C.LINE, 951)
+        text('WHEN TWO PASSIVES CHANGE THE SAME THING', X0, by, 12, C.MUTED)
         local strongest = p.conflicts == 'strongest'
         for k, opt in ipairs({ { 'policy:stack', 'Stack all', not strongest }, { 'policy:strongest', 'Strongest only', strongest } }) do
             local bx = X0 + (k - 1) * 150
             local hovered = ui.hover == opt[1]
-            rect(bx, by + 20, 148, 30, opt[3] and ACCENT or (hovered and CARD_HI or CARD), 951)
-            text(opt[2], bx + 14, by + 27, 15, opt[3] and INK or (hovered and TEXT or MUTED), 124)
+            rect(bx, by + 20, 148, 30, opt[3] and C.ACCENT or (hovered and C.CARD_HI or C.CARD), 951)
+            text(opt[2], bx + 14, by + 27, 15, opt[3] and C.INK or (hovered and C.TEXT or C.MUTED), 124)
             region(opt[1], bx, by + 20, 148, 30)
         end
         local last = last_result[p.perk]
         local res = last and last.res
         if not sites_by_perk[p.perk] then
-            text('This armor passive was not found in the game\'s data yet.', X0, by + 64, 14, WARN, RW)
+            text('This armor passive was not found in the game\'s data yet.', X0, by + 64, 14, C.WARN, RW)
         elseif sites_by_perk[p.perk][1].foreign then
-            text('Another mod already changed this passive\'s data; Passive Picker leaves it alone.', X0, by + 64, 14, WARN, RW)
+            text('Another mod already changed this passive\'s data; Passive Picker leaves it alone.', X0, by + 64, 14, C.WARN, RW)
         else
             local added = 0
             for _, site in ipairs(sites_by_perk[p.perk]) do added = math.max(added, site.added or 0) end
-            local n_on = res and #res.enabled or 0
-            rect(X0, by + 67, 8, 8, GOOD, 952)
-            text(n_on .. ' passive(s) stacked, +' .. added .. ' row(s) in the game\'s data' ..
-                 (res and res.conflicts > 0 and (' - ' .. res.conflicts .. ' overlap(s)') or ''), X0 + 16, by + 63, 14, TEXT, RW - 16)
-            if last.error then text(last.error, X0, by + 84, 13, WARN, RW) end
+            local n_stacked = res and #res.enabled or 0
+            rect(X0, by + 67, 8, 8, C.GOOD, 952)
+            text(n_stacked .. ' passive(s) stacked, +' .. added .. ' row(s) in the game\'s data' ..
+                 (res and res.conflicts > 0 and (' - ' .. res.conflicts .. ' overlap(s)') or ''), X0 + 16, by + 63, 14, C.TEXT, RW - 16)
+            if last.error then text(last.error, X0, by + 84, 13, C.WARN, RW) end
         end
         local sure = ui.confirm and ui.confirm.kind
-        button('clear', sure == 'clear' and 'Click again' or 'Turn all off', X0, H - 128, 170, 30, true)
-        button('revert', sure == 'revert' and 'Click again' or 'Back to installed build', X0 + 178, H - 128, 230, 30, true)
+        button('undo', #ui.history > 0 and ('Undo (' .. #ui.history .. ')') or 'Undo', X0, H - 128, 120, 30, #ui.history > 0)
+        button('copy', 'Copy code', X0 + 128, H - 128, 140, 30, true)
+        button('paste', 'Paste code', X0 + 276, H - 128, 140, 30, true)
+        button('clear', sure == 'clear' and 'Click again' or 'Turn all off', X0 + 424, H - 128, 150, 30, true)
     end
 
     -- footer
     local path = save_path()
-    rect(LW + 1, H - 84, W - LW - 2, 1, LINE, 951)
-    text(path and 'Saved automatically to PassivePicker\\loadout.ini' or 'Cannot save (no LOCALAPPDATA)', X0, H - 74, 12, DIM, RW)
-    text('Changes apply at once. Re-equip the armor if you do not see them. Solo / private lobbies only.', X0, H - 56, 12, DIM, RW)
+    rect(LW + 1, H - 84, W - LW - 2, 1, C.LINE, 951)
+    text((path and 'Saved automatically.' or 'Cannot save (no LOCALAPPDATA).') ..
+         (swap_key() ~= 'OFF' and ('  ' .. swap_key() .. ' in game swaps presets.') or '') .. '  Ctrl+Z undoes.', X0, H - 74, 12, C.DIM, RW)
+    text('Changes apply at once. Re-equip the armor if you do not see them. Solo / private lobbies only.', X0, H - 56, 12, C.DIM, RW)
     if ui.message then
-        rect(X0, H - 36, RW, 24, ACCENT_SOFT, 951)
-        text(ui.message.text, X0 + 10, H - 32, 14, ACCENT, RW - 20)
+        rect(X0, H - 36, RW, 24, C.SOFT, 951)
+        text(ui.message.text, X0 + 10, H - 32, 14, C.ACCENT, RW - 20)
     end
     return regions
 end
@@ -549,16 +914,32 @@ local function confirm(kind)
     return false
 end
 
+local function finish_naming(keep)
+    local nm = ui.naming
+    ui.naming = nil
+    ui.version = ui.version + 1
+    if not nm or not keep then return end
+    local name = PP.clean_name(nm.text)
+    local entry = PP.user[nm.i]
+    if name and entry then
+        entry.name = name
+        PP.save_user()
+        say('Saved as "' .. name .. '"')
+    end
+end
+
 local function click(key)
     if not key then return end
     local kind, arg = key:match('^([%w_]+):?(.*)$')
     if ui.value and (kind ~= 'value' or tonumber(arg) ~= ui.value.n or ui.sel ~= ui.value.pid) then finish_value(true) end
-    if ui.confirm and kind ~= ui.confirm.kind and not (kind == 'remove' and ui.confirm.kind == 'remove') then ui.confirm = nil end
+    if ui.naming and kind ~= 'pre' then finish_naming(true) end
+    if ui.confirm and kind ~= ui.confirm.kind then ui.confirm = nil end
     local p = current()
     local n = tonumber(arg)
-    if kind == 'tab' and n then ui.tab, ui.sel, ui.adding = n, nil, false
-    elseif kind == 'add' then ui.adding = not ui.adding
+    if kind == 'tab' and n then ui.tab, ui.sel, ui.adding, ui.presets = n, nil, false, false
+    elseif kind == 'add' then ui.adding, ui.presets = not ui.adding, false
     elseif kind == 'addcancel' then ui.adding = false
+    elseif kind == 'presets' then ui.presets, ui.adding = not ui.presets, false; PP.load_user()
     elseif kind == 'addpick' and n then
         LOADOUT.profiles[#LOADOUT.profiles + 1] = { perk = n, conflicts = 'stack', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
         ui.tab, ui.sel, ui.adding = #LOADOUT.profiles, nil, false
@@ -573,26 +954,61 @@ local function click(key)
     elseif kind == 'tick' and n and p then toggle(p, n)
     elseif kind == 'policy' and p then p.conflicts = arg; changed(p.perk)
     elseif kind == 'clear' and p then
-        if confirm('clear') then p.enabled, p.tweaks = {}, {}; changed(p.perk, 'Unticked everything on this armor') end
-    elseif kind == 'revert' then
-        if confirm('revert') then
-            LOADOUT = default_loadout()
-            ui.tab, ui.sel = 1, nil
-            changed(nil, 'Back to the loadout this build was installed with')
+        if confirm('clear') then p.enabled, p.tweaks = {}, {}; changed(p.perk, 'Turned everything off on this armor') end
+    elseif kind == 'undo' then PP.undo()
+    elseif kind == 'copy' then PP.copy_code()
+    elseif kind == 'paste' then PP.paste_code()
+    -- presets
+    elseif kind == 'pre' then
+        local k, i = arg:match('^(%a+):(%d+)$')
+        ui.psel = { kind = k, i = tonumber(i) }
+        if ui.naming and not (k == 'user' and ui.naming.i == tonumber(i)) then finish_naming(true) end
+    elseif kind == 'pload' and ui.psel then
+        for _, e in ipairs(PP.entries()) do
+            if e.kind == ui.psel.kind and e.i == ui.psel.i then PP.load(e); ui.presets = false; break end
         end
+    elseif kind == 'psave' then
+        local base, k = 'My preset', #PP.user + 1
+        local taken = {}
+        for _, u in ipairs(PP.user) do taken[u.name] = true end
+        while taken[base .. ' ' .. k] do k = k + 1 end
+        PP.user[#PP.user + 1] = { name = base .. ' ' .. k, text = snapshot() }
+        PP.save_user()
+        ui.psel = { kind = 'user', i = #PP.user }
+        ui.naming = { i = #PP.user, text = base .. ' ' .. k, fresh = true }
+        say('Saved. Type a name for it, or press Enter to keep "' .. base .. ' ' .. k .. '".', 5)
+    elseif kind == 'pover' and ui.psel and ui.psel.kind == 'user' then
+        if confirm('pover') then
+            PP.user[ui.psel.i].text = snapshot()
+            PP.save_user()
+            say('Saved your current stacks into "' .. PP.user[ui.psel.i].name .. '"')
+        end
+    elseif kind == 'pren' and ui.psel and ui.psel.kind == 'user' then
+        ui.naming = { i = ui.psel.i, text = PP.user[ui.psel.i].name, fresh = true }
+    elseif kind == 'pdel' and ui.psel and ui.psel.kind == 'user' then
+        if confirm('pdel') then
+            local gone = table.remove(PP.user, ui.psel.i)
+            PP.save_user()
+            ui.psel, ui.naming = nil, nil
+            say('Deleted "' .. (gone and gone.name or '?') .. '"')
+        end
+    -- values
     elseif kind == 'reset_passive' and p and ui.sel then
         for k in pairs(p.tweaks) do if k:match('^' .. ui.sel .. '%.') then p.tweaks[k] = nil end end
         changed(p.perk)
     elseif p and ui.sel and n and CAT[ui.sel] and CAT[ui.sel].effects[n] then
         local e = CAT[ui.sel].effects[n]
-        local small, big = steps(e)
-        local v = value_of(p, ui.sel, e)
-        if kind == 'dec' then set_value(p, ui.sel, e, v - small)
-        elseif kind == 'dec_big' then set_value(p, ui.sel, e, v - big)
-        elseif kind == 'inc' then set_value(p, ui.sel, e, v + small)
-        elseif kind == 'inc_big' then set_value(p, ui.sel, e, v + big)
+        local u = PP.unit(e)
+        local small, big = PP.steps(u)
+        local f = PP.to_friendly(u, value_of(p, ui.sel, e))
+        local step = (kind == 'dec' and -small) or (kind == 'dec_big' and -big) or (kind == 'inc' and small)
+                     or (kind == 'inc_big' and big) or nil
+        if step then
+            set_value(p, ui.sel, e, PP.from_friendly(u, round1(f + step)))
         elseif kind == 'reset' then set_value(p, ui.sel, e, e.def)
-        elseif kind == 'value' and not ui.value then ui.value = { pid = ui.sel, n = n, text = fmt(v), fresh = true } end
+        elseif kind == 'value' and not ui.value then
+            ui.value = { pid = ui.sel, n = n, text = fmt(round1(f)), fresh = true }
+        end
     end
     ui.version = ui.version + 1
 end
@@ -608,22 +1024,44 @@ local function pressed(name, vk, now)
 end
 
 local function keyboard(now)
-    local v = ui.value
-    if not v then return end
-    if pressed('Escape', VK.Escape, now) then finish_value(false); return end
-    if pressed('Enter', VK.Enter, now) then finish_value(true); return end
-    if pressed('Backspace', VK.Backspace, now) then
-        v.text = v.fresh and '' or v.text:sub(1, -2)
-        v.fresh = false
-        ui.version = ui.version + 1
-    end
-    for _, k in ipairs(DIGIT_KEYS) do
-        if pressed('D' .. k[1], k[1], now) then
-            if v.fresh then v.text, v.fresh = '', false end
-            if #v.text < 12 then v.text = v.text .. k[2] end
+    local nm = ui.naming
+    if nm then
+        if pressed('Escape', VK.Escape, now) then finish_naming(false); return end
+        if pressed('Enter', VK.Enter, now) then finish_naming(true); return end
+        if pressed('Backspace', VK.Backspace, now) then
+            nm.text = nm.fresh and '' or nm.text:sub(1, -2)
+            nm.fresh = false
             ui.version = ui.version + 1
         end
+        local shift = input.key_down(VK.Shift)
+        for _, k in ipairs(NAME_KEYS) do
+            if pressed('N' .. k[1], k[1], now) then
+                if nm.fresh then nm.text, nm.fresh = '', false end
+                if #nm.text < 28 then nm.text = nm.text .. (shift and k[3] or k[2]) end
+                ui.version = ui.version + 1
+            end
+        end
+        return
     end
+    local v = ui.value
+    if v then
+        if pressed('Escape', VK.Escape, now) then finish_value(false); return end
+        if pressed('Enter', VK.Enter, now) then finish_value(true); return end
+        if pressed('Backspace', VK.Backspace, now) then
+            v.text = v.fresh and '' or v.text:sub(1, -2)
+            v.fresh = false
+            ui.version = ui.version + 1
+        end
+        for _, k in ipairs(DIGIT_KEYS) do
+            if pressed('D' .. k[1], k[1], now) then
+                if v.fresh then v.text, v.fresh = '', false end
+                if #v.text < 12 then v.text = v.text .. k[2] end
+                ui.version = ui.version + 1
+            end
+        end
+        return
+    end
+    if input.key_down(VK.Ctrl) and pressed('Z', 0x5A, now) then PP.undo() end
 end
 
 local function mouse()
@@ -697,6 +1135,7 @@ local function release_cursor()
     if cursor.clip then input.set_clip(cursor.clip) end
 end
 
+
 -- ---------------------------------------------------------------- per frame (from SHODAN v1.4.1)
 local SETTLE_SECONDS = 1.5
 
@@ -704,6 +1143,12 @@ local function same_worlds(a, b)
     if not a or not b or #a ~= #b then return false end
     for k = 1, #a do if a[k] ~= b[k] then return false end end
     return true
+end
+
+local function overlay_world()
+    local main = sr.Application.main_world()
+    for _, w in ipairs(sr.Application.worlds() or {}) do if w ~= main then return w end end
+    return nil
 end
 
 local function panel_frame(now)
@@ -716,8 +1161,7 @@ local function panel_frame(now)
         return
     end
     if now < ui.settled_at then return end
-    local world = nil
-    for _, w in ipairs(worlds) do if w ~= main then world = w break end end
+    local world = overlay_world()
     if not world then clear_gui(); return end
     if ui.world ~= world then
         clear_gui()
@@ -739,9 +1183,10 @@ local function panel_frame(now)
     if ui.message and now >= ui.message.till then ui.message = nil end
     if ui.confirm and now >= ui.confirm.till then ui.confirm = nil; ui.version = ui.version + 1 end
     local signature = table.concat({ width, height, state.phase, perks_found, ui.tab, tostring(ui.sel),
-                                     tostring(ui.hover), ui.version, tostring(ui.adding),
+                                     tostring(ui.hover), ui.version, tostring(ui.adding), tostring(ui.presets),
                                      ui.message and ui.message.text or '',
-                                     ui.value and (ui.value.n .. '=' .. ui.value.text) or '-' }, '|')
+                                     ui.value and (ui.value.n .. '=' .. ui.value.text) or '-',
+                                     ui.naming and ui.naming.text or '-' }, '|')
     if signature ~= ui.signature then
         if ui.gui then pcall(sr.World.destroy_gui, ui.world, ui.gui) end
         ui.gui = sr.World.create_screen_gui(ui.world, 'scale', 1, 1)
@@ -761,15 +1206,58 @@ local function panel_frame(now)
     end
 end
 
+-- ---------------------------------------------------------------- quick-swap toast
+-- A small card at the top of the screen for ~2 s after the quick-swap key, drawn once
+-- into its own gui (the panel stays closed).
+local function clear_toast()
+    if toast.gui and toast.world then
+        for _, w in ipairs(sr.Application.worlds() or {}) do
+            if w == toast.world then pcall(sr.World.destroy_gui, toast.world, toast.gui) break end
+        end
+    end
+    toast.gui, toast.world = nil, nil
+end
+
+local function toast_frame(now)
+    if not toast.text then return end
+    if now >= toast.till then clear_toast(); toast.text = nil; return end
+    if toast.gui then return end
+    local world = overlay_world()
+    if not world then return end
+    local gui = sr.World.create_screen_gui(world, 'scale', 1, 1)
+    if not gui then return end
+    toast.gui, toast.world = gui, world
+    local ok, f = pcall(choose_font, gui)
+    f = ok and f or {}
+    local Gui, Vector3, Vector2, Color = sr.Gui, sr.Vector3, sr.Vector2, sr.Color
+    local width, height = sr.Gui.resolution()
+    local s = height / 1080
+    local w, h = 460 * s, 64 * s
+    local x, y = (width - w) / 2, height - 140 * s - h
+    Gui.rect(gui, Vector3(x, y, 960), Vector2(w, h), Color(236, 15, 17, 21))
+    Gui.rect(gui, Vector3(x, y + h - 5 * s, 961), Vector2(w, 5 * s), Color(255, 244, 210, 31))
+    if f.font then
+        local function t(value, px, py, size, c)
+            Gui.text(gui, value, f.font, size * s, f.material, Vector3(x + px * s, y + h - py * s - size * s * 0.8, 962), c)
+        end
+        t('PASSIVE PICKER  -  ' .. tostring(toast.sub or ''), 16, 12, 13, Color(255, 244, 210, 31))
+        t(tostring(toast.text), 16, 32, 22, Color(255, 232, 230, 223))
+    end
+end
+
 local function open_panel(open)
     ui.open = open
     if open then
         ui.worlds = nil
+        clear_toast(); toast.text = nil
+        if not ui.last_text and LOADOUT then ui.last_text = snapshot() end
+        PP.load_user()
         log('panel opened')
         local ok, why = pcall(take_cursor)
         if not ok then log('cursor: could not free it: ' .. tostring(why)) end
     else
         if ui.value then finish_value(true) end
+        if ui.naming then finish_naming(true) end
         pcall(release_cursor)
         clear_gui()
         ui.worlds = nil
@@ -779,12 +1267,27 @@ local function open_panel(open)
     end
 end
 
+-- true once per press of a hotkey (window focused)
+local function hotkey_pressed(name)
+    local vk = VK[name]
+    if not vk then return false end
+    local down = input.key_down(vk)
+    local was = keys_was[name]
+    keys_was[name] = down
+    return down and not was and input.focused()
+end
+
 panel_tick = function(now)
     if not input or not sr then return end
-    local vk = VK[hotkey()] or VK.F7
-    local down = input.key_down(vk)
-    if down and not hotkey_was_down and input.focused() then open_panel(not ui.open) end
-    hotkey_was_down = down
+    if hotkey_pressed(hotkey()) then open_panel(not ui.open) end
+    local sk = swap_key()
+    if sk ~= 'OFF' and sk ~= hotkey() and hotkey_pressed(sk) and not ui.value and not ui.naming
+       and state.phase == 'ready' and now >= (ui.swap_at or 0) then
+        ui.swap_at = now + 0.25
+        if not ui.last_text and LOADOUT then ui.last_text = snapshot() end
+        local ok, why = pcall(PP.swap)
+        if not ok then log('quick-swap: ' .. tostring(why)) end
+    end
     if ui.open then
         local ok, why = pcall(panel_frame, now)
         if ok then
@@ -798,15 +1301,23 @@ panel_tick = function(now)
                 log('panel closed after 5 errors in a row')
             end
         end
+    else
+        local ok, why = pcall(toast_frame, now)
+        if not ok then log('toast: ' .. tostring(why)); pcall(clear_toast); toast.text = nil end
     end
 end
 
-local function setup_panel()
+setup_panel = function()
     sr = rawget(_G, 'stingray')
     if type(sr) ~= 'table' then log('panel: the engine (stingray) is unavailable; panel off'); return end
     local ok, built = pcall(function() return rawget(_G, 'PP_TEST_INPUT') or build_input() end)
     if not ok then log('panel: input unavailable: ' .. tostring(built)); return end
     input = built
     state.ui = ui
-    log('panel ready: press ' .. hotkey() .. ' in game')
+    state.pp = PP
+    log('panel ready: press ' .. hotkey() .. ' in game' ..
+        (swap_key() ~= 'OFF' and ('; ' .. swap_key() .. ' swaps presets') or ''))
 end
+
+end
+build_panel()

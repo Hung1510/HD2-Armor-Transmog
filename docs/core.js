@@ -153,7 +153,7 @@
   // ------------------------------------------------------------------ config -> profiles
   function loadConfigText(cat, text) {
     const sections = parseIni(text);
-    const settings = { retire: true, name: null, hotkey: null };
+    const settings = { retire: true, name: null, hotkey: null, swap_hotkey: null };
     const profiles = [];
     for (const sec of sections) {
       if (sec.name === "settings") {
@@ -164,6 +164,10 @@
             const hk = v.trim().toUpperCase();
             if (!/^F([1-9]|1[0-2])$/.test(hk)) throw new ConfigError(`[settings]: hotkey must be F1..F12, got '${v.trim()}'`);
             settings.hotkey = hk;
+          } else if (k === "swap_hotkey") {
+            const hk = v.trim().toUpperCase();
+            if (!/^(F([1-9]|1[0-2])|OFF)$/.test(hk)) throw new ConfigError(`[settings]: swap_hotkey must be F1..F12 or off, got '${v.trim()}'`);
+            settings.swap_hotkey = hk;
           } else if (k === "base") { /* written by the in-game panel; only the game reads it */ }
           else throw new ConfigError(`[settings]: unknown key '${k}'`);
         }
@@ -173,6 +177,8 @@
       if (!m) throw new ConfigError(`[${sec.name}]: sections must be [settings] or [profile: <passive>]`);
       profiles.push(buildProfile(cat, m[1], sec.items, `[${sec.name}]`));
     }
+    if (settings.swap_hotkey && settings.swap_hotkey === (settings.hotkey || "F7"))
+      throw new ConfigError("[settings]: swap_hotkey and hotkey must be different keys");
     if (!profiles.length) throw new ConfigError("no [profile: <passive>] section found");
     const seen = new Set();
     for (const p of profiles) {
@@ -372,6 +378,7 @@
     L.push(`    name = ${luaStr(settings.name || data.title)},`);
     L.push(`    retire = ${settings.retire ? "true" : "false"},`);
     L.push(`    hotkey = '${settings.hotkey || data.default_hotkey}',`);
+    L.push(`    swap_hotkey = '${settings.swap_hotkey || data.default_swap_hotkey}',`);
     L.push("    type_passive = 0x63CE0FEB,   -- HelldiverCustomizationPassiveBonusSettings");
     L.push("    type_kit     = 0xD9A55AA0,   -- HelldiverCustomizationKit");
     L.push("    -- the loadout this build starts with; the in-game panel starts from it");
@@ -391,6 +398,17 @@
       for (const r of st.raw_stats) L.push(`                { ${r[0]}, ${luaNum(r[1])}, ${luaNum(r[2])} },`);
       L.push("            },");
       L.push("        },");
+    }
+    L.push("    },");
+    L.push("    -- built-in presets: the panel's Presets tab and the quick-swap key");
+    L.push("    presets = {");
+    for (const p of data.presets) {
+      const text = p.ini.replace(/\r\n/g, "\n");
+      const m = text.match(/^[ \t]*name[ \t]*=[ \t]*([^;#\r\n]+)/m);
+      const name = m ? m[1].trim() : p.file.replace(/\.ini$/, "");
+      L.push(`        { name = ${luaStr(name)}, text = [==[`);
+      L.push(text.replace(/\n+$/, ""));
+      L.push("]==] },");
     }
     L.push("    },");
     L.push("}");
@@ -494,6 +512,7 @@
     L.push(`name   = ${(state.name || "My Passive Stack").replace(/[;#\r\n]/g, " ").trim()}`);
     L.push(`retire = ${state.retire ? "true" : "false"}`);
     L.push(`hotkey = ${state.hotkey || "F7"}`);
+    L.push(`swap_hotkey = ${state.swap_hotkey || "F9"}`);
     for (const p of state.profiles) {
       const tname = cat.byId.get(p.perk).name;
       L.push("");
@@ -520,7 +539,7 @@
     const sections = parseIni(text);
     const parsed = loadConfigText(cat, text); // validates
     const state = { name: parsed.settings.name || "My Passive Stack", retire: parsed.settings.retire,
-      hotkey: parsed.settings.hotkey || "F7", profiles: [] };
+      hotkey: parsed.settings.hotkey || "F7", swap_hotkey: parsed.settings.swap_hotkey || "F9", profiles: [] };
     for (const sec of sections) {
       const m = sec.name.match(/^\s*profile\s*:\s*(.+?)\s*$/i);
       if (!m) continue;

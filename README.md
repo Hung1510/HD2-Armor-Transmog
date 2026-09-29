@@ -37,12 +37,19 @@ Then:
 ## The in-game panel (F7)
 
 - **Left:** every armor passive with a tick box. Ticked = stacked onto your armor. Click a name to see its values.
-- **Right:** the chosen passive's values. `--` `-` `+` `++` change them, `R` resets, or click a value and type one (Enter to set, Esc to cancel). The armor's own passive (e.g. Med-Kit) is listed first; its values **replace** the originals.
+- **Right:** the chosen passive's values, in plain terms (`75%` resist, `+30%`, `+50` armor). `--` `-` `+` `++` change them, `R` resets, or click a value and type one, e.g. `75` for 75% (Enter to set, Esc to cancel). The armor's own passive (e.g. Med-Kit) is listed first; its values **replace** the originals.
 - **Tabs:** one per armor passive you stack onto. **+ Armor** adds another (e.g. a separate Siege-Ready stack), **Remove this armor** puts the game's own values back.
 - **When two passives change the same thing:** *Stack all* or *Strongest only*.
-- Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\PassivePicker\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a different build starts fresh from that build; **Back to installed build** does the same by hand.
+- Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\PassivePicker\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a different build starts fresh from that build.
+- **Presets tab:** load the installed build, a built-in preset or one of yours. **+ Save current stack** saves what you have; rename, overwrite or delete your own. Saved in `PassivePicker\my-presets.txt`.
+- **Quick-swap (F9):** cycles your presets in game without opening the panel (built-ins if you have none saved). Set `swap_hotkey = F9` or `OFF` in `[settings]`.
+- **Undo / Ctrl+Z** takes back the last change (up to 30).
+- **Copy code / Paste code:** your build as one line of text for Discord etc. Web-builder share links paste too.
+
 - The key is set with `hotkey = F7` in `[settings]` (the web builder has a dropdown). SHODAN Stat Editor uses F8, and its panel sits on the right while this one sits on the left.
 - If a change doesn't show, re-equip the armor or start a mission.
+
+<p align="center"><img src="docs/img/panel-presets.png" width="560" alt="Presets tab"></p>
 
 ## What v4 adds over v3
 

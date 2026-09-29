@@ -401,7 +401,7 @@ local function find_perk(text)
 end
 
 -- ---------------------------------------------------------------- loadout
--- A loadout: { name, retire, hotkey, profiles = { profile... } }
+-- A loadout: { name, retire, hotkey, swap_hotkey, profiles = { profile... } }
 -- profile:   { perk, conflicts = 'stack'|'strongest', enabled = { [pid] = true },
 --              tweaks = { ['pid.key'] = value }, raw = { {id,type,value} }, raw_stats = { {stat,u1,u2} } }
 local function copy_profile(p)
@@ -416,7 +416,8 @@ end
 
 -- MOD.default (generated) -> loadout
 local function default_loadout()
-    local l = { name = MOD.name or MOD.title, retire = MOD.retire, hotkey = MOD.hotkey or 'F7', profiles = {} }
+    local l = { name = MOD.name or MOD.title, retire = MOD.retire, hotkey = MOD.hotkey or 'F7',
+                swap_hotkey = MOD.swap_hotkey or 'F9', profiles = {} }
     for _, d in ipairs(MOD.default or {}) do
         local p = { perk = d.perk, conflicts = d.conflicts, enabled = {}, tweaks = {},
                     raw = d.raw, raw_stats = d.raw_stats }
@@ -541,6 +542,7 @@ local function serialize(l, base_key)
         'name   = ' .. tostring(l.name or MOD.title):gsub('[;#\r\n]', ' '),
         'retire = ' .. (l.retire and 'true' or 'false'),
         'hotkey = ' .. (l.hotkey or 'F7'),
+        'swap_hotkey = ' .. (l.swap_hotkey or 'F9'),
     }
     if base_key then L[#L + 1] = 'base   = ' .. base_key end
     for _, p in ipairs(l.profiles) do
@@ -603,6 +605,7 @@ local function parse_loadout(text)
                     if k == 'name' then l.name = val
                     elseif k == 'retire' then l.retire = TRUE_WORDS[val:lower()] or false
                     elseif k == 'hotkey' then l.hotkey = val:upper()
+                    elseif k == 'swap_hotkey' then l.swap_hotkey = val:upper()
                     elseif k == 'base' then l.base = val end
                 elseif k and prof then
                     local lk = k:lower()
@@ -637,7 +640,9 @@ end
 
 -- djb2 over the canonical text of the built-in loadout
 local function fingerprint(l)
-    local text = serialize(l, nil)
+    -- settings lines added in later versions are left out, so updating the mod keeps
+    -- the panel's saved edits
+    local text = serialize(l, nil):gsub('swap_hotkey = [^\r\n]*\r\n', '')
     local h = 5381
     for i = 1, #text do h = (h * 33 + text:byte(i)) % 4294967296 end
     return string.format('%08x', h)
@@ -669,6 +674,7 @@ local function load_loadout()
             saved.name = saved.name or def.name
             if saved.retire == nil then saved.retire = def.retire end
             saved.hotkey = saved.hotkey or def.hotkey
+            saved.swap_hotkey = saved.swap_hotkey or def.swap_hotkey
             log('loadout: using the panel save ' .. path)
             return saved, 'saved'
         elseif ok and saved.base ~= DEFAULT_KEY then

@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.4 (2026-09-30)
+- **Presets in the panel:** a Presets tab with the installed build, the 6 built-in presets and your own. Save the current stacks, rename, overwrite or delete. Your presets live in `PassivePicker\my-presets.txt`.
+- **Quick-swap (F9):** cycles your presets (or the built-ins if you have none) without opening the panel; a small card at the top of the screen shows which one is on. `swap_hotkey = F1..F12 | OFF` in `[settings]`, also a dropdown in the web builder.
+- **Undo:** Undo button and Ctrl+Z (last 30 changes).
+- **Share codes:** Copy code puts your whole build on the clipboard as one line; Paste code loads one. Codes are the same as web-builder share links, so a link works too.
+- **Plain values:** values show and are typed as the game means them: `75%` resist, `+30%`, `+50` armor, `+2` stims, with the game's raw number shown underneath.
+- *Back to installed build* moved into the Presets tab.
+- 4.3 panel saves carry over unchanged.
+
 ## 4.3 (2026-09-30)
 - **Much lighter start-up:** the memory scan stops once the armor-passive table and the area around it are checked, instead of reading all of the game's memory (in the test, 0.4 MB read instead of all 64 MB). It reads into one reused buffer, so there's no garbage-collector stutter, and it gives itself a share of each frame measured from your frame rate (~3 ms at 60 fps, ~1.5 ms at 144 fps). A passive removed by a game patch no longer triggers 12 full rescans.
 - **Patch-day tooling:** the mod writes every armor passive in the game (IDs and the game's own values, read before any change) to `PassivePicker\passives-dump.txt`. `python tools/picker.py check-dump` compares it with the catalog and prints new passives, changed values and new effect IDs as ready-to-paste lines.

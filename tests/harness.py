@@ -41,7 +41,7 @@ stingray = {
         material = function() return {} end,
     },
     Material = { set_texture = function() end },
-    World = { create_screen_gui = function(w) DRAW = {}; return {} end, destroy_gui = function() end },
+    World = { create_screen_gui = function(w) DRAW = {}; return {} end, destroy_gui = function() DRAW = {} end },
     Application = { worlds = function() return WORLDS end, main_world = function() return WORLDS[1] end,
                     can_get = function() return true end },
     IdString64 = { from_hex = function(s) return s end },
@@ -54,7 +54,10 @@ PP_TEST_INPUT = {
     show_cursor = function() return 0 end,
     get_clip = function() return nil end,
     set_clip = function() end,
+    get_clipboard = function() return CLIP end,
+    set_clipboard = function(text) CLIP = text; return true end,
 }
+CLIP = nil
 CowboyBingusModLoader = { api = 1 }
 FAKE_T, FAKE_NOW = 1000, 0
 os.time = function() return FAKE_T end
@@ -221,9 +224,31 @@ class FakeGame:
         self.tick(2)
 
     def type_text(self, text):
+        keys = self.L.globals()[b"KEYS"]
         for ch in text:
-            vk = {".": 0xBE, "-": 0xBD}.get(ch, 0x30 + int(ch) if ch.isdigit() else None)
+            shift = ch.isupper() or ch in "_"
+            vk = {".": 0xBE, "-": 0xBD, "_": 0xBD, "+": 0x6B, " ": 0x20}.get(ch)
+            if vk is None:
+                vk = 0x30 + int(ch) if ch.isdigit() else ord(ch.upper())
+            if shift:
+                keys[0x10] = True
             self.key(vk, 1)
+            if shift:
+                keys[0x10] = None
+
+    def clipboard(self, value=None):
+        g = self.L.globals()
+        if value is not None:
+            g[b"CLIP"] = value.encode() if isinstance(value, str) else value
+        c = g[b"CLIP"]
+        return c.decode() if isinstance(c, bytes) else c
+
+    def ctrl(self, vk):
+        keys = self.L.globals()[b"KEYS"]
+        keys[0x11] = True
+        self.key(vk, 2)
+        keys[0x11] = None
+        self.tick(2)
 
     def draw_calls(self):
         d = self.L.globals()[b"DRAW"]
