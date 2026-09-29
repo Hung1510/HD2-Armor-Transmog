@@ -19,7 +19,7 @@ local function tick()
         end
         if finished then
             pcall(write_dump)          -- after every pass; only rewrites when something new was found
-            if complete() or state.rounds >= MAX_ROUNDS then
+            if good_enough() or state.rounds >= MAX_ROUNDS then
                 set_status('ready', (complete() and 'all ' .. #CAT_LIST .. ' armor passives found'
                                      or ('found ' .. perks_found .. ' of ' .. #CAT_LIST .. ' armor passives'))
                                     .. '; ' .. summary())
@@ -60,6 +60,7 @@ local ok, failure = pcall(function()
     assert(ffi.abi('64bit'), 'Windows x64 is required')
     assert(type(update) == 'function', 'the game update hook is unavailable')
     api = build_api()
+    ensure_read_into()
     LOADOUT, state.loadout_source = load_loadout()
     self_addresses = { api.address_of(NEEDLE) }
     skip_low = (self_addresses[1] or LUA_HEAP_LIMIT) < LUA_HEAP_LIMIT

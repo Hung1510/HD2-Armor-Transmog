@@ -1,6 +1,7 @@
 # Changelog
 
 ## 4.3 (2026-09-30)
+- **Much lighter start-up:** the memory scan stops once the armor-passive table and the area around it are checked, instead of reading all of the game's memory (in the test, 0.4 MB read instead of all 64 MB). It reads into one reused buffer, so there's no garbage-collector stutter, and it gives itself a share of each frame measured from your frame rate (~3 ms at 60 fps, ~1.5 ms at 144 fps). A passive removed by a game patch no longer triggers 12 full rescans.
 - **Patch-day tooling:** the mod writes every armor passive in the game (IDs and the game's own values, read before any change) to `PassivePicker\passives-dump.txt`. `python tools/picker.py check-dump` compares it with the catalog and prints new passives, changed values and new effect IDs as ready-to-paste lines.
 - The STATUS file flags armor passives that aren't in the catalog.
 - In-game panel redesign: yellow header with hazard stripe, toggle switches, underlined armor tabs, value cards.

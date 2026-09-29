@@ -245,5 +245,17 @@ check("NOT in the catalog=1" in open(glob.glob(os.path.join(appdata, "**", "Pass
       "STATUS file flags passives missing from the catalog")
 check(len(live(g6, 7)[0]) > 2, "stacking still works on a patched game")
 
+# ------------------------------------------------------------------ 5. boot cost
+g7 = FakeGame(path, junk_mb=64)
+g7.tick(420)
+mb = g7.bytes_read / 1048576
+check(g7.phase() == "ready" and matches(g7, 7, profiles[0]),
+      "with 64 MB of other memory: finds the table and applies")
+check(mb < 8, "stops once the table is found: read %.1f MB of 64+ MB" % mb)
+g8 = FakeGame(path, junk_mb=16, perks=[p for p in picker.CATALOG if p != 5])
+g8.tick(420)
+check(g8.phase() == "ready" and g8.state[b"rounds"] == 1,
+      "a passive removed by a patch: ready after one round (was 12 full rescans)")
+
 print("\n%d FAILED" % len(failed) if failed else "\nall in-game checks passed")
 sys.exit(1 if failed else 0)

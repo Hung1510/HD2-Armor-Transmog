@@ -63,7 +63,7 @@ update = function() end
 
 
 class FakeGame:
-    def __init__(self, lua_path, retire=None, appdata=None, perks=None, game=None):
+    def __init__(self, lua_path, retire=None, appdata=None, perks=None, game=None, junk_mb=0):
         # game: {perk: (name, rows, stats)} the fake game holds; default = the catalog
         src = open(lua_path, encoding="utf-8").read()
         if retire is not None:
@@ -80,6 +80,9 @@ class FakeGame:
         self.mem = {}
         self.nalloc = 0
         self.game = game or picker.CATALOG
+        self.bytes_read = 0
+        if junk_mb:   # a big unrelated allocation, like the rest of the game's memory
+            self.mem[0x40000000] = bytearray(junk_mb * 1024 * 1024)
         self._build_memory(perks or list(self.game))
         g = self.L.globals()
         self.L.execute(MOCK.encode())
@@ -100,6 +103,7 @@ class FakeGame:
 
     def _read(self, addr, size):
         addr, size = int(addr), int(size)
+        self.bytes_read += size
         b, buf = self._region(addr, size)
         return None if buf is None else bytes(buf[addr - b:addr - b + size])
 

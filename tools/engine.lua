@@ -56,7 +56,8 @@ if rawget(_G, MOD.global) then return end
 
 local HEADER_BYTES = 24
 local MAX_PAYLOAD = 64 * 1024 * 1024
-local FRAME_BUDGET = 0.006
+local BUDGET_MIN, BUDGET_MAX, BUDGET_SHARE = 0.0015, 0.004, 0.2   -- seconds of scanning per frame
+local HOT_WINDOW = 4 * 1024 * 1024    -- after the first armor-passive block, look this far around it
 local CHUNK = 262144
 local START_FRAME = 300
 local PROBE_MIN_ALLOC = 64 * 1024
@@ -164,6 +165,18 @@ local function build_api()
     local counter = ffi.new('size_t[1]')
 
     local self = {}
+
+    -- Read into ONE reused buffer (the scan reads hundreds of MB: allocating a fresh
+    -- buffer and Lua string per chunk made the garbage collector stutter the game).
+    local scratch, scratch_size = nil, 0
+    function self.read_into(address, size)
+        if size <= 0 then return nil end
+        if size > scratch_size then scratch, scratch_size = ffi.new('uint8_t[?]', size), size end
+        if kernel.ReadProcessMemory(process, ffi.cast('const void *', address),
+                                    scratch, size, counter) == 0 then return nil end
+        if tonumber(counter[0]) ~= size then return nil end
+        return scratch
+    end
 
     function self.read(address, size)
         if size <= 0 then return nil end
@@ -929,6 +942,18 @@ end
 -- ---------------------------------------------------------------- status file
 local function complete() return perks_found >= #CAT_LIST end
 
+-- Stop searching even if a catalog passive is missing (a game patch removed or renumbered
+-- it): every armor with a stack is found, most of the catalog is, and the window around
+-- the table was checked. Otherwise one missing passive meant 12 full rescans.
+local function good_enough()
+    if complete() then return true end
+    if not state.scanned_window or perks_found < #CAT_LIST - 3 then return false end
+    for _, p in ipairs(LOADOUT and LOADOUT.profiles or {}) do
+        if not sites_by_perk[p.perk] then return false end
+    end
+    return true
+end
+
 local function summary()
     local parts = {}
     for _, p in ipairs(LOADOUT and LOADOUT.profiles or {}) do
@@ -991,6 +1016,9 @@ local seen_blocks = {}
 local LUA_HEAP_LIMIT = 0x80000000
 local skip_low = false
 
+-- where the armor-passive blocks were found this round (see the scan below)
+local found_lo, found_hi = nil, nil
+
 local function handle_block(address)
     if seen_blocks[address] then return end
     seen_blocks[address] = true
@@ -1000,6 +1028,8 @@ local function handle_block(address)
     local kind, payload = u32(header, 8), u32(header, 12)
     if not payload or payload < REC_HEAD or payload > MAX_PAYLOAD then return end
     if kind ~= MOD.type_passive then return end
+    if not found_lo or address < found_lo then found_lo = address end
+    if not found_hi or address > found_hi then found_hi = address end
     -- read the payload only, so our own copy carries no LDLD header for a later sweep
     local blob = api.read(address + HEADER_BYTES, payload)
     if not blob then return end
@@ -1007,20 +1037,47 @@ local function handle_block(address)
     capture(address + HEADER_BYTES, address, blob)
 end
 
+-- APIs without read_into (tests, older builds): same thing through read()
+local function ensure_read_into()
+    if api.read_into then return end
+    local scratch, scratch_size = nil, 0
+    api.read_into = function(address, size)
+        local s = api.read(address, size)
+        if not s or #s ~= size then return nil end
+        if size > scratch_size then scratch, scratch_size = ffi.new('uint8_t[?]', size), size end
+        ffi.copy(scratch, s, size)
+        return scratch
+    end
+end
+
+-- The LDLD blocks of the armor-passive table sit together. Remember where the first
+-- one was found; once every known passive is in, a window around that spot is checked
+-- (for passives new in a game patch) and the scan stops, instead of reading all of the
+-- game's memory.
+local hits = {}
+
+-- Finds LDLD headers with a byte loop over the reused buffer: no allocation, and
+-- LuaJIT compiles the loop. Hits are handled after the loop because handle_block reads
+-- memory itself.
 local function scan_chunk(addr, size)
-    local blob = api.read(addr, size)
-    if not blob then return end
-    local position = 1
-    while true do
-        local hit = blob:find(NEEDLE, position, true)
-        if not hit then break end
-        local address = addr + hit - 1
+    local p = api.read_into(addr, size)
+    if not p then return end
+    local n = 0
+    for i = 0, size - 8 do
+        if p[i] == 0x4C and p[i + 1] == 0x44 and p[i + 2] == 0x4C and p[i + 3] == 0x44
+           and p[i + 4] == 1 and p[i + 5] == 0 and p[i + 6] == 0 and p[i + 7] == 0 then
+            n = n + 1
+            hits[n] = addr + i
+        end
+    end
+    for k = 1, n do
+        local address = hits[k]
+        hits[k] = nil
         local skip = false
         for _, own in ipairs(self_addresses) do
             if own and math.abs(address - own) <= SELF_MARGIN then skip = true break end
         end
         if not skip then pcall(handle_block, address) end
-        position = hit + 1
     end
 end
 
@@ -1028,8 +1085,9 @@ local probe, scan
 
 local function begin_round()
     probe = { regions = {}, index = 1, seen = {}, done = false }
-    scan = { regions = {}, index = 1, cursor = 0, overlap = #NEEDLE - 1 }
+    scan = { regions = {}, index = 1, cursor = 0, overlap = #NEEDLE - 1, hot = nil, hot_done = false }
     seen_blocks = {}
+    found_lo, found_hi = nil, nil
     state.rounds = state.rounds + 1
     for _, region in ipairs(api.regions()) do
         if region.allocation_base and region.size >= PROBE_MIN_ALLOC then
@@ -1039,8 +1097,32 @@ local function begin_round()
     end
 end
 
+-- A share of the frame, measured: ~3 ms at 60 fps, ~1.5 ms at 144 fps, at most 4 ms.
+local last_frame_at, frame_dt = nil, 1 / 60
+local function frame_budget()
+    local now = api.now()
+    if last_frame_at then
+        local d = now - last_frame_at
+        if d > 0 and d < 0.5 then frame_dt = frame_dt * 0.8 + d * 0.2 end
+    end
+    last_frame_at = now
+    return math.max(BUDGET_MIN, math.min(BUDGET_MAX, frame_dt * BUDGET_SHARE))
+end
+
+-- the window around the first armor-passive block, clamped to the region holding it
+local function hot_window()
+    for _, r in ipairs(scan.regions) do
+        if found_lo >= r.base and found_lo < r.base + r.size then
+            local lo = math.max(r.base, found_lo - HOT_WINDOW)
+            local hi = math.min(r.base + r.size, found_hi + HOT_WINDOW)
+            return { base = lo, size = hi - lo, cursor = 0 }
+        end
+    end
+    return { base = found_lo, size = 0, cursor = 0 }
+end
+
 local function scan_step()
-    local deadline = os.clock() + FRAME_BUDGET
+    local deadline = api.now() + frame_budget()
     while not probe.done and probe.index <= #probe.regions do
         local region = probe.regions[probe.index]
         probe.index = probe.index + 1
@@ -1049,23 +1131,38 @@ local function scan_step()
             probe.seen[key] = true
             pcall(scan_chunk, region.allocation_base, math.min(PROBE_BYTES, region.size))
         end
-        if os.clock() >= deadline then return false end
+        if api.now() >= deadline then return false end
     end
     probe.done = true
-    if complete() and skip_low then return true end
-    while scan.index <= #scan.regions do
-        local region = scan.regions[scan.index]
-        if scan.cursor >= region.size then
-            scan.index = scan.index + 1
-            scan.cursor = 0
+    while true do
+        if found_lo and not scan.hot_done then
+            scan.hot = scan.hot or hot_window()
+            local h = scan.hot
+            if h.cursor >= h.size then
+                scan.hot_done = true
+                state.scanned_window = true
+            else
+                local take = math.min(CHUNK, h.size - h.cursor)
+                pcall(scan_chunk, h.base + h.cursor, take)
+                h.cursor = h.cursor + math.max(take - scan.overlap, 1)
+            end
+        elseif complete() and scan.hot_done then
+            return true                      -- everything known found, its neighbourhood checked
+        elseif scan.index <= #scan.regions then
+            local region = scan.regions[scan.index]
+            if scan.cursor >= region.size then
+                scan.index = scan.index + 1
+                scan.cursor = 0
+            else
+                local take = math.min(CHUNK, region.size - scan.cursor)
+                pcall(scan_chunk, region.base + scan.cursor, take)
+                scan.cursor = scan.cursor + math.max(take - scan.overlap, 1)
+            end
         else
-            local take = math.min(CHUNK, region.size - scan.cursor)
-            pcall(scan_chunk, region.base + scan.cursor, take)
-            scan.cursor = scan.cursor + math.max(take - scan.overlap, 1)
-            if os.clock() >= deadline then return false end
+            return true
         end
+        if api.now() >= deadline then return false end
     end
-    return true
 end
 
 -- ---------------------------------------------------------------- keeping values applied
