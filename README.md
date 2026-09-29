@@ -27,6 +27,8 @@ Built on **[Modular Armor Passives / Passive Picker v3](https://ayakamods.com/mo
 | Your own build, no setup | **[Web builder](https://hung1510.github.io/HD2-Armor-Transmog/)**, then *Download mod (.zip)* |
 | Scripting / version control | `python tools\picker.py build loadout.ini --zip "My Stack.zip"` (below) |
 
+<p align="center"><img src="docs/img/web-builder.png" width="720" alt="Web builder"></p>
+
 Then:
 1. Remove Passive Picker v3 and any older v4 build.
 2. Deploy, **fully restart the game**, and wear armor with the passive the stack is on (Med-Kit by default; use Armor Transmog if you want a different look).

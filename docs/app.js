@@ -372,7 +372,8 @@
     const lua = core.generateLua(data, settings, profiles);
     const archive = core.archiveFor(data, lua);
     const display = settings.name || data.title;
-    const desc = core.describeProfiles(profiles) + ". " + data.credit;
+    const desc = `v${data.version}. Press ${settings.hotkey || data.default_hotkey} in game to edit. ` +
+      core.describeProfiles(profiles) + ". " + data.credit;
     let icon = null;
     try { const r = await fetch("icon.png"); if (r.ok) icon = new Uint8Array(await r.arrayBuffer()); } catch (e) { /* optional */ }
     const zip = new JSZip();

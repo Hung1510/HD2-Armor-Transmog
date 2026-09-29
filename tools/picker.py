@@ -642,7 +642,8 @@ def cmd_build(args):
         return 0
     archive = archive_for(full)
     display = args.name or settings["name"] or TITLE
-    desc = "%s. %s" % (describe_profiles(profiles), CREDIT)
+    desc = "v%s. Press %s in game to edit. %s. %s" % (VERSION, settings.get("hotkey") or DEFAULT_HOTKEY,
+                                                     describe_profiles(profiles), CREDIT)
     guid = write_zip(archive, args.zip, display, desc)
     print("Wrote zip         : %s  (%d bytes Lua, guid %s)" % (args.zip, len(full.encode("utf-8")), guid))
     print("Install it with your mod manager. Remove the original Passive Picker v3 first.")
@@ -686,8 +687,9 @@ def cmd_release(args):
     guid = str(uuid.uuid5(GUID_NS, MOD_ID))
     manifest = {
         "Version": 1, "Guid": guid, "Name": TITLE,
-        "Description": "Pick one preset stack for Med-Kit armour, or build your own at "
-                       "https://hung1510.github.io/HD2-Armor-Transmog/ . " + CREDIT,
+        "Description": "v%s. Press %s in game to tick passives and change values live. "
+                       "Pick one preset stack for Med-Kit armour, or build your own at "
+                       "https://hung1510.github.io/HD2-Armor-Transmog/ . %s" % (VERSION, DEFAULT_HOTKEY, CREDIT),
         "Options": [{
             "Name": TITLE,
             "Description": "Choose ONE preset.",
