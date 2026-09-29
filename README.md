@@ -126,6 +126,7 @@ tests/harness.py           fake game for LuaJIT: memory, engine GUI, keyboard, m
 tests/test_ingame.py       real mod vs fake game: rows match picker.py, panel flows, save/restore
 tests/test_panel_features.py  presets, quick-swap, undo, share codes, plain values
 tests/test_release.py      release zip, blank install, saves from before the rename
+tests/test_panel_layout.py no overlapping or clipped text in any panel view
 tests/test_web_parity.js   web builder output must be byte-identical to Python
 tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, every 6 h)
 TESTING.md                 in-game verification status per effect
@@ -160,6 +161,7 @@ On patch day:
   python tests/test_ingame.py
   python tests/test_panel_features.py
   python tests/test_release.py
+  python tests/test_panel_layout.py
   node tests/test_web_parity.js
   ```
   Preview the site locally with `cd docs && python -m http.server`.

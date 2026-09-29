@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.1 (2026-09-30)
+- **The F7 panel matches the web builder:** the Helldivers 2 armory look, with near-black panels, yellow for what is on, boxed tabs with a hatched stripe under the active one, uppercase passive names and a key-prompt bar (F7 close, F9 swap, Ctrl+Z undo).
+- **Fixed overlapping text:** values like `+30%` could run into the `--` button, `++` was wider than its button, and long *Reset ...* labels ran past their click area. Buttons are now sized from their label's measured width. When the game can't measure text, the panel estimates widths per character on the wide side.
+- New `tests/test_panel_layout.py` checks every panel view for overlapping or clipped text, with real font measurement and with the estimate.
+
 ## 5.0 (2026-09-30): Super Earth Armory Forge
 Passive Picker v4 has a new name and its own identity. Includes everything listed under 4.4 (never released on its own).
 - **New name: Super Earth Armory Forge.** It has a new icon, a new in-game terminal look (navy and Super Earth gold, ember marks on values you change, numbered requisition boxes) and a matching web builder.

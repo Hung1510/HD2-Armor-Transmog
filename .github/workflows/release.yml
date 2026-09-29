@@ -19,12 +19,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: pip install lupa
+      - run: pip install lupa pillow
       - run: python tools/picker.py export-web --check
       - run: |
           python tests/test_ingame.py
           python tests/test_panel_features.py
           python tests/test_release.py
+          python tests/test_panel_layout.py
           node tests/test_web_parity.js
       - run: python tools/picker.py release --zip dist/Super-Earth-Armory-Forge.zip
       - uses: softprops/action-gh-release@v2

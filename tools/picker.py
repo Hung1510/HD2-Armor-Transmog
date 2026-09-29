@@ -35,7 +35,7 @@ ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "panel.lua", "main
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "ArmoryForge"
 TITLE = "Super Earth Armory Forge"
-VERSION = "5.0"
+VERSION = "5.1"
 AUTHOR = "mostlycloudy (original v3), Hung1510 (v4 edit)"
 DEFAULT_HOTKEY = "F7"
 DEFAULT_SWAP_HOTKEY = "F9"     # F6 = Refresh Operations, F8 = SHODAN Stat Editor

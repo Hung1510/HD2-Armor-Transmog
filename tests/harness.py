@@ -94,8 +94,43 @@ class FakeGame:
             b"address_of": lambda t: None, b"mkdir": self._mkdir,
             b"now": lambda: self.L.globals()[b"FAKE_NOW"], b"module_base": lambda n: None,
         })
+        # measure text like a real font would (Pillow, if installed), so layout checks
+        # and screenshots match what a proportional UI font does
+        self._measure_font = {}
+        try:
+            from PIL import ImageFont  # noqa: F401
+            g[b"stingray"][b"Gui"][b"text_extents"] = self._text_extents
+        except ImportError:
+            pass
         self.L.execute(src.encode("utf-8"))
         self.state = g[b"ArmoryForge"]
+
+    def _font(self, size):
+        from PIL import ImageFont
+        sz = max(6, int(round(size)))
+        if sz not in self._measure_font:
+            try:
+                self._measure_font[sz] = ImageFont.truetype("DejaVuSans.ttf", sz)
+            except OSError:
+                self._measure_font[sz] = ImageFont.load_default()
+        return self._measure_font[sz]
+
+    def _text_extents(self, gui, text, font, size):
+        t = text.decode("utf-8", "replace") if isinstance(text, bytes) else str(text)
+        w = self._font(size).getlength(t)
+        return self.L.table_from([0, 0]), self.L.table_from([w, size])
+
+    def text_boxes(self):
+        """[(text, x0, x1, y_top, y_bottom)] in screen pixels from the top, as drawn."""
+        out = []
+        for c in self.draw_calls():
+            if c[0] != b"text":
+                continue
+            _, x, y, z, size, t, *_ = c
+            w = self._font(size).getlength(t.decode("utf-8", "replace"))
+            base = 1080 - y
+            out.append((t.decode("utf-8", "replace"), x, x + w, base - size * 0.8, base))
+        return out
 
     # ------------------------------------------------------------- memory
     def _region(self, addr, size):
@@ -283,8 +318,9 @@ class FakeGame:
                         fonts[sz] = ImageFont.truetype("DejaVuSans.ttf", sz)
                     except OSError:
                         fonts[sz] = ImageFont.load_default()
-                top = height - y - size * 0.8
-                dr.text((x, top), t.decode("utf-8", "replace"), font=fonts[sz], fill=(int(r), int(g), int(b), int(a)))
+                # the mod passes the text's baseline
+                dr.text((x, height - y), t.decode("utf-8", "replace"), font=fonts[sz], anchor="ls",
+                        fill=(int(r), int(g), int(b), int(a)))
         if crop:
             rects = [c for c in calls if c[0] == b"rect"]
             if rects:

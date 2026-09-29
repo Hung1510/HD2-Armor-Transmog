@@ -122,7 +122,7 @@ local ui = { open = false, tab = 1, sel = nil, hover = nil, gui = nil, world = n
              regions = {}, version = 0, errors = 0, value = nil, adding = false, message = nil,
              confirm = nil, presets = false, psel = nil, naming = nil, history = {}, last_text = nil,
              swap_at = 0 }
-local W, H = 1000, 940
+local W, H = 1000, 990
 local font = nil
 local held, mouse_was_down, armed = {}, nil, nil
 local keys_was = {}          -- hotkeys: pressed this frame but not last
@@ -530,11 +530,12 @@ end
 
 
 -- ---------------------------------------------------------------- draw
--- Super Earth Armory Forge look: a Ministry of Defense requisition terminal. Navy steel,
--- Super Earth gold, ember orange for values you have forged (changed), reticle corners,
--- numbered requisition boxes, "//" section labels. Same palette as the mod icon and the
--- web builder. Coordinates are panel units from the top left; the gui counts pixels
--- from the bottom left.
+-- The same look as the web builder and the game's own Armory screen: near-black panels,
+-- Helldivers yellow (#FFE710) for what is on, boxed tabs with a hatched stripe under the
+-- active one, uppercase passive names, a key-prompt bar at the bottom. Buttons are sized
+-- from their label's measured width, so text never runs out of them. Coordinates are
+-- panel units from the top left; the gui counts pixels from the bottom left. ASCII only:
+-- the game's font may not have other glyphs.
 local function draw(width, height)
     local Gui, Vector3, Vector2, Color = sr.Gui, sr.Vector3, sr.Vector2, sr.Color
     local s = height / 1080 * 0.8
@@ -542,6 +543,7 @@ local function draw(width, height)
     local gui = ui.gui
     local regions = {}
     local ink_font, ink_material = font.font, font.material
+    local up = string.upper
 
     local function color(r, g, b, a) return Color(a or 255, r, g, b) end
     local function vx(v)
@@ -553,286 +555,321 @@ local function draw(width, height)
         return nil
     end
     local C = {
-        BG = color(10, 18, 29, 242), SIDE = color(13, 23, 36, 245), HEAD = color(16, 30, 48),
-        CARD = color(19, 33, 51), CARD_HI = color(27, 45, 68), FIELD = color(8, 14, 23),
-        LINE = color(41, 62, 88), TEXT = color(233, 228, 212), MUTED = color(146, 160, 178), DIM = color(88, 104, 124),
-        GOLD = color(233, 185, 73), GOLD_HI = color(255, 210, 110), GOLD_DK = color(120, 92, 30),
-        EMBER = color(255, 122, 47), INK = color(10, 16, 26), SOFT = color(233, 185, 73, 34),
-        GOOD = color(92, 201, 170), WARN = color(255, 122, 47),
+        BG = color(11, 12, 13, 246), PANEL = color(18, 19, 21), ROW = color(26, 28, 31), ROW_HI = color(34, 36, 40),
+        FIELD = color(10, 11, 12), LINE = color(44, 46, 50), LINE2 = color(62, 65, 70),
+        TEXT = color(233, 230, 220), MUTED = color(143, 146, 150), DIM = color(93, 97, 102),
+        YELLOW = color(255, 231, 16), YELLOW_DK = color(150, 136, 10), INK = color(18, 17, 4),
+        SOFT = color(255, 231, 16, 26), BLUE = color(65, 99, 156), GOOD = color(92, 201, 170), BAD = color(255, 107, 91),
     }
-    C.ACCENT = C.GOLD
 
     local function rect(x, y, w, h, c, z)
         Gui.rect(gui, Vector3(ox + x * s, height - oy - (y + h) * s, z or 951), Vector2(w * s, h * s), c)
     end
-    local function text(value, x, y, size, c, limit, align_right)
-        if value == nil or value == '' or not ink_font then return end
-        size = size * s
-        local px = ox + x * s
-        if limit or align_right then
-            local ok, lo, hi = pcall(Gui.text_extents, gui, value, ink_font, size)
-            local measure = nil
-            if ok and lo and hi then
-                local a, b = vx(lo), vx(hi)
-                if a and b and b > a then measure = b - a end
-            end
-            measure = measure or #value * size * 0.5
-            if limit and measure > limit * s then size = size * limit * s / measure; measure = limit * s end
-            if align_right then px = px - measure end
+    -- width of a text in panel units: measured when the engine can, else a safe estimate
+    local function measure(value, size)
+        local ok, lo, hi = pcall(Gui.text_extents, gui, value, ink_font, size * s)
+        if ok and lo and hi then
+            local a, b = vx(lo), vx(hi)
+            if a and b and b > a then return (b - a) / s end
         end
-        Gui.text(gui, value, ink_font, size, ink_material, Vector3(px, height - oy - y * s - size * 0.8, 954), c or C.TEXT)
+        -- estimate per character, on the wide side (a wide font like DejaVu Sans)
+        local w = 0
+        for ch in value:gmatch('.') do
+            w = w + (ch:find('[%%@MWmw]') and 0.98 or ch:find('[%u+=<>#&]') and 0.8 or ch:find('%d') and 0.66
+                     or ch:find('[%s%.,:;!|il\'%-%(%)%[%]]') and 0.36 or 0.62)
+        end
+        return w * size
+    end
+    -- limit: shrink to fit that width; align: 'right' or 'center' around x
+    local function text(value, x, y, size, c, limit, align)
+        if value == nil or value == '' or not ink_font then return 0 end
+        local w = measure(value, size)
+        if limit and w > limit then size = size * limit / w; w = limit end
+        local px = x
+        if align == 'right' then px = x - w elseif align == 'center' then px = x - w / 2 end
+        local sz = size * s
+        Gui.text(gui, value, ink_font, sz, ink_material, Vector3(ox + px * s, height - oy - y * s - sz * 0.8, 954), c or C.TEXT)
+        return w
     end
     local function border(x, y, w, h, c, z)
         rect(x, y, w, 1, c, z or 952); rect(x, y + h - 1, w, 1, c, z or 952)
         rect(x, y, 1, h, c, z or 952); rect(x + w - 1, y, 1, h, c, z or 952)
     end
-    -- reticle corners: short L-brackets on the four corners of a box
-    local function corners(x, y, w, h, c, len, t, z)
-        len, t, z = len or 14, t or 2, z or 955
-        rect(x, y, len, t, c, z); rect(x, y, t, len, c, z)
-        rect(x + w - len, y, len, t, c, z); rect(x + w - t, y, t, len, c, z)
-        rect(x, y + h - t, len, t, c, z); rect(x, y + h - len, t, len, c, z)
-        rect(x + w - len, y + h - t, len, t, c, z); rect(x + w - t, y + h - len, t, len, c, z)
-    end
     local function region(key, x, y, w, h, enabled)
         regions[#regions + 1] = { key = key, x = ox + x * s, y = height - oy - (y + h) * s, w = w * s, h = h * s,
                                   enabled = enabled ~= false }
     end
-    local function label(value, x, y, c) text('// ' .. value, x, y, 12, c or C.GOLD) end
-    -- filled = primary (gold slab with a notch), else a steel key with a thin frame
+    local function label(value, x, y, c, limit) return text(up(value), x, y, 11, c or C.YELLOW, limit) end
+    -- a button; w = nil sizes it to its label. Returns its width.
     local function button(key, caption, x, y, w, h, enabled, filled, ink)
+        caption = up(caption)
+        local size = 13
+        w = w or (measure(caption, size) + 28)
         local hovered = ui.hover == key and enabled ~= false
         if filled then
-            rect(x, y, w, h, enabled == false and C.GOLD_DK or hovered and C.GOLD_HI or C.GOLD, 951)
-            rect(x, y + h - 3, w, 3, C.GOLD_DK, 952)                 -- forged edge
+            rect(x, y, w, h, enabled == false and C.YELLOW_DK or C.YELLOW, 951)
+            if hovered then border(x, y, w, h, C.TEXT, 953) end
         else
-            rect(x, y, w, h, hovered and C.CARD_HI or C.CARD, 951)
-            border(x, y, w, h, enabled == false and C.LINE or hovered and C.GOLD or C.LINE)
+            rect(x, y, w, h, hovered and C.ROW_HI or C.PANEL, 951)
+            border(x, y, w, h, enabled == false and C.LINE or hovered and C.TEXT or C.LINE2)
         end
         local c = enabled == false and C.DIM or filled and C.INK or ink or C.TEXT
-        text(caption, x + 12, y + (h - 15) / 2, 15, c, w - 18)
+        text(caption, x + w / 2, y + (h - size) / 2, size, c, w - 14, 'center')
         region(key, x, y, w, h, enabled)
+        return w
     end
-    -- requisition box: square, gold fill with a navy core when requisitioned
+    local function keycap(k, x, y)
+        local w = math.max(26, measure(k, 12) + 14)
+        border(x, y, w, 22, C.TEXT, 953)
+        text(k, x + w / 2, y + 5, 12, C.TEXT, w - 6, 'center')
+        return w
+    end
     local function checkbox(key, x, y, on, enabled)
         local hovered = ui.hover == key
-        if on then
-            rect(x, y, 16, 16, hovered and C.GOLD_HI or C.GOLD, 952)
-            rect(x + 5, y + 5, 6, 6, C.INK, 953)
-        else
-            border(x, y, 16, 16, hovered and C.GOLD or C.MUTED, 952)
-        end
-        region(key, x - 4, y - 4, 24, 24, enabled)
+        border(x, y, 16, 16, on and C.YELLOW or hovered and C.YELLOW or C.MUTED, 952)
+        if on then rect(x + 4, y + 4, 8, 8, C.YELLOW, 953) end
+        region(key, x - 5, y - 4, 26, 24, enabled)
     end
-    local function stamp(caption, x, y, c)
-        local w = #caption * 8 + 16
-        border(x, y, w, 20, c, 952)
-        text(caption, x + 8, y + 4, 11, c)
-        return w
-    end
-    local function tab(key, caption, x, active, ink)
-        local w = math.min(200, 30 + #caption * 8.2)
-        if active then
-            rect(x - 8, 66, w - 6, 34, C.CARD, 951)
-            rect(x - 8, 66, w - 6, 2, C.GOLD, 952)
-        elseif ui.hover == key then
-            rect(x - 8, 98, w - 6, 2, C.MUTED, 952)
+    -- the game's hatched stripe, as short diagonal steps
+    local function hatch(x, y, w, c)
+        local k = 0
+        while k * 7 + 6 <= w do
+            for j = 0, 2 do rect(x + k * 7 + j * 1.5, y + 4 - j * 2, 2.5, 2, c, 953) end
+            k = k + 1
         end
-        text(caption, x + 4, 76, 15, active and C.TEXT or (ui.hover == key and C.TEXT or ink or C.MUTED), w - 22)
-        region(key, x - 8, 64, w - 6, 36)
+    end
+    local function tab(key, caption, x, active, ink, n)
+        caption = up(caption)
+        local w = math.min(230, measure(caption, 15) + (n and 44 or 30))
+        rect(x, 0 + 108, w, 40, active and C.PANEL or C.BG, 951)
+        border(x, 108, w, 40, active and C.TEXT or (ui.hover == key and C.MUTED or C.LINE2), 952)
+        text(caption, x + 12, 116, 15, active and C.TEXT or (ui.hover == key and C.TEXT or ink or C.MUTED), w - (n and 36 or 20))
+        if n then text(tostring(n), x + w - 8, 134, 11, C.DIM, nil, 'right') end
+        if active then hatch(x + 10, 136, w - (n and 34 or 20), C.TEXT) end
+        region(key, x, 108, w, 40)
         return w
     end
 
-    -- frame: navy body, header plate with emblem, reticle corners
+    -- frame, top strip, title
     rect(0, 0, W, H, C.BG, 950)
-    rect(0, 0, W, 58, C.HEAD, 951)
-    rect(0, 0, W, 3, C.GOLD, 952)
-    rect(0, 58, W, 1, C.GOLD_DK, 952)
-    border(0, 0, W, H, C.LINE, 954)
-    corners(0, 0, W, H, C.GOLD, 26, 3)
+    border(0, 0, W, H, C.LINE, 955)
+    rect(0, 0, W, 3, C.YELLOW, 952)
     region('panel', 0, 0, W, H, false)
-    -- emblem: a gold shield with a chevron, drawn from rects
-    rect(18, 12, 30, 22, C.GOLD, 952)
-    rect(21, 34, 24, 4, C.GOLD, 952)
-    rect(25, 38, 16, 4, C.GOLD, 952)
-    rect(30, 42, 6, 3, C.GOLD, 952)
-    rect(24, 19, 18, 4, C.INK, 953)
-    rect(28, 23, 10, 4, C.INK, 953)
-    text('SUPER EARTH ARMORY FORGE', 60, 10, 22, C.GOLD)
-    text('MINISTRY OF DEFENSE  //  ARMOR REQUISITION TERMINAL  //  v' .. tostring(MOD.version), 60, 36, 11, C.MUTED)
-    local kw = #hotkey() * 10 + 16
-    border(W - 20 - kw - 58, 17, kw, 24, C.GOLD, 953)
-    text(hotkey(), W - 20 - kw - 50, 21, 14, C.GOLD)
-    text('CLOSE', W - 20, 22, 13, C.MUTED, nil, true)
+    local mx = text('MINISTRY OF DEFENSE', 22, 12, 11, C.MUTED)
+    text('SUPER EARTH ARMORY FORGE', 22 + mx + 12, 12, 11, C.TEXT)
+    text('V' .. tostring(MOD.version), W - 22, 12, 11, C.DIM, nil, 'right')
+    rect(0, 32, W, 1, C.LINE, 951)
+    -- emblem box: the shield from the mod icon
+    border(22, 44, 50, 50, C.TEXT, 952)
+    rect(33, 54, 28, 20, C.YELLOW, 952); rect(36, 74, 22, 4, C.YELLOW, 952)
+    rect(40, 78, 14, 4, C.YELLOW, 952); rect(44, 82, 6, 3, C.YELLOW, 952)
+    rect(38, 59, 18, 4, C.INK, 953); rect(42, 63, 10, 4, C.INK, 953)
+    local tw = text('ARMORY', 86, 50, 34, C.TEXT)
+    text('FORGE', 86 + tw + 12, 50, 34, C.YELLOW)
+    text('Tick passives, change values: it all applies at once.', 88, 84, 12, C.MUTED, 420)
+
+    local by0 = H - 40                           -- key-prompt bar
+    local function prompts()
+        rect(0, by0, W, 40, color(6, 7, 8, 250), 951)
+        rect(0, by0, W, 1, C.LINE, 952)
+        local x = 22
+        for _, p in ipairs({ { hotkey(), 'Close' }, swap_key() ~= 'OFF' and { swap_key(), 'Swap loadout' } or false,
+                             { 'CTRL+Z', 'Undo' } }) do
+            if p then
+                x = x + keycap(p[1], x, by0 + 9) + 8
+                x = x + text(up(p[2]), x, by0 + 13, 12, C.TEXT) + 22
+            end
+        end
+        if ui.message then
+            local mw = math.min(W - x - 30, measure(ui.message.text, 13) + 26)
+            rect(W - 16 - mw, by0 + 7, mw, 26, C.SOFT, 952)
+            rect(W - 16 - mw, by0 + 7, 3, 26, C.YELLOW, 953)
+            text(ui.message.text, W - 16 - mw + 13, by0 + 13, 13, C.YELLOW, mw - 20)
+        else
+            text('SOLO / PRIVATE LOBBIES ONLY', W - 22, by0 + 14, 11, C.DIM, nil, 'right')
+        end
+    end
 
     if state.phase ~= 'ready' then
-        label('SCANNING ARMORY RECORDS', 26, 84)
-        text('Reading the game\'s armor passives... (' .. perks_found .. ' of ' .. #CAT_LIST .. ' found)', 26, 108, 18, C.TEXT)
-        text('Load into your ship or a mission if this does not finish.', 26, 136, 15, C.MUTED)
+        label('Scanning armory records', 22, 124)
+        text('Reading the game\'s armor passives... (' .. perks_found .. ' of ' .. #CAT_LIST .. ' found)', 22, 146, 18, C.TEXT, W - 44)
+        text('Load into your ship or a mission if this does not finish.', 22, 176, 14, C.MUTED, W - 44)
+        prompts()
         return regions
     end
 
     -- tabs: one per armor stack, + Armor, Presets
     local p = current()
-    local x = 26
+    local x = 22
     for n, prof in ipairs(LOADOUT.profiles) do
-        x = x + tab('tab:' .. n, CAT[prof.perk].name .. ' armor', x, n == ui.tab and not ui.adding and not ui.presets)
-        if x > W - 400 then break end
+        x = x + tab('tab:' .. n, CAT[prof.perk].name, x, n == ui.tab and not ui.adding and not ui.presets, nil, n) + 6
+        if x > W - 420 then break end
     end
-    x = x + tab('add', '+ Armor', x + 4, ui.adding, C.GOLD) + 4
-    tab('presets', 'Presets', x + 8, ui.presets, C.GOLD)
+    x = x + tab('add', '+ Armor', x, ui.adding, C.YELLOW) + 6
+    tab('presets', 'Presets', x, ui.presets, C.YELLOW)
     if p and not ui.adding and not ui.presets then
         local sure = ui.confirm and ui.confirm.kind == 'remove'
-        text(sure and 'Click again to remove' or 'Remove this armor', W - 26, 76, 14,
-             (sure or ui.hover == 'remove') and C.EMBER or C.DIM, nil, true)
-        region('remove', W - 26 - 180, 64, 180, 36)
+        local cap = sure and 'CLICK AGAIN TO REMOVE' or 'REMOVE THIS STACK'
+        local rw = measure(cap, 11)
+        text(cap, W - 22, 126, 11, (sure or ui.hover == 'remove') and C.BAD or C.DIM, nil, 'right')
+        region('remove', W - 22 - rw - 6, 114, rw + 12, 28)
     end
-    rect(0, 100, W, 1, C.LINE, 951)
 
-    local LX, LW, LY, RH = 0, 336, 114, 25
-    local X0, RW = LW + 24, W - LW - 48
-    rect(LX, 101, LW, H - 101, C.SIDE, 950)
-    rect(LW, 101, 1, H - 101, C.LINE, 951)
+    -- two panels
+    local LX, LW, TOP = 22, 330, 158
+    local X0 = LX + LW + 14
+    local RW = W - 22 - X0
+    local BOT = by0 - 10
+    rect(LX, TOP, LW, BOT - TOP, C.PANEL, 950); border(LX, TOP, LW, BOT - TOP, C.LINE, 951)
+    rect(X0, TOP, RW, BOT - TOP, C.PANEL, 950); border(X0, TOP, RW, BOT - TOP, C.LINE, 951)
+    local IX, IW = LX + 14, LW - 28                  -- left inner
+    local RX, RIW = X0 + 16, RW - 32                 -- right inner
+    local RH = 23
+
+    local function head(x, y, lab, title, limit)
+        label(lab, x, y)
+        text(up(title), x, y + 16, 21, C.TEXT, limit)
+    end
+    local function list_row(key, y, name, chosen, name_c)
+        if chosen then rect(LX + 1, y, LW - 2, RH - 1, C.ROW_HI, 951); rect(LX + 1, y, 3, RH - 1, C.YELLOW, 952)
+        elseif ui.hover == key then rect(LX + 1, y, LW - 2, RH - 1, C.ROW, 951) end
+        text(name, IX + 4, y + 5, 14, name_c or (chosen and C.TEXT or C.MUTED), IW - 12)
+        region(key, LX + 1, y, LW - 2, RH - 1)
+    end
 
     -- ============================================================ Presets tab
     if ui.presets then
         local list = PP.entries()
-        local y = LY
-        local function row(entry)
-            local key = 'pre:' .. entry.kind .. ':' .. entry.i
-            local chosen = ui.psel and ui.psel.kind == entry.kind and ui.psel.i == entry.i
-            if chosen then rect(LX, y, LW, RH - 1, C.CARD_HI, 951); rect(LW - 4, y, 4, RH - 1, C.GOLD, 952)
-            elseif ui.hover == key then rect(LX, y, LW, RH - 1, C.CARD, 951) end
-            local naming = ui.naming and ui.naming.i == entry.i and entry.kind == 'user'
-            text(chosen and '>' or '-', 24, y + 5, 15, chosen and C.GOLD or C.DIM)
-            if naming then
-                text(ui.naming.text .. '_', 44, y + 5, 15, ui.naming.fresh and C.MUTED or C.GOLD, LW - 64)
-            else
-                text(entry.name, 44, y + 5, 15, chosen and C.TEXT or C.MUTED, LW - 64)
+        head(IX, TOP + 14, 'Loadouts', 'Presets', IW)
+        local y = TOP + 64
+        label('Standard issue', IX, y); y = y + 18
+        for _, e in ipairs(list) do
+            if e.kind ~= 'user' then
+                list_row('pre:' .. e.kind .. ':' .. e.i, y, e.name, ui.psel and ui.psel.kind == e.kind and ui.psel.i == e.i)
+                y = y + RH
             end
-            region(key, LX, y, LW, RH - 1)
-            y = y + RH
         end
-        label('STANDARD ISSUE', 24, y)
-        y = y + 22
-        for _, entry in ipairs(list) do if entry.kind ~= 'user' then row(entry) end end
         y = y + 12
-        label('YOUR LOADOUTS', 24, y)
-        text(#PP.user .. ' saved', LW - 20, y - 1, 12, #PP.user > 0 and C.GOLD or C.DIM, nil, true)
-        y = y + 22
-        for _, entry in ipairs(list) do if entry.kind == 'user' then row(entry) end end
-        if #PP.user == 0 then text('None yet. Save the current stack below.', 24, y + 4, 13, C.DIM, LW - 44); y = y + 26 end
-        button('psave', '+ Save current stack', 24, y + 10, 230, 32, true, true)
+        label('Your loadouts', IX, y)
+        text(#PP.user .. ' SAVED', IX + IW, y, 11, #PP.user > 0 and C.YELLOW or C.DIM, nil, 'right')
+        y = y + 18
+        for _, e in ipairs(list) do
+            if e.kind == 'user' then
+                local key = 'pre:user:' .. e.i
+                local chosen = ui.psel and ui.psel.kind == 'user' and ui.psel.i == e.i
+                if ui.naming and ui.naming.i == e.i then
+                    list_row(key, y, ui.naming.text .. '_', chosen, ui.naming.fresh and C.MUTED or C.YELLOW)
+                else
+                    list_row(key, y, e.name, chosen)
+                end
+                y = y + RH
+            end
+        end
+        if #PP.user == 0 then text('None yet. Save the current stack.', IX + 4, y + 4, 13, C.DIM, IW - 8); y = y + 26 end
+        button('psave', '+ Save current stack', IX, y + 10, IW, 32, true, true)
 
-        -- right: the chosen preset
         local entry = nil
         for _, e in ipairs(list) do if ui.psel and e.kind == ui.psel.kind and e.i == ui.psel.i then entry = e end end
         if not entry then
-            label('LOADOUTS', X0, 116)
-            text('Presets', X0, 136, 24, C.TEXT, RW)
-            text('Click a preset on the left to see what it stacks, then load it.', X0, 176, 14, C.MUTED, RW)
-            text('Save your own with "+ Save current stack". ' .. (swap_key() ~= 'OFF' and
-                 (swap_key() .. ' in game cycles through your presets (or the standard ones).') or ''), X0, 196, 14, C.MUTED, RW)
+            head(RX, TOP + 14, 'Loadouts', 'Choose a preset', RIW)
+            text('Pick one on the left to see what it stacks, then load it.', RX, TOP + 70, 14, C.MUTED, RIW)
+            text('Save your own with "+ Save current stack".', RX, TOP + 92, 14, C.MUTED, RIW)
+            if swap_key() ~= 'OFF' then
+                text(swap_key() .. ' in game cycles your loadouts (or the standard ones).', RX, TOP + 114, 14, C.MUTED, RIW)
+            end
         else
             local l = PP.loadout_of(entry)
-            label(entry.kind == 'installed' and 'INSTALLED BUILD' or entry.kind == 'builtin' and 'STANDARD ISSUE' or 'YOUR LOADOUT', X0, 116)
-            text(entry.name, X0, 136, 24, C.TEXT, RW)
-            local y2 = 180
+            head(RX, TOP + 14, entry.kind == 'installed' and 'Installed build' or entry.kind == 'builtin' and 'Standard issue' or 'Your loadout',
+                 entry.name, RIW)
+            local y2 = TOP + 66
             for _, sm in ipairs(PP.summary(l)) do
-                rect(X0, y2, RW, 1, C.LINE, 951)
-                text(sm.armor .. ' armor', X0, y2 + 10, 16, C.GOLD, RW)
-                text(#sm.names .. ' passive(s), ' .. sm.tweaks .. ' value(s) forged, ' ..
-                     (sm.policy == 'strongest' and 'strongest only' or 'stack all'), X0, y2 + 32, 13, C.MUTED, RW)
-                y2 = y2 + 56
+                rect(RX, y2, RIW, 1, C.LINE, 951)
+                text(up(sm.armor .. ' armor'), RX, y2 + 10, 14, C.YELLOW, RIW)
+                text(#sm.names .. ' passive(s), ' .. sm.tweaks .. ' value(s) changed, ' ..
+                     (sm.policy == 'strongest' and 'strongest only' or 'stack all'), RX, y2 + 30, 13, C.MUTED, RIW)
+                y2 = y2 + 52
                 local line = ''
                 for i, nm in ipairs(sm.names) do
                     local add = (line == '' and '' or ', ') .. nm
-                    if #line + #add > 70 then
-                        text(line .. ',', X0 + 10, y2, 13, C.DIM, RW - 10); y2 = y2 + 18; line = nm
+                    if measure(line .. add, 13) > RIW - 10 then
+                        text(line .. ',', RX + 8, y2, 13, C.DIM, RIW - 10); y2 = y2 + 18; line = nm
                     else line = line .. add end
-                    if i == #sm.names then text(line, X0 + 10, y2, 13, C.DIM, RW - 10); y2 = y2 + 18 end
+                    if i == #sm.names then text(line, RX + 8, y2, 13, C.DIM, RIW - 10); y2 = y2 + 18 end
                 end
                 y2 = y2 + 12
-                if y2 > H - 260 then break end
+                if y2 > BOT - 150 then break end
             end
-            local by = H - 200
-            rect(X0, by - 12, RW, 1, C.LINE, 951)
-            button('pload', 'Load this preset', X0, by, 200, 34, l ~= nil, true)
+            local by = BOT - 96
+            rect(RX, by - 12, RIW, 1, C.LINE, 951)
+            local bx = RX
+            bx = bx + button('pload', 'Load this preset', bx, by, nil, 34, l ~= nil, true) + 8
             if entry.kind == 'user' then
                 local sure = ui.confirm and ui.confirm.kind
-                button('pover', sure == 'pover' and 'Click again' or 'Save current here', X0 + 210, by, 170, 34, true)
-                button('pren', 'Rename', X0 + 390, by, 100, 34, true)
-                button('pdel', sure == 'pdel' and 'Click again' or 'Delete', X0 + 500, by, 100, 34, true, false,
-                       sure == 'pdel' and C.EMBER or nil)
-                if ui.naming then text('Type a name, Enter to keep it, Esc to cancel.', X0, by + 46, 13, C.GOLD, RW) end
+                bx = bx + button('pover', sure == 'pover' and 'Click again' or 'Save current here', bx, by, nil, 34, true) + 8
+                bx = bx + button('pren', 'Rename', bx, by, nil, 34, true) + 8
+                button('pdel', sure == 'pdel' and 'Click again' or 'Delete', bx, by, nil, 34, true, false, sure == 'pdel' and C.BAD or nil)
             end
-            text('Loading replaces your current stacks (Undo brings them back).', X0, by + 66, 12, C.DIM, RW)
+            if ui.naming then text('Type a name, Enter to keep it, Esc to cancel.', RX, by + 46, 13, C.YELLOW, RIW)
+            else text('Loading replaces your current stacks (Undo brings them back).', RX, by + 46, 12, C.DIM, RIW) end
         end
 
     -- ============================================================ + Armor
     elseif ui.adding then
-        label('CHOOSE THE ARMOR PASSIVE', 24, LY)
+        head(IX, TOP + 14, 'New stack', 'Choose armor passive', IW)
         local used = {}
         for _, prof in ipairs(LOADOUT.profiles) do used[prof.perk] = true end
-        local y = LY + 24
+        local y = TOP + 64
         for _, c in ipairs(CAT_LIST) do
-            if not used[c.id] then
-                local key = 'addpick:' .. c.id
-                if ui.hover == key then rect(LX, y, LW, RH - 1, C.CARD_HI, 951); rect(LW - 4, y, 4, RH - 1, C.GOLD, 952) end
-                text(c.name, 24, y + 5, 15, ui.hover == key and C.TEXT or C.MUTED, LW - 44)
-                region(key, LX, y, LW, RH - 1)
+            if not used[c.id] and y + RH < BOT - 50 then
+                list_row('addpick:' .. c.id, y, up(c.name), ui.hover == 'addpick:' .. c.id)
                 y = y + RH
             end
         end
-        button('addcancel', 'Cancel', 24, H - 50, 110, 32, true)
-        label('NEW STACK', X0, 116)
-        text('A second stack', X0, 136, 24, C.TEXT, RW)
-        text('Each armor passive can carry its own stack. Pick one on the left,', X0, 176, 14, C.MUTED, RW)
-        text('then wear any armor that has that passive to get the stack.', X0, 196, 14, C.MUTED, RW)
-        text('Example: Med-Kit armor for a tank build, Siege-Ready armor for a gunner build.', X0, 226, 13, C.DIM, RW)
+        button('addcancel', 'Cancel', IX, BOT - 44, nil, 32, true)
+        head(RX, TOP + 14, 'New stack', 'A second stack', RIW)
+        text('Each armor passive can carry its own stack. Pick one on the left,', RX, TOP + 70, 14, C.MUTED, RIW)
+        text('then wear any armor that has that passive to get the stack.', RX, TOP + 92, 14, C.MUTED, RIW)
+        text('Example: Med-Kit armor for a tank build, Siege-Ready armor for a gunner build.', RX, TOP + 122, 13, C.DIM, RIW)
 
     elseif not p then
-        label('NO ARMOR FORGED YET', 24, LY)
-        text('Nothing is stacked.', 24, LY + 24, 18, C.TEXT)
-        text('Click "+ Armor" to start one,', 24, LY + 54, 14, C.MUTED, LW - 44)
-        text('or load one from Presets.', 24, LY + 74, 14, C.MUTED, LW - 44)
-        label('HOW IT WORKS', X0, 116)
-        text('Pick the armor passive you wear (for example Med-Kit),', X0, 140, 15, C.TEXT, RW)
-        text('then tick any of the 31 passives to stack onto it and', X0, 162, 15, C.TEXT, RW)
-        text('change their values. Everything applies at once.', X0, 184, 15, C.TEXT, RW)
-        button('add', '+ Armor', X0, 222, 150, 34, true, true)
-        button('presets', 'Presets', X0 + 160, 222, 150, 34, true)
+        head(IX, TOP + 14, 'No armor forged yet', 'Empty', IW)
+        text('Nothing is stacked.', IX, TOP + 70, 14, C.MUTED, IW)
+        head(RX, TOP + 14, 'How it works', 'Forge your armor', RIW)
+        text('Pick the armor passive you wear (for example Med-Kit),', RX, TOP + 72, 15, C.TEXT, RIW)
+        text('then tick any of the 31 passives to stack onto it and', RX, TOP + 94, 15, C.TEXT, RIW)
+        text('change their values. Everything applies at once.', RX, TOP + 116, 15, C.TEXT, RIW)
+        local bx = RX
+        bx = bx + button('add', '+ Armor', bx, TOP + 152, nil, 36, true, true) + 8
+        button('presets', 'Presets', bx, TOP + 152, nil, 36, true)
 
     -- ============================================================ an armor stack
     else
         local n_on = 0
         for _ in pairs(p.enabled) do n_on = n_on + 1 end
-        label('PASSIVE CATALOG', 24, LY)
-        text(n_on .. ' requisitioned', LW - 20, LY - 1, 12, n_on > 0 and C.GOLD or C.DIM, nil, true)
-        local y = LY + 20
+        head(IX, TOP + 14, 'Armor stack ' .. ui.tab .. ' / ' .. #LOADOUT.profiles, 'Choose passives', IW - 70)
+        text(n_on .. ' ON', IX + IW, TOP + 14, 11, n_on > 0 and C.YELLOW or C.DIM, nil, 'right')
+        local y = TOP + 60
         local base_key = 'sel:' .. p.perk
-        if ui.sel == p.perk then rect(LX, y, LW, RH, C.CARD_HI, 951); rect(LW - 4, y, 4, RH, C.GOLD, 952)
-        elseif ui.hover == base_key then rect(LX, y, LW, RH, C.CARD, 951) end
-        rect(24, y + 5, 40, 16, C.GOLD, 952)
-        text('BASE', 29, y + 7, 11, C.INK)
-        text(CAT[p.perk].name, 74, y + 5, 15, C.TEXT, LW - 96)
-        region(base_key, LX, y, LW, RH)
-        y = y + RH + 6
-        local k = 0
+        if ui.sel == p.perk then rect(LX + 1, y, LW - 2, RH, C.ROW_HI, 951); rect(LX + 1, y, 3, RH, C.YELLOW, 952)
+        elseif ui.hover == base_key then rect(LX + 1, y, LW - 2, RH, C.ROW, 951) end
+        local bw = measure('BASE', 10) + 10
+        rect(IX + 2, y + 5, bw, 14, C.YELLOW, 952)
+        text('BASE', IX + 2 + bw / 2, y + 7, 10, C.INK, nil, 'center')
+        text(up(CAT[p.perk].name), IX + bw + 12, y + 5, 14, C.TEXT, IW - bw - 16)
+        region(base_key, LX + 1, y, LW - 2, RH)
+        y = y + RH + 4
         for _, c in ipairs(CAT_LIST) do
             if c.id ~= p.perk then
-                k = k + 1
                 local on = p.enabled[c.id] == true
                 local key = 'sel:' .. c.id
-                if ui.sel == c.id then rect(LX, y, LW, RH - 1, C.CARD_HI, 951); rect(LW - 4, y, 4, RH - 1, C.GOLD, 952)
-                elseif ui.hover == key then rect(LX, y, LW, RH - 1, C.CARD, 951) end
-                region(key, LX + 48, y, LW - 48, RH - 1)
-                checkbox('tick:' .. c.id, 24, y + 4, on)
-                text(string.format('%02d', k), 50, y + 7, 11, on and C.GOLD_DK or C.LINE)
+                if ui.sel == c.id then rect(LX + 1, y, LW - 2, RH - 1, C.ROW_HI, 951); rect(LX + 1, y, 3, RH - 1, C.YELLOW, 952)
+                elseif ui.hover == key then rect(LX + 1, y, LW - 2, RH - 1, C.ROW, 951) end
+                region(key, IX + 26, y, LW - 2 - (IX + 26 - LX), RH - 1)
+                checkbox('tick:' .. c.id, IX + 2, y + 3, on)
                 local tweaked = false
                 for tk in pairs(p.tweaks) do if tk:match('^' .. c.id .. '%.') then tweaked = true break end end
-                text(c.name, 74, y + 5, 15, on and C.TEXT or C.MUTED, LW - 104)
-                if tweaked and on then rect(LW - 20, y + 9, 7, 7, C.EMBER, 952) end
+                text(up(c.name), IX + 28, y + 5, 13, on and C.YELLOW or C.MUTED, IW - 44)
+                if tweaked and on then rect(IX + IW - 6, y + 9, 6, 6, C.TEXT, 952) end
                 y = y + RH
             end
         end
@@ -842,105 +879,101 @@ local function draw(width, height)
         if sel then
             local is_base = sel.id == p.perk
             local on = is_base or p.enabled[sel.id] == true
-            label('SPECIFICATIONS', X0, 114)
-            text(sel.name, X0, 132, 24, C.TEXT, RW - 180)
-            local caption = is_base and 'BASE PERK' or on and 'REQUISITIONED' or 'NOT ISSUED'
-            local pw = stamp(caption, X0, 164, is_base and C.GOLD or on and C.GOOD or C.DIM)
-            if is_base then
-                text('Your armor\'s own passive. Values here replace its own.', X0 + pw + 12, 167, 13, C.MUTED, RW - pw - 14)
-            else
-                button('tick:' .. sel.id, on and 'Remove from stack' or 'Add to stack', W - 24 - 170, 122, 170, 32, true, not on)
-                text(on and ('Stacked on ' .. CAT[p.perk].name .. ' armor.') or 'Values you set are kept for when you add it.',
-                     X0 + pw + 12, 167, 13, C.MUTED, RW - pw - 14)
-            end
-            local y2 = 198
+            local cap = on and (is_base and 'Remove from stack' or 'Remove from stack') or 'Add to stack'
+            local btn_w = measure(up(cap), 13) + 28
+            head(RX, TOP + 14, 'Specifications', sel.name, RIW - (is_base and 0 or btn_w + 12))
+            if not is_base then button('tick:' .. sel.id, cap, RX + RIW - btn_w, TOP + 18, btn_w, 32, true, not on) end
+            local st = is_base and 'BASE PERK' or on and 'STACKED' or 'NOT STACKED'
+            local sw = measure(st, 11) + 16
+            border(RX, TOP + 50, sw, 18, is_base and C.YELLOW or on and C.GOOD or C.DIM, 952)
+            text(st, RX + sw / 2, TOP + 54, 11, is_base and C.YELLOW or on and C.GOOD or C.DIM, nil, 'center')
+            text(is_base and 'Your armor\'s own passive. Values here replace its own.'
+                 or on and ('On ' .. CAT[p.perk].name .. ' armor.') or 'Values you set are kept for when you add it.',
+                 RX + sw + 10, TOP + 53, 12, C.MUTED, RIW - sw - 12)
+            -- value cards: label | value field | -- - + ++ | R
+            local fw, bw2, gap, rw = 104, 36, 4, 26
+            local controls = fw + 10 + 4 * bw2 + 3 * gap + 6 + rw
+            local y2 = TOP + 82
             for n, e in ipairs(sel.effects) do
                 local v = value_of(p, sel.id, e)
                 local tweaked = v ~= e.def
                 local u = PP.unit(e)
-                rect(X0, y2, RW, 58, C.CARD, 950)
-                rect(X0, y2, 4, 58, tweaked and C.EMBER or C.LINE, 951)
-                text(label_of(e) .. (e.hint:find('%?') and '  ?' or ''), X0 + 16, y2 + 9, 16, C.TEXT, 280)
-                text(PP.WHAT[u] .. (e.hint:find('%?') and '  (name is a guess)' or ''), X0 + 16, y2 + 31, 12, C.DIM, 280)
-                local bx = X0 + RW - 294
+                rect(RX, y2, RIW, 60, C.ROW, 950)
+                rect(RX, y2, 3, 60, tweaked and C.YELLOW or C.LINE2, 951)
+                local lw = RIW - controls - 26
+                text(label_of(e) .. (e.hint:find('%?') and ' ?' or ''), RX + 14, y2 + 10, 15, C.TEXT, lw)
+                text(PP.WHAT[u] .. (e.hint:find('%?') and ' (name is a guess)' or ''), RX + 14, y2 + 32, 12, C.DIM, lw)
+                local bx = RX + RIW - 10 - controls
                 local typing = ui.value and ui.value.pid == sel.id and ui.value.n == n
                 local vkey = 'value:' .. n
-                rect(bx, y2 + 10, 100, 30, C.FIELD, 951)
-                border(bx, y2 + 10, 100, 30, (typing or ui.hover == vkey) and C.GOLD or C.LINE)
+                rect(bx, y2 + 10, fw, 30, C.FIELD, 951)
+                border(bx, y2 + 10, fw, 30, (typing or ui.hover == vkey) and C.YELLOW or tweaked and C.YELLOW_DK or C.LINE2)
                 if typing then
-                    text(ui.value.text .. '_', bx + 8, y2 + 16, 17, ui.value.fresh and C.MUTED or C.TEXT, 84)
+                    text(ui.value.text .. '_', bx + 8, y2 + 17, 16, ui.value.fresh and C.MUTED or C.TEXT, fw - 16)
                 else
-                    text(PP.text(e, v), bx + 92, y2 + 16, 17, tweaked and C.EMBER or C.TEXT, 84, true)
+                    text(PP.text(e, v), bx + fw - 8, y2 + 17, 16, tweaked and C.YELLOW or C.TEXT, fw - 16, 'right')
                 end
-                region(vkey, bx, y2 + 10, 100, 30)
-                local ax = bx + 106
+                region(vkey, bx, y2 + 10, fw, 30)
+                local ax = bx + fw + 10
                 for _, b in ipairs({ { 'dec_big', '--' }, { 'dec', '-' }, { 'inc', '+' }, { 'inc_big', '++' } }) do
                     local key = b[1] .. ':' .. n
                     local hovered = ui.hover == key
-                    rect(ax, y2 + 10, 32, 30, hovered and C.GOLD or C.CARD_HI, 951)
-                    text(b[2], ax + (#b[2] == 1 and 12 or 8), y2 + 16, 16, hovered and C.INK or C.TEXT)
-                    region(key, ax, y2 + 10, 32, 30)
-                    ax = ax + 36
+                    rect(ax, y2 + 10, bw2, 30, hovered and C.YELLOW or C.PANEL, 951)
+                    border(ax, y2 + 10, bw2, 30, hovered and C.YELLOW or C.LINE2)
+                    text(b[2], ax + bw2 / 2, y2 + 17, 15, hovered and C.INK or C.TEXT, bw2 - 8, 'center')
+                    region(key, ax, y2 + 10, bw2, 30)
+                    ax = ax + bw2 + gap
                 end
+                ax = ax + 6 - gap
                 local rkey = 'reset:' .. n
-                text('R', ax + 8, y2 + 16, 15, tweaked and ((ui.hover == rkey) and C.GOLD or C.MUTED) or C.LINE)
-                region(rkey, ax, y2 + 10, 28, 30, tweaked)
-                text('game value ' .. PP.raw_text(e, v) .. (tweaked and ('   was ' .. PP.text(e, e.def)) or ''),
-                     bx, y2 + 45, 11, tweaked and C.EMBER or C.DIM, 280)
-                y2 = y2 + 64
+                text('R', ax + rw / 2, y2 + 17, 15, tweaked and ((ui.hover == rkey) and C.YELLOW or C.MUTED) or C.LINE2, nil, 'center')
+                region(rkey, ax, y2 + 10, rw, 30, tweaked)
+                text('GAME VALUE ' .. PP.raw_text(e, v) .. (tweaked and ('   WAS ' .. PP.text(e, e.def)) or ''),
+                     bx, y2 + 45, 10, tweaked and C.YELLOW or C.DIM, controls)
+                y2 = y2 + 66
             end
             local rp = 'reset_passive'
-            text('Reset ' .. sel.name, X0, y2 + 6, 13, ui.hover == rp and C.GOLD or C.DIM, RW)
-            region(rp, X0 - 4, y2, 240, 26)
+            local rcap = up('Reset ' .. sel.name)
+            local rpw = math.min(RIW, measure(rcap, 11))
+            text(rcap, RX, y2 + 8, 11, ui.hover == rp and C.YELLOW or C.DIM, RIW)
+            region(rp, RX - 4, y2 + 2, rpw + 8, 22)
         end
 
         -- overlap rule, status, actions
-        local by = H - 240
-        rect(X0, by - 12, RW, 1, C.LINE, 951)
-        label('WHEN TWO PASSIVES CHANGE THE SAME THING', X0, by)
+        local by = BOT - 172
+        rect(RX, by - 12, RIW, 1, C.LINE, 951)
+        label('When two passives change the same thing', RX, by, nil, RIW)
         local strongest = p.conflicts == 'strongest'
-        for k2, opt in ipairs({ { 'policy:stack', 'Stack all', not strongest }, { 'policy:strongest', 'Strongest only', strongest } }) do
-            local bx = X0 + (k2 - 1) * 152
-            local hovered = ui.hover == opt[1]
-            rect(bx, by + 22, 148, 30, opt[3] and C.GOLD or (hovered and C.CARD_HI or C.CARD), 951)
-            if not opt[3] then border(bx, by + 22, 148, 30, hovered and C.GOLD or C.LINE) end
-            text(opt[2], bx + 14, by + 29, 15, opt[3] and C.INK or (hovered and C.TEXT or C.MUTED), 124)
-            region(opt[1], bx, by + 22, 148, 30)
+        local bx = RX
+        for _, opt in ipairs({ { 'policy:stack', 'Stack all', not strongest }, { 'policy:strongest', 'Strongest only', strongest } }) do
+            bx = bx + button(opt[1], opt[2], bx, by + 18, 150, 30, true, opt[3], (not opt[3]) and C.MUTED or nil)
         end
         local last = last_result[p.perk]
         local res = last and last.res
         if not sites_by_perk[p.perk] then
-            text('This armor passive was not found in the game\'s data yet.', X0, by + 66, 14, C.EMBER, RW)
+            text('This armor passive was not found in the game\'s data yet.', RX, by + 62, 13, C.BAD, RIW)
         elseif sites_by_perk[p.perk][1].foreign then
-            text('Another mod already changed this passive\'s data; Armory Forge leaves it alone.', X0, by + 66, 14, C.EMBER, RW)
+            text('Another mod already changed this passive\'s data; Armory Forge leaves it alone.', RX, by + 62, 13, C.BAD, RIW)
         else
             local added = 0
             for _, site in ipairs(sites_by_perk[p.perk]) do added = math.max(added, site.added or 0) end
             local n_stacked = res and #res.enabled or 0
-            rect(X0, by + 69, 8, 8, C.GOOD, 952)
+            rect(RX, by + 65, 7, 7, C.GOOD, 952)
             text(n_stacked .. ' passive(s) stacked, +' .. added .. ' row(s) in the game\'s data' ..
-                 (res and res.conflicts > 0 and (' - ' .. res.conflicts .. ' overlap(s)') or ''), X0 + 16, by + 65, 14, C.TEXT, RW - 16)
-            if last.error then text(last.error, X0, by + 86, 13, C.EMBER, RW) end
+                 (res and res.conflicts > 0 and (' - ' .. res.conflicts .. ' overlap(s)') or ''), RX + 14, by + 62, 13, C.TEXT, RIW - 14)
+            if last.error then text(last.error, RX, by + 80, 12, C.BAD, RIW) end
         end
         local sure = ui.confirm and ui.confirm.kind
-        button('undo', #ui.history > 0 and ('Undo (' .. #ui.history .. ')') or 'Undo', X0, H - 130, 120, 32, #ui.history > 0)
-        button('copy', 'Copy code', X0 + 128, H - 130, 140, 32, true)
-        button('paste', 'Paste code', X0 + 276, H - 130, 140, 32, true)
-        button('clear', sure == 'clear' and 'Click again' or 'Turn all off', X0 + 424, H - 130, 150, 32, true, false,
-               sure == 'clear' and C.EMBER or nil)
+        local ay = BOT - 50
+        local ax = RX
+        local each = (RIW - 3 * 8) / 4
+        ax = ax + button('undo', #ui.history > 0 and ('Undo (' .. #ui.history .. ')') or 'Undo', ax, ay, each, 34, #ui.history > 0) + 8
+        ax = ax + button('copy', 'Copy code', ax, ay, each, 34, true) + 8
+        ax = ax + button('paste', 'Paste code', ax, ay, each, 34, true) + 8
+        button('clear', sure == 'clear' and 'Click again' or 'Turn all off', ax, ay, each, 34, true, false, sure == 'clear' and C.BAD or nil)
     end
 
-    -- footer: status strip
-    local path = save_path()
-    rect(LW + 1, H - 86, W - LW - 2, 1, C.LINE, 951)
-    text((path and 'Saved automatically.' or 'Cannot save (no LOCALAPPDATA).') ..
-         (swap_key() ~= 'OFF' and ('  ' .. swap_key() .. ' in game swaps presets.') or '') .. '  Ctrl+Z undoes.', X0, H - 76, 12, C.DIM, RW)
-    text('Changes apply at once. Re-equip the armor if you do not see them. Solo / private lobbies only.', X0, H - 58, 12, C.DIM, RW)
-    if ui.message then
-        rect(X0, H - 38, RW, 26, C.SOFT, 951)
-        rect(X0, H - 38, 4, 26, C.GOLD, 952)
-        text(ui.message.text, X0 + 14, H - 33, 14, C.GOLD, RW - 24)
-    end
+    prompts()
     return regions
 end
 
@@ -1284,22 +1317,21 @@ local function toast_frame(now)
     local Gui, Vector3, Vector2, Color = sr.Gui, sr.Vector3, sr.Vector2, sr.Color
     local width, height = sr.Gui.resolution()
     local s = height / 1080
-    local w, h = 480 * s, 70 * s
+    local w, h = 480 * s, 72 * s
     local x, y = (width - w) / 2, height - 140 * s - h
-    local gold, navy = Color(255, 233, 185, 73), Color(240, 10, 18, 29)
+    local yellow = Color(255, 255, 231, 16)
     local function r(px, py, pw, ph, c, z)      -- panel units from the card's top left
         Gui.rect(gui, Vector3(x + px * s, y + h - (py + ph) * s, z or 961), Vector2(pw * s, ph * s), c)
     end
-    r(0, 0, 480, 70, navy, 960)
-    r(0, 0, 5, 70, gold)
-    for _, c in ipairs({ { 0, 0 }, { 468, 0 }, { 0, 68 }, { 468, 68 } }) do r(c[1], c[2], 12, 2, gold) end
-    r(478, 0, 2, 12, gold); r(478, 58, 2, 12, gold)
+    r(0, 0, 480, 72, Color(246, 11, 12, 13), 960)
+    r(0, 0, 4, 72, yellow)
+    r(4, 0, 476, 1, Color(255, 62, 65, 70)); r(4, 71, 476, 1, Color(255, 62, 65, 70)); r(479, 0, 1, 72, Color(255, 62, 65, 70))
     if f.font then
         local function t(value, px, py, size, c)
             Gui.text(gui, value, f.font, size * s, f.material, Vector3(x + px * s, y + h - py * s - size * s * 0.8, 962), c)
         end
-        t('// ARMORY FORGE  -  ' .. string.upper(tostring(toast.sub or '')), 20, 12, 12, gold)
-        t(tostring(toast.text), 20, 34, 22, Color(255, 233, 228, 212))
+        t('ARMORY FORGE  -  ' .. string.upper(tostring(toast.sub or '')), 20, 13, 11, yellow)
+        t(tostring(toast.text), 20, 34, 22, Color(255, 233, 230, 220))
     end
 end
 

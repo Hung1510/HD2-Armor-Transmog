@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: pip install lupa
+      - run: pip install lupa pillow
 
       - name: Web builder data is in sync with tools/
         run: python tools/picker.py export-web --check
@@ -31,6 +31,9 @@ jobs:
 
       - name: Panel presets, quick-swap, undo, share codes, units
         run: python tests/test_panel_features.py
+
+      - name: Panel layout (no overlapping or clipped text)
+        run: python tests/test_panel_layout.py
 
       - name: Release zip, blank install, old saves
         run: python tests/test_release.py
