@@ -5,261 +5,327 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Super Earth Armory Forge</title>
 <meta name="description" content="Super Earth Armory Forge web builder: plan a Helldivers 2 armor passive stack and download it as a mod. Optional: the mod has the same editor in game on F7.">
+<meta name="theme-color" content="#0b0c0d">
 <link rel="icon" href="icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
+/* Fonts are self-hosted (SIL OFL, see vendor/fonts). Saira stands in for the game's
+   FS Sinclair; its width axis gives the condensed headings from one file. */
+@font-face { font-family: "Saira"; src: url("vendor/fonts/saira-var.woff2") format("woff2"); font-weight: 100 900; font-stretch: 50% 125%; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("vendor/fonts/barlow-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("vendor/fonts/barlow-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("vendor/fonts/barlow-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+
+/* Helldivers 2 palette: Helldivers yellow #FFE710, Super Earth blue #41639C, near black. */
 :root {
-  --bg: #121314;
-  --surface: #1a1c1f;
-  --surface-2: #212428;
-  --border: #2d3136;
-  --text: #e7e4dc;
-  --muted: #8e9298;
-  --accent: #f2d31b;
-  --accent-ink: #17150a;
-  --changed: #f2d31b;
-  --ok: #7cc48b;
-  --warn: #e5a54b;
-  --bad: #ef6b63;
-  --head: "Barlow Semi Condensed", "Bahnschrift SemiCondensed", "Arial Narrow", sans-serif;
+  --bg: #0b0c0d;
+  --panel: rgba(18, 19, 21, .94);
+  --line: #2c2e32;
+  --line-2: #3a3d42;
+  --text: #e9e6dc;
+  --muted: #8f9296;
+  --dim: #5d6166;
+  --yellow: #ffe710;
+  --yellow-ink: #121104;
+  --blue: #41639c;
+  --bad: #ff6b5b;
+  --cut: 12px;
+  --ui: "Saira", "Bahnschrift", "Arial Narrow", sans-serif;
+  --body: "Barlow", system-ui, "Segoe UI", sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
-}
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #f3f2ee; --surface: #ffffff; --surface-2: #f7f6f2; --border: #dedbd2;
-    --text: #1d1e20; --muted: #6a6e75; --accent: #e7c500; --accent-ink: #17150a; --changed: #a07f00;
-  }
-}
-:root[data-theme="light"] {
-  --bg: #f3f2ee; --surface: #ffffff; --surface-2: #f7f6f2; --border: #dedbd2;
-  --text: #1d1e20; --muted: #6a6e75; --accent: #e7c500; --accent-ink: #17150a; --changed: #a07f00;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body { background: var(--bg); color: var(--text); font: 15px/1.45 Barlow, system-ui, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
-a { color: inherit; text-underline-offset: 3px; }
-h1, h2, h3 { font-family: var(--head); font-weight: 600; margin: 0; letter-spacing: .01em; }
-code { font-family: var(--mono); font-size: 12.5px; }
-button, input, select { font: inherit; color: inherit; }
-input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-
-.wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
-
-/* header */
-.top { border-bottom: 1px solid var(--border); background: var(--surface); }
-.top .wrap { display: flex; align-items: center; gap: 12px; min-height: 58px; flex-wrap: wrap; padding-top: 8px; padding-bottom: 8px; }
-.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; text-decoration: none; min-width: 0; }
-.brand img { width: 30px; height: 30px; flex: none; }
-.brand h1 { font-size: 21px; }
-.brand span { color: var(--muted); font-size: 14px; }
-.nav { display: flex; align-items: center; gap: 18px; font-size: 14px; flex-wrap: wrap; }
-.nav a { text-decoration: none; color: var(--muted); }
-.nav a:hover { color: var(--text); }
-.icon-btn { background: none; border: 1px solid var(--border); border-radius: 4px; width: 30px; height: 30px; cursor: pointer; color: var(--muted); }
-.icon-btn:hover { color: var(--text); }
-
-/* intro */
-.intro { display: flex; gap: 16px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; padding: 22px 0 18px; }
-.intro p { margin: 0; max-width: 700px; color: var(--muted); }
-.intro p b { color: var(--text); font-weight: 600; }
-.kbd { display: inline-block; font-family: var(--mono); font-size: 12px; padding: 0 6px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; background: var(--surface); color: var(--text); }
-
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; padding-bottom: 48px; }
-.layout > * { min-width: 0; }
-.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
-.panel + .panel { margin-top: 16px; }
-.panel-h { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.panel-h h2 { font-size: 18px; margin-right: auto; }
-.panel-b { padding: 14px 16px; }
-
-/* form bits */
-.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
-.field { display: grid; gap: 4px; min-width: 0; }
-.field label { font-size: 13px; color: var(--muted); }
-.grow { flex: 1 1 200px; }
-.field select, .field input { width: 100%; }
-input[type=text], input[type=number], input[type=search], select {
-  background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 7px 9px; min-width: 0;
+body {
+  color: var(--text); font: 15px/1.45 var(--body); -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(1200px 600px at 70% -10%, rgba(65, 99, 156, .20), transparent 60%),
+    radial-gradient(900px 500px at 0% 100%, rgba(255, 231, 16, .05), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  padding-bottom: 64px;          /* room for the prompt bar */
 }
-.hint { color: var(--muted); font-size: 13.5px; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; font-weight: 500; font-size: 14px; }
-.btn:hover { border-color: var(--muted); }
-.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-family: var(--head); font-weight: 700; font-size: 17px; padding: 10px 14px; letter-spacing: .02em; }
-.btn.primary:hover { filter: brightness(1.06); }
-.btn.primary:disabled { opacity: .45; cursor: not-allowed; }
-.btn.block { width: 100%; }
-.btn.small { padding: 5px 10px; font-size: 13.5px; }
-.link-btn { background: none; border: 0; padding: 0; color: var(--muted); cursor: pointer; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
-.link-btn:hover { color: var(--text); }
+a { color: inherit; text-underline-offset: 3px; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
 
-.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-.seg button { border: 0; background: var(--bg); padding: 6px 12px; cursor: pointer; font-size: 14px; }
-.seg button + button { border-left: 1px solid var(--border); }
-.seg button[aria-pressed="true"] { background: var(--surface-2); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+/* ------------------------------------------------ top strip */
+.strip { border-bottom: 1px solid var(--line); background: rgba(8, 9, 10, .8); }
+.strip .wrap { display: flex; align-items: center; gap: 20px; min-height: 44px; flex-wrap: wrap; }
+.strip .who { font-family: var(--ui); font-size: 12.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-right: auto; }
+.strip .who b { color: var(--text); font-weight: 600; }
+.strip nav { display: flex; gap: 18px; font-family: var(--ui); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; flex-wrap: wrap; }
+.strip nav a { text-decoration: none; color: var(--muted); }
+.strip nav a:hover { color: var(--yellow); }
 
-/* armor tabs */
-.tabs { display: flex; gap: 2px; flex-wrap: wrap; padding: 0 16px; border-bottom: 1px solid var(--border); }
-.tab { display: inline-flex; align-items: center; gap: 6px; padding: 11px 12px 9px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); cursor: pointer; font-size: 15px; font-family: var(--head); font-weight: 600; margin-bottom: -1px; }
-.tab:hover { color: var(--text); }
-.tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
-.tab .x { color: var(--muted); padding: 0 2px; font-weight: 400; }
+/* ------------------------------------------------ title, like the game's ARMORY header */
+.title { display: flex; align-items: center; gap: 16px; padding: 30px 0 6px; }
+.title .mark { width: 54px; height: 54px; border: 2px solid var(--text); display: grid; place-items: center; flex: none; }
+.title .mark img { width: 40px; height: 40px; }
+.title h1 { margin: 0; font: 700 44px/1 var(--ui); font-stretch: 75%; letter-spacing: .03em; text-transform: uppercase; }
+.title h1 span { color: var(--yellow); }
+.lede { margin: 10px 0 22px 70px; max-width: 720px; color: var(--muted); }
+.lede b { color: var(--text); font-weight: 600; }
+.key { display: inline-grid; place-items: center; min-width: 26px; height: 24px; padding: 0 6px; border: 1.5px solid var(--text); border-radius: 3px;
+       font: 600 12px/1 var(--ui); letter-spacing: .04em; color: var(--text); background: rgba(0,0,0,.35); vertical-align: middle; }
+
+/* ------------------------------------------------ tabs: boxed, numbered, hatched when active */
+.tabbar { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.tabbar > .key { margin-bottom: 9px; cursor: pointer; }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.tab { position: relative; min-width: 170px; padding: 10px 30px 20px 14px; border: 1.5px solid var(--line-2); background: rgba(0,0,0,.35);
+       font: 600 17px/1 var(--ui); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); cursor: pointer; text-align: left;
+       clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%); }
+.tab .n { position: absolute; right: 12px; bottom: 4px; font-size: 13px; color: var(--dim); }
+.tab:hover { color: var(--text); border-color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--text); border-color: var(--text); }
+.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 10px; right: 34px; bottom: 6px; height: 7px;
+       background: repeating-linear-gradient(-45deg, var(--text) 0 3px, transparent 3px 7px); }
+.tab .x { position: absolute; right: 8px; top: 6px; font-size: 15px; color: var(--dim); }
 .tab .x:hover { color: var(--bad); }
+.tab.add { min-width: 0; padding: 10px 16px 20px; color: var(--yellow); border-style: dashed; }
 .tabline { display: none; }
 
-/* base perk */
-.base { border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin: 14px 0 18px; background: var(--surface-2); }
-.base h3 { font-size: 16px; margin-bottom: 2px; }
+/* ------------------------------------------------ panels with a cut corner */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; padding-bottom: 30px; }
+.layout > * { min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); position: relative;
+         clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); }
+.panel + .panel { margin-top: 16px; }
+.ph { padding: 14px 18px 12px; border-bottom: 1px solid var(--line); display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.ph .lab { display: block; font: 600 11.5px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--yellow); margin-bottom: 6px; }
+.ph h2 { margin: 0; font: 600 21px/1.1 var(--ui); letter-spacing: .02em; overflow-wrap: anywhere; }
+.ph .tools { margin-left: auto; display: flex; gap: 8px; }
+.pb { padding: 14px 18px; }
 
-/* passive list */
-.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
-.toolbar input[type=search] { flex: 1 1 180px; }
-.grid { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-.pcard { border-top: 1px solid var(--border); }
-.pcard:first-child { border-top: 0; }
-.pcard .top { display: grid; grid-template-columns: 20px minmax(130px, 220px) minmax(0, 1fr) 16px; gap: 12px; align-items: center; padding: 8px 12px; cursor: pointer; user-select: none; }
-.pcard .top:hover { background: var(--surface-2); }
-.pcard .name { font-weight: 500; color: var(--muted); }
-.pcard.on .name { color: var(--text); font-weight: 600; }
-.pcard .sum { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pcard .sum .changed { color: var(--changed); }
-.pcard .chev { color: var(--muted); font-size: 12px; text-align: right; }
-.pcard .top[aria-expanded="true"] { background: var(--surface-2); }
-.switch { width: 18px; height: 18px; border: 1.5px solid var(--muted); border-radius: 3px; background: transparent; cursor: pointer; padding: 0; position: relative; }
-.switch:hover { border-color: var(--text); }
-.switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
-.switch[aria-checked="true"]::after { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
-.empty { color: var(--muted); padding: 18px; text-align: center; }
+/* ------------------------------------------------ form bits */
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field label { font: 600 11.5px/1 var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.grow { flex: 1 1 120px; }
+.field select, .field input { width: 100%; }
+input[type=text], input[type=number], input[type=search], select {
+  background: #0c0d0f; border: 1px solid var(--line-2); border-radius: 0; padding: 8px 10px; min-width: 0;
+}
+input:hover, select:hover { border-color: var(--muted); }
+.hint { color: var(--muted); font-size: 13.5px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 7px 14px; border: 1px solid var(--line-2); background: #141517;
+       cursor: pointer; font: 600 13px/1.2 var(--ui); letter-spacing: .08em; text-transform: uppercase; }
+.btn:hover { border-color: var(--text); }
+.btn.small { padding: 6px 12px; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--muted); cursor: pointer; font: 600 12px/1 var(--ui); letter-spacing: .1em; text-transform: uppercase; }
+.link-btn:hover { color: var(--yellow); }
 
-/* value editors */
-.effects { padding: 6px 12px 12px 44px; display: grid; gap: 10px; background: var(--surface-2); }
-.base .effects { padding: 6px 0 0; background: none; }
-.eff { display: grid; grid-template-columns: minmax(0, 1fr) 96px 22px; gap: 2px 10px; align-items: center; }
-.eff .lbl b { font-weight: 500; font-size: 14px; }
+.seg { display: inline-flex; border: 1px solid var(--line-2); }
+.seg button { border: 0; background: #0c0d0f; padding: 8px 14px; cursor: pointer; font: 600 13px/1 var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line-2); }
+.seg button[aria-pressed="true"] { background: var(--yellow); color: var(--yellow-ink); }
+
+/* ------------------------------------------------ base passive block */
+.base { border: 1px solid var(--line); border-left: 3px solid var(--yellow); background: rgba(255, 231, 16, .03); padding: 12px 14px; margin: 16px 0 20px; }
+.base h3 { margin: 0 0 2px; font: 600 17px/1.2 var(--ui); letter-spacing: .06em; text-transform: uppercase; color: var(--yellow); }
+
+/* ------------------------------------------------ passive list, like the game's passive cards */
+.toolbar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.toolbar input[type=search] { flex: 1 1 200px; }
+.toolbar .hint { font-family: var(--ui); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+.grid { display: grid; gap: 4px; }
+.pcard { background: rgba(26, 28, 31, .7); border: 1px solid transparent; position: relative; }
+.pcard:hover { border-color: var(--line-2); }
+.pcard.on { background: rgba(28, 30, 33, .98); }
+.pcard.on::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--yellow); }
+.pcard .top { display: grid; grid-template-columns: 22px minmax(150px, 250px) minmax(0, 1fr) 14px; gap: 14px; align-items: center; padding: 11px 14px 11px 16px; cursor: pointer; user-select: none; }
+.pcard .name { font: 600 16px/1.15 var(--ui); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.pcard.on .name { color: var(--yellow); }
+.pcard .sum { color: var(--dim); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pcard.on .sum { color: var(--muted); }
+.pcard .sum .changed { color: var(--text); text-decoration: underline; text-decoration-color: var(--yellow); text-underline-offset: 3px; }
+.pcard .chev { color: var(--dim); font-size: 11px; }
+.pcard .top[aria-expanded="true"] .chev { color: var(--yellow); }
+.switch { width: 20px; height: 20px; border: 1.5px solid var(--muted); background: transparent; cursor: pointer; padding: 0; position: relative; }
+.switch:hover { border-color: var(--yellow); }
+.switch[aria-checked="true"] { border-color: var(--yellow); }
+.switch[aria-checked="true"]::after { content: ""; position: absolute; inset: 3px; background: var(--yellow); }
+.empty { color: var(--muted); padding: 22px; text-align: center; }
+
+/* ------------------------------------------------ value editors */
+.effects { padding: 4px 16px 16px 52px; display: grid; gap: 12px; }
+.base .effects { padding: 8px 0 0; }
+.eff { display: grid; grid-template-columns: minmax(0, 1fr) 104px 22px; gap: 3px 12px; align-items: center; }
+.eff .lbl b { font-weight: 600; font-size: 14.5px; }
 .eff .lbl small { display: block; color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
-.eff input { width: 96px; text-align: right; font-family: var(--mono); font-size: 13.5px; padding: 5px 8px; }
-.eff .reset { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 0; }
+.eff input { width: 104px; text-align: right; font: 500 15px/1 var(--mono); padding: 7px 9px; }
+.eff .reset { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0; }
+.eff .reset:hover { color: var(--yellow); }
 .eff .reset:disabled { visibility: hidden; }
-.eff .meaning { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); }
-.eff.changed input { border-color: var(--changed); }
-.eff.changed .meaning { color: var(--changed); }
+.eff .meaning { grid-column: 1 / -1; font: 600 12px/1.2 var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.eff.changed input { border-color: var(--yellow); color: var(--yellow); }
+.eff.changed .meaning { color: var(--yellow); }
 
-/* sidebar */
+/* ------------------------------------------------ custom variant card (right) */
 aside { position: sticky; top: 16px; }
-.counts { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
-.counts b { color: var(--text); font-weight: 600; }
-.build { list-style: none; margin: 0 0 12px; padding: 0; font-size: 14px; }
-.build li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px dashed var(--border); }
-.build li:last-child { border-bottom: 0; }
-.build .armor { font-family: var(--head); font-weight: 600; font-size: 15px; border: 0; padding-top: 6px; }
-.build .ed { color: var(--changed); font-size: 12.5px; white-space: nowrap; }
-.notes { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
-.notes li { padding-left: 14px; position: relative; overflow-wrap: anywhere; }
-.notes li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
-.notes li.good::before { background: var(--ok); }
-.notes li.warn::before { background: var(--warn); }
-.notes li.bad { color: var(--bad); }
-.notes li.bad::before { background: var(--bad); }
+.variant .ph h2 { font-size: 24px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 2px 0 16px; }
+.stats div { border-left: 1px solid var(--line-2); padding-left: 10px; }
+.stats span { display: block; font: 600 10.5px/1.2 var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.stats b { display: block; font: 600 30px/1.1 var(--ui); }
+.sub { font: 600 11.5px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--yellow); margin: 0 0 6px; }
+.build { list-style: none; margin: 0 0 14px; padding: 0; font-size: 14.5px; }
+.build li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+.build .armor { font: 600 12.5px/1.2 var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); border: 0; padding-top: 8px; }
+.build .ed { color: var(--yellow); font: 600 11px/1.6 var(--ui); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.build .none { color: var(--dim); border: 0; }
+.notes { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; font-size: 13px; color: var(--muted); }
+.notes li { padding: 7px 10px; background: rgba(65, 99, 156, .14); border-left: 2px solid var(--blue); overflow-wrap: anywhere; }
+.notes li.warn { background: rgba(255, 231, 16, .06); border-color: var(--yellow); }
+.notes li.bad { background: rgba(255, 107, 91, .1); border-color: var(--bad); color: var(--bad); }
+
+/* the call-in button */
+.callin { width: 100%; display: grid; gap: 5px; justify-items: center; padding: 14px 12px 12px; border: 0; cursor: pointer; background: var(--yellow); color: var(--yellow-ink);
+          clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%); }
+.callin:hover { filter: brightness(1.08); }
+.callin:disabled { background: var(--dim); cursor: not-allowed; }
+.callin .big { font: 700 21px/1 var(--ui); font-stretch: 85%; letter-spacing: .08em; text-transform: uppercase; }
+.callin .code { font: 600 13px/1 var(--ui); letter-spacing: .3em; opacity: .7; }
 .actions { display: grid; gap: 8px; }
 .actions .row { gap: 8px; }
 .actions .row .btn { flex: 1; }
 details { font-size: 14px; }
-details summary { cursor: pointer; color: var(--muted); }
+details summary { cursor: pointer; font: 600 12px/1.6 var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 details summary:hover { color: var(--text); }
-details pre { max-height: 280px; overflow: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 10px; font: 12px/1.4 var(--mono); white-space: pre; }
-.install ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; }
-.install code { overflow-wrap: anywhere; }
-.credit { font-size: 13px; color: var(--muted); margin: 14px 2px 0; }
+details pre { max-height: 280px; overflow: auto; background: #08090a; border: 1px solid var(--line); padding: 10px; font: 12px/1.4 var(--mono); white-space: pre; }
+.install ol { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 5px; }
+.install code { font: 12px var(--mono); overflow-wrap: anywhere; }
+.credit { font-size: 13px; color: var(--dim); margin: 14px 2px 0; }
+.credit b { color: var(--muted); }
 
-.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 9px 14px; border-radius: 4px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); }
-.toast.show { opacity: 1; }
-dialog { border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); padding: 0; max-width: min(460px, calc(100% - 32px)); }
-dialog::backdrop { background: rgba(0,0,0,.55); }
-dialog .panel-b { display: grid; gap: 12px; }
-footer { border-top: 1px solid var(--border); padding: 18px 0 30px; color: var(--muted); font-size: 13px; }
+/* ------------------------------------------------ propaganda ribbon */
+.ribbon { margin: 8px 0 26px; padding: 12px 18px; background: var(--blue); color: #fff; display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+          clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 100%, 0 100%); }
+.ribbon b { font: 700 15px/1.2 var(--ui); letter-spacing: .12em; text-transform: uppercase; }
+.ribbon span { opacity: .85; font-size: 14px; }
 
-@media (max-width: 960px) {
+/* ------------------------------------------------ bottom prompt bar, like the game's */
+.prompts { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: rgba(6, 7, 8, .92); border-top: 1px solid var(--line); backdrop-filter: blur(6px); }
+.prompts .wrap { display: flex; gap: 26px; align-items: center; min-height: 52px; flex-wrap: wrap; }
+.prompts .p { display: flex; gap: 9px; align-items: center; font: 600 14px/1 var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text); background: none; border: 0; padding: 0; cursor: pointer; }
+.prompts .p:hover { color: var(--yellow); }
+.prompts .right { margin-left: auto; color: var(--muted); cursor: default; }
+.prompts .right:hover { color: var(--muted); }
+
+.toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, -12px); z-index: 10; min-width: 280px; max-width: calc(100% - 32px);
+         background: rgba(10, 11, 12, .96); border: 1px solid var(--line-2); border-left: 4px solid var(--yellow); padding: 10px 16px;
+         font: 600 14px/1.3 var(--ui); letter-spacing: .06em; text-transform: uppercase; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+dialog { border: 1px solid var(--line-2); background: #111214; color: var(--text); padding: 0; max-width: min(460px, calc(100% - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.65); }
+dialog .pb { display: grid; gap: 12px; }
+dialog h2 { margin: 0; font: 600 20px/1.1 var(--ui); letter-spacing: .04em; text-transform: uppercase; }
+footer { border-top: 1px solid var(--line); padding: 18px 0 24px; color: var(--dim); font-size: 13px; }
+footer a { color: var(--muted); }
+
+@media (max-width: 980px) {
   .layout { grid-template-columns: 1fr; }
   aside { position: static; }
 }
-@media (max-width: 560px) {
-  .pcard .top { grid-template-columns: 20px minmax(0, 1fr) 16px; }
+@media (max-width: 600px) {
+  .wrap { padding: 0 14px; }
+  .title h1 { font-size: 32px; }
+  .lede { margin-left: 0; }
+  .pcard .top { grid-template-columns: 22px minmax(0, 1fr) 14px; }
   .pcard .sum { display: none; }
-  .effects { padding-left: 12px; }
-  .brand span { display: none; }
+  .effects { padding-left: 16px; }
+  .tab { min-width: 0; }
+  .prompts .hide-sm { display: none; }
+  .tabbar > .key { display: none; }
+  .strip .who { display: none; }
+  .ph .tools { margin-left: 0; }
 }
 </style>
 </head>
 <body>
-<header class="top">
+<div class="strip">
   <div class="wrap">
-    <a class="brand" href="./">
-      <img src="icon.png" alt="" width="30" height="30">
-      <h1>Super Earth Armory Forge</h1>
-      <span>web builder</span>
-    </a>
-    <nav class="nav">
-      <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest" target="_blank" rel="noopener">Download the mod</a>
+    <div class="who">Ministry of Defense &middot; <b>Super Earth Armory Forge</b></div>
+    <nav>
+      <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest" target="_blank" rel="noopener">Download mod</a>
       <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge" target="_blank" rel="noopener">GitHub</a>
       <a href="https://ayakamods.com/mods/passive-picker-v4.4359/" target="_blank" rel="noopener">AyakaMods</a>
-      <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light / dark">&#9680;</button>
     </nav>
   </div>
-</header>
+</div>
 
 <main class="wrap">
-  <div class="intro">
-    <p>Plan an armor passive stack here and download it as a ready-to-install mod. <b>You don't need this page</b>: the mod has the same editor in game. Install it and press <span class="kbd">F7</span>.</p>
+  <div class="title">
+    <div class="mark"><img src="icon.png" alt=""></div>
+    <h1>Armory <span>Forge</span></h1>
+  </div>
+  <p class="lede">Plan an armor passive stack and download it as a ready-to-install mod. <b>This page is optional</b>: the mod has the same editor in game. Install it and press <span class="key">F7</span>.</p>
+
+  <div class="tabbar">
+    <span class="key" id="prevTab" title="Previous armor stack (Q)">Q</span>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <span class="key" id="nextTab" title="Next armor stack (E)">E</span>
   </div>
 
   <div class="layout">
     <div>
-      <section class="panel">
-        <div class="panel-h"><h2>Build</h2>
-          <button class="btn small" id="importBtn" type="button">Import loadout.ini</button>
-          <input type="file" id="importFile" accept=".ini,.txt" hidden>
-          <button class="btn small" id="resetBtn" type="button">Start over</button>
-        </div>
-        <div class="panel-b">
-          <div class="row">
-            <div class="field grow"><label for="modName">Name in your mod manager</label>
-              <input type="text" id="modName" maxlength="60"></div>
-            <div class="field grow"><label for="presetSel">Start from a preset</label>
-              <select id="presetSel"><option value="">Choose…</option></select></div>
-            <div class="field"><label for="hotkeySel">Panel key</label>
-              <select id="hotkeySel"><option>F1</option><option>F2</option><option>F3</option><option>F4</option><option>F5</option><option>F6</option><option>F7</option><option>F8</option><option>F9</option><option>F10</option><option>F11</option><option>F12</option></select></div>
-            <div class="field"><label for="swapSel">Swap key</label>
-              <select id="swapSel"><option>F1</option><option>F2</option><option>F3</option><option>F4</option><option>F5</option><option>F6</option><option>F7</option><option>F8</option><option>F9</option><option>F10</option><option>F11</option><option>F12</option><option value="OFF">Off</option></select></div>
+      <section class="panel" id="profileCard">
+        <div class="ph">
+          <div><span class="lab" id="stackLab">Armor stack</span><h2>Choose passives</h2></div>
+          <div class="tools">
+            <button class="btn small" id="importBtn" type="button">Import</button>
+            <input type="file" id="importFile" accept=".ini,.txt" hidden>
+            <button class="btn small" id="resetBtn" type="button">Start over</button>
           </div>
         </div>
-      </section>
-
-      <section class="panel" id="profileCard">
-        <div class="tabs" role="tablist" id="tabs"></div>
         <div class="tabline"></div>
-        <div class="panel-b" id="profileBody"></div>
+        <div class="pb" id="profileBody"></div>
       </section>
     </div>
 
     <aside>
-      <section class="panel">
-        <div class="panel-h"><h2>Your build</h2></div>
-        <div class="panel-b">
-          <p class="counts"><b id="sPass">0</b> passives &middot; <b id="sRows">0</b> rows added &middot; <b id="sTweaks">0</b> values changed</p>
-          <ul class="build" id="buildList"></ul>
-          <ul class="notes" id="notes"></ul>
+      <section class="panel variant">
+        <div class="ph"><div><span class="lab">Custom variant</span><h2 id="variantName">My Armory Build</h2></div></div>
+        <div class="pb">
+          <div class="stats">
+            <div><span>Passives</span><b id="sPass">0</b></div>
+            <div><span>Rows added</span><b id="sRows">0</b></div>
+            <div><span>Edited</span><b id="sTweaks">0</b></div>
+          </div>
           <div class="actions">
-            <button class="btn primary block" id="dlZip" type="button">Download mod (.zip)</button>
+            <button class="callin" id="dlZip" type="button" title="Or type the Reinforce stratagem: up, down, right, left, up">
+              <span class="big">Download mod</span><span class="code" aria-hidden="true">&#8593; &#8595; &#8594; &#8592; &#8593;</span>
+            </button>
             <div class="row">
               <button class="btn small" id="shareBtn" type="button">Copy share link</button>
-              <button class="btn small" id="dlIni" type="button">Save loadout.ini</button>
+              <button class="btn small" id="dlIni" type="button" title="Save loadout.ini">Save .ini</button>
             </div>
-            <details class="ini"><summary>Show loadout.ini</summary><pre id="iniView"></pre></details>
           </div>
+          <p class="sub" style="margin-top:18px">Stacked passives</p>
+          <ul class="build" id="buildList"></ul>
+          <details id="notesBox" hidden><summary id="notesSum">Notes</summary><ul class="notes" id="notes" style="margin-top:8px"></ul></details>
         </div>
       </section>
+
+      <section class="panel">
+        <div class="pb">
+          <div class="field" style="margin-bottom:12px"><label for="modName">Name in your mod manager</label>
+            <input type="text" id="modName" maxlength="60"></div>
+          <div class="field" style="margin-bottom:12px"><label for="presetSel">Start from a preset</label>
+            <select id="presetSel"><option value="">Choose…</option></select></div>
+          <div class="row">
+            <div class="field grow"><label for="hotkeySel">Panel key</label>
+              <select id="hotkeySel"><option>F1</option><option>F2</option><option>F3</option><option>F4</option><option>F5</option><option>F6</option><option>F7</option><option>F8</option><option>F9</option><option>F10</option><option>F11</option><option>F12</option></select></div>
+            <div class="field grow"><label for="swapSel">Swap key</label>
+              <select id="swapSel"><option>F1</option><option>F2</option><option>F3</option><option>F4</option><option>F5</option><option>F6</option><option>F7</option><option>F8</option><option>F9</option><option>F10</option><option>F11</option><option>F12</option><option value="OFF">Off</option></select></div>
+          </div>
+          <details class="ini" style="margin-top:14px"><summary>Show loadout.ini</summary><pre id="iniView"></pre></details>
+        </div>
+      </section>
+
       <section class="panel install">
-        <div class="panel-b">
+        <div class="pb">
           <details open>
             <summary>How to install</summary>
             <ol>
@@ -267,25 +333,37 @@ footer { border-top: 1px solid var(--border); padding: 18px 0 30px; color: var(-
               <li>Remove Passive Picker v3 if you have it.</li>
               <li>Add the zip to your mod manager and deploy.</li>
               <li>Restart the game and wear armor with the passive you picked.</li>
-              <li>Change anything later in game with <span class="kbd">F7</span>.</li>
+              <li>Change anything later in game with <span class="key">F7</span>.</li>
             </ol>
             <p class="hint" style="margin:10px 0 0">Not working? Check <code>%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ArmoryForge-STATUS.txt</code>. Single-player and private lobbies only.</p>
           </details>
         </div>
       </section>
-      <p class="credit">Engine, archive format and passive data from mostlycloudy's Passive Picker v3 (engine credit also SHODAN). Effect names are inferred from the game; ones marked <b>?</b> are guesses.</p>
+      <p class="credit">Engine, archive format and passive data from <b>mostlycloudy</b>'s Passive Picker v3 (engine credit also SHODAN). Effect names are inferred from the game; ones marked <b>?</b> are guesses.</p>
     </aside>
   </div>
+
+  <div class="ribbon"><b>A well-equipped Helldiver is a free Helldiver.</b><span>Custom armor is approved for single-player and private lobbies only.</span></div>
 </main>
 
+<div class="prompts" role="toolbar" aria-label="Shortcuts">
+  <div class="wrap">
+    <button class="p" type="button" data-act="download"><span class="key">D</span>Download</button>
+    <button class="p" type="button" data-act="share"><span class="key">S</span>Share link</button>
+    <button class="p hide-sm" type="button" data-act="import"><span class="key">I</span>Import</button>
+    <button class="p hide-sm" type="button" data-act="search"><span class="key">/</span>Search</button>
+    <span class="p right hide-sm"><span class="key">F7</span>In game</span>
+  </div>
+</div>
+
 <dialog id="addDlg">
-  <form method="dialog" class="panel-b">
-    <h2 style="font-size:18px">Add another armor</h2>
+  <form method="dialog" class="pb">
+    <h2>Add another armor</h2>
     <p class="hint" style="margin:0">Armor with this passive gets its own separate stack.</p>
     <select id="addSel"></select>
     <div class="row" style="justify-content:flex-end">
       <button class="btn small" value="cancel">Cancel</button>
-      <button class="btn small primary" value="ok" id="addOk" style="font-size:15px;padding:5px 14px">Add</button>
+      <button class="btn small" value="ok" id="addOk" style="background:var(--yellow);color:var(--yellow-ink);border-color:var(--yellow)">Add</button>
     </div>
   </form>
 </dialog>
@@ -297,7 +375,7 @@ footer { border-top: 1px solid var(--border); padding: 18px 0 30px; color: var(-
     Super Earth Armory Forge by Hung1510 &middot; <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge">source</a> &middot;
     <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/issues/new/choose">report a wrong effect name</a> &middot;
     started from <a href="https://ayakamods.com/mods/modular-armor-passives.4350/">Passive Picker v3</a> by mostlycloudy &middot;
-    not affiliated with Arrowhead Game Studios.
+    fonts: Saira, Barlow (SIL OFL) &middot; fan-made, not affiliated with Arrowhead Game Studios or Sony.
   </div>
 </footer>
 

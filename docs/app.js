@@ -72,6 +72,7 @@
     } catch (e) {
       lastOk = false;
       notes.innerHTML = `<li class="bad">${esc(e.message)}</li>`;
+      $("notesBox").hidden = false; $("notesBox").open = true; $("notesSum").textContent = "Notes (1)";
       $("dlZip").disabled = true;
       return;
     }
@@ -95,7 +96,6 @@
         return pid !== sp.perk && sp.enabled.includes(pid);
       }).length;
     if (dups) items.push(["", `${dups} effect(s) are shared by several passives; each applies once.`]);
-    if (!passives && !tweaks) items.unshift(["", "Nothing ticked yet. Tick passives on the left, or start from a preset."]);
     const bl = [];
     for (const sp of state.profiles) {
       if (state.profiles.length > 1 || sp.enabled.length) bl.push(`<li class="armor">${esc(nameOf(sp.perk))} armor</li>`);
@@ -106,21 +106,25 @@
         bl.push(`<li><span>${esc(nameOf(pid))}</span>${ed ? `<span class="ed">${ed} edited</span>` : ""}</li>`);
       }
     }
-    $("buildList").innerHTML = bl.join("");
+    $("buildList").innerHTML = bl.join("") || `<li class="none">Nothing yet. Tick passives, or start from a preset.</li>`;
+    $("variantName").textContent = state.name || "Unnamed build";
     $("sPass").textContent = passives;
     $("sRows").textContent = rows;
     $("sTweaks").textContent = tweaks;
     notes.innerHTML = items.map(([c, t]) => `<li class="${c}">${esc(t)}</li>`).join("");
+    $("notesBox").hidden = !items.length;
+    $("notesSum").textContent = `Notes (${items.length})`;
   }
 
   // ---------------------------------------------------------------- render
   function renderTabs() {
     const tabs = $("tabs");
     tabs.innerHTML = state.profiles.map((p, i) =>
-      `<div class="tab" role="tab" tabindex="0" aria-selected="${i === active}" data-tab="${i}">${esc(nameOf(p.perk))} armor` +
-      (state.profiles.length > 1 ? ` <span class="x" data-remove="${i}" title="Remove this armor" role="button" aria-label="Remove">&times;</span>` : "") +
-      `</div>`).join("") +
-      `<button class="tab" type="button" id="addTab" title="Give another armor passive its own stack">+ Add armor</button>`;
+      `<div class="tab" role="tab" tabindex="0" aria-selected="${i === active}" data-tab="${i}">${esc(nameOf(p.perk))}` +
+      (state.profiles.length > 1 ? `<span class="x" data-remove="${i}" title="Remove this armor stack" role="button" aria-label="Remove">&times;</span>` : "") +
+      `<span class="n">${i + 1}</span></div>`).join("") +
+      `<button class="tab add" type="button" id="addTab" title="Give another armor passive its own stack">+ Armor</button>`;
+    $("stackLab").textContent = `Armor stack ${active + 1} / ${state.profiles.length}`;
   }
 
   function effEditor(pid, e, prof) {
@@ -320,13 +324,48 @@
       render();
     });
 
-    $("themeBtn").addEventListener("click", () => {
-      const cur = document.documentElement.dataset.theme ||
-        (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
-      const next = cur === "light" ? "dark" : "light";
-      document.documentElement.dataset.theme = next;
-      store.set("pp4-theme", next);
+    $("prevTab").addEventListener("click", () => switchTab(-1));
+    $("nextTab").addEventListener("click", () => switchTab(1));
+    document.querySelector(".prompts").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-act]");
+      if (b) act(b.dataset.act);
     });
+
+    // keyboard, like the game's prompts: Q/E switch stacks, D download, S share, I import,
+    // / search. Typing the Reinforce stratagem (up down right left up) also downloads.
+    const REINFORCE = ["ArrowUp", "ArrowDown", "ArrowRight", "ArrowLeft", "ArrowUp"];
+    let typed = [];
+    document.addEventListener("keydown", (e) => {
+      const t = e.target;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (t.closest && t.closest("input, select, textarea, dialog")) return;
+      if (e.key.startsWith("Arrow")) {
+        typed = typed.concat(e.key).slice(-REINFORCE.length);
+        if (typed.join() === REINFORCE.join()) { typed = []; e.preventDefault(); toast("Reinforce: build inbound"); act("download"); }
+        return;
+      }
+      const k = e.key.toLowerCase();
+      if (k === "q") switchTab(-1);
+      else if (k === "e") switchTab(1);
+      else if (k === "d") act("download");
+      else if (k === "s") act("share");
+      else if (k === "i") act("import");
+      else if (k === "/") { e.preventDefault(); act("search"); }
+    });
+  }
+
+  function switchTab(d) {
+    if (state.profiles.length < 2) return;
+    active = (active + d + state.profiles.length) % state.profiles.length;
+    search = "";
+    render();
+  }
+
+  function act(what) {
+    if (what === "download") $("dlZip").click();
+    else if (what === "share") $("shareBtn").click();
+    else if (what === "import") $("importBtn").click();
+    else if (what === "search") { const s = $("search"); if (s) { s.focus(); s.scrollIntoView({ block: "center" }); } }
   }
 
   function setTweak(key, raw, final) {
@@ -421,8 +460,6 @@
 
   // ---------------------------------------------------------------- start
   async function start() {
-    const theme = store.get("pp4-theme");
-    if (theme) document.documentElement.dataset.theme = theme;
     try {
       data = await (await fetch("data.json")).json();
     } catch (e) {
