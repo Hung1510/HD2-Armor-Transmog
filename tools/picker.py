@@ -35,7 +35,7 @@ ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "panel.lua", "main
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "PassivePickerV4"
 TITLE = "Passive Picker v4"
-VERSION = "4.2"
+VERSION = "4.3"
 AUTHOR = "mostlycloudy (original v3), Hung1510 (v4 edit)"
 DEFAULT_HOTKEY = "F7"
 
@@ -758,6 +758,139 @@ def cmd_export_web(args):
     return 0
 
 
+# --------------------------------------------------------------------------- check-dump
+def _f32(v):
+    return struct.unpack("<f", struct.pack("<f", float(v)))[0]
+
+
+def _short(v):
+    """Shortest decimal that is the same float32 (what you'd type into CATALOG)."""
+    x = _f32(v)
+    for p in range(1, 10):
+        s = "%.*g" % (p, x)
+        if _f32(float(s)) == x:
+            break
+    else:
+        s = repr(x)
+    return s if any(c in s for c in ".en") else s + ".0"
+
+
+def default_dump_path():
+    base = os.environ.get("LOCALAPPDATA")
+    if not base:
+        return None
+    return os.path.join(base, "CowboyBingus", "Helldivers2", "PassivePicker", "passives-dump.txt")
+
+
+def parse_dump(path):
+    meta, perks, cur = {}, {}, None
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            w = line.split()
+            if not w or w[0].startswith("#"):
+                continue
+            if w[0] == "perk":
+                cur = {"name": int(w[3], 16) if len(w) > 3 else 0, "modified": "modified" in w,
+                       "rows": [], "stats": []}
+                perks[int(w[1])] = cur
+            elif w[0] == "row" and cur is not None:
+                cur["rows"].append((int(w[1], 16), int(w[2]), float(w[3])))
+            elif w[0] == "stat" and cur is not None:
+                cur["stats"].append((int(w[1]), float(w[2]), float(w[3])))
+            elif w[0] == "end":
+                cur = None
+            else:
+                meta[w[0]] = " ".join(w[1:])
+    return meta, perks
+
+
+def catalog_line(pid, name, rows, stats):
+    r = ", ".join("(0x%08X, %d, %s)" % (m, ty, _short(v)) for m, ty, v in rows)
+    s = ", ".join("(%d, %s, %s)" % (st, _short(a), _short(b)) for st, a, b in stats)
+    return "    %d: (%s, [%s], [%s])," % (pid, json.dumps(name), r, s)
+
+
+def cmd_check_dump(args):
+    path = args.dump or default_dump_path()
+    if not path or not os.path.exists(path):
+        print("No dump found at %s" % path)
+        print("Start the game once with Passive Picker v4.3+ installed; it writes passives-dump.txt")
+        print("to %LOCALAPPDATA%\\CowboyBingus\\Helldivers2\\PassivePicker\\ when its scan finishes.")
+        return 2
+    meta, perks = parse_dump(path)
+    print("Dump      : %s" % path)
+    print("Written   : %s by mod v%s, game.dll stamp %s" % (meta.get("written", "?"), meta.get("mod", "?"),
+                                                           meta.get("game_stamp", "?")))
+    print("In game   : %d armor passives; in CATALOG: %d" % (len(perks), len(CATALOG)))
+    print()
+
+    def game_rows(e):
+        return [(m, ty, _f32(v)) for m, ty, v in e["rows"]], [(s, _f32(a), _f32(b)) for s, a, b in e["stats"]]
+
+    issues = 0
+    new_effects, new_stats = {}, {}
+    for pid in sorted(perks):
+        e = perks[pid]
+        rows, stats = game_rows(e)
+        for m, ty, _ in rows:
+            if m not in EFFECTS:
+                new_effects.setdefault(m, (ty, pid))
+        for st, _, _ in stats:
+            if st not in STAT_EFFECTS:
+                new_stats.setdefault(st, pid)
+        if e["modified"]:
+            print("WARNING   perk %d was already changed by another mod when dumped; its values may not be the game's." % pid)
+            issues += 1
+        if pid not in CATALOG:
+            issues += 1
+            print("NEW       perk %d (name hash 0x%08X): not in CATALOG. Add to CATALOG in tools/picker.py,"
+                  " then replace the name:" % (pid, e["name"]))
+            print(catalog_line(pid, "NEW PASSIVE %d" % pid, rows, stats))
+            print()
+            continue
+        name, crow, cstat = CATALOG[pid]
+        want_rows = [(m, ty, _f32(v)) for m, ty, v in crow]
+        want_stats = [(s, _f32(a), _f32(b)) for s, a, b in cstat]
+        if rows != want_rows or stats != want_stats:
+            issues += 1
+            print("CHANGED   perk %d %s: the game's values differ from CATALOG." % (pid, name))
+            gone = [("row", r) for r in want_rows if r not in rows] + [("stat", s) for s in want_stats if s not in stats]
+            added = [("row", r) for r in rows if r not in want_rows] + [("stat", s) for s in stats if s not in want_stats]
+            for kind, r in gone:
+                print("          was  %s" % _describe(kind, r))
+            for kind, r in added:
+                print("          now  %s" % _describe(kind, r))
+            print("          replace its CATALOG line with:")
+            print(catalog_line(pid, name, rows, stats))
+            print()
+    for pid in sorted(set(CATALOG) - set(perks)):
+        issues += 1
+        print("MISSING   perk %d %s: in CATALOG but not in the game (removed or renumbered?)." % (pid, CATALOG[pid][0]))
+    if new_effects or new_stats:
+        print()
+        print("New effect ids: add to EFFECTS / STAT_EFFECTS in tools/picker.py with a real name:")
+        for m, (ty, pid) in sorted(new_effects.items()):
+            print('    0x%08X: ("effect_%08x", "%s; ? (first seen on perk %d)"),' % (m, m, TYPE_NAMES.get(ty, "?"), pid))
+        for st, pid in sorted(new_stats.items()):
+            print('    %d: ("stat_%d", "stat; ? (first seen on perk %d)"),' % (st, st, pid))
+    print()
+    if issues:
+        print("%d difference(s). After editing tools/picker.py run:" % issues)
+        print("  python tools/picker.py export-web")
+        print("  python tests/test_ingame.py")
+        return 1
+    print("CATALOG matches the game: nothing to update.")
+    return 0
+
+
+def _describe(kind, r):
+    if kind == "row":
+        key = EFFECTS.get(r[0], ("effect_%08x" % r[0],))[0]
+        return "0x%08X %-4s %-10s %s" % (r[0], TYPE_NAMES.get(r[1], "?"), _short(r[2]), key)
+    key = STAT_EFFECTS.get(r[0], ("stat_%d" % r[0],))[0]
+    return "stat %-3d %s %s  %s" % (r[0], _short(r[1]), _short(r[2]), key)
+
+
 def cmd_list(args):
     for pid, (name, _, _) in CATALOG.items():
         print("%-34s perk %d" % (name, pid))
@@ -834,6 +967,9 @@ def main(argv=None):
     w.add_argument("-o", "--output", default=os.path.join(os.path.dirname(HERE), "docs", "data.json"))
     w.add_argument("--check", action="store_true", help="fail if data.json is stale")
     w.set_defaults(func=cmd_export_web)
+    d = sub.add_parser("check-dump", help="compare the game's passives (passives-dump.txt) with CATALOG")
+    d.add_argument("dump", nargs="?", help="path to passives-dump.txt (default: %%LOCALAPPDATA%%\\...\\PassivePicker)")
+    d.set_defaults(func=cmd_check_dump)
     args = p.parse_args(argv)
     return args.func(args)
 

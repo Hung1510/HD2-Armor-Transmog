@@ -838,6 +838,94 @@ local function capture(record, block, blob)
     if not site.foreign then apply_perk(perk) end
 end
 
+-- ---------------------------------------------------------------- passive dump
+-- Every armor passive the game has, as the game shipped it (read before anything is
+-- changed), written to PassivePicker\passives-dump.txt once the scan is done. After a
+-- game patch, `python tools/picker.py check-dump` compares it with the catalog and
+-- prints new passives and changed values, ready to paste.
+local dump, dump_order, unknown_found = {}, {}, 0
+
+local function f32_of(bytes)
+    local cell = ffi.new('float[1]')
+    ffi.copy(cell, bytes, 4)
+    return cell[0]
+end
+
+local function note_for_dump(record, blob)
+    local perk = u32(blob, REC_ID)
+    if not perk or dump[perk] then return end
+    local pm_ptr, pm_cnt = u64(blob, REC_PM), u64(blob, REC_PM + 8)
+    local sm_ptr, sm_cnt = u64(blob, REC_SM), u64(blob, REC_SM + 8)
+    if not (pm_ptr and pm_cnt and sm_ptr and sm_cnt) or pm_cnt > 64 or sm_cnt > 64 then return end
+    local sm_off = REC_HEAD + pm_cnt * ROW_BYTES
+    local inline = (pm_cnt == 0 or pm_ptr == record + REC_HEAD) and (sm_cnt == 0 or sm_ptr == record + sm_off)
+    local function take(ptr, off, n, width)
+        if n == 0 then return '' end
+        if inline and #blob >= off + n * width then return blob:sub(off + 1, off + n * width) end
+        return api.read(ptr, n * width)
+    end
+    local pm, sm = take(pm_ptr, REC_HEAD, pm_cnt, ROW_BYTES), take(sm_ptr, sm_off, sm_cnt, STAT_BYTES)
+    if not pm or not sm then return end
+    local e = { perk = perk, name = u32(blob, 4) or 0, inline = inline, rows = {}, stats = {} }
+    for i = 0, pm_cnt - 1 do
+        local r = pm:sub(i * ROW_BYTES + 1, (i + 1) * ROW_BYTES)
+        e.rows[#e.rows + 1] = { u32(r, 0), u32(r, 4), f32_of(r:sub(9, 12)) }
+    end
+    for i = 0, sm_cnt - 1 do
+        local r = sm:sub(i * STAT_BYTES + 1, (i + 1) * STAT_BYTES)
+        e.stats[#e.stats + 1] = { u32(r, 0), f32_of(r:sub(5, 8)), f32_of(r:sub(9, 12)) }
+    end
+    dump[perk] = e
+    dump_order[#dump_order + 1] = perk
+    if not CAT[perk] then
+        unknown_found = unknown_found + 1
+        log('armor passive ' .. perk .. ' is not in the catalog (new in this game version?); see passives-dump.txt')
+    end
+end
+
+local function game_stamp()
+    local base = api.module_base and api.module_base('game.dll')
+    if not base then return nil end
+    local dos = api.read(base, 64)
+    local pe = dos and u32(dos, 60)
+    local head = pe and api.read(base + pe, 16)
+    if not head or head:sub(1, 4) ~= 'PE\0\0' then return nil end
+    return u32(head, 8)
+end
+
+local function dump_path()
+    local dir = data_dir('PassivePicker')
+    return dir and (dir .. '/passives-dump.txt') or nil
+end
+
+local dump_written = 0
+local function write_dump()
+    local path = dump_path()
+    if not path or #dump_order == 0 or #dump_order == dump_written then return false end
+    table.sort(dump_order)
+    local ok_stamp, stamp = pcall(game_stamp)
+    local L = {
+        '# Passive Picker passive dump v1: every armor passive in the game, as shipped.',
+        '# Compare with the catalog: python tools/picker.py check-dump "' .. path .. '"',
+        'mod ' .. MOD.version,
+        'game_stamp ' .. ((ok_stamp and stamp) and string.format('0x%08X', stamp) or 'unknown'),
+        'written ' .. os.date('!%Y-%m-%dT%H:%M:%SZ'),
+        'passives ' .. #dump_order,
+    }
+    for _, perk in ipairs(dump_order) do
+        local e = dump[perk]
+        L[#L + 1] = string.format('perk %d name 0x%08X%s', perk, e.name, e.inline and '' or ' modified')
+        for _, r in ipairs(e.rows) do L[#L + 1] = string.format('row 0x%08X %d %.9g', r[1], r[2], r[3]) end
+        for _, s in ipairs(e.stats) do L[#L + 1] = string.format('stat %d %.9g %.9g', s[1], s[2], s[3]) end
+        L[#L + 1] = 'end'
+    end
+    local ok = write_file(path, table.concat(L, '\r\n') .. '\r\n')
+    if ok then dump_written = #dump_order end
+    if ok then log('wrote ' .. #dump_order .. ' armor passives to ' .. path .. (unknown_found > 0
+        and (' (' .. unknown_found .. ' not in the catalog)') or '')) end
+    return ok
+end
+
 -- ---------------------------------------------------------------- status file
 local function complete() return perks_found >= #CAT_LIST end
 
@@ -876,7 +964,9 @@ write_status = function()
         'version=' .. MOD.version .. ' author=' .. MOD.author,
         'phase=' .. tostring(state.phase) .. ' frame=' .. tostring(state.frame),
         'applied=' .. state.applied .. ' re-applied=' .. state.reapplied .. ' refused=' .. state.refused,
-        'armor passives found=' .. perks_found .. ' of ' .. #CAT_LIST,
+        'armor passives found=' .. perks_found .. ' of ' .. #CAT_LIST ..
+            (unknown_found > 0 and ('; NOT in the catalog=' .. unknown_found .. ' (new passives? see passives-dump.txt)') or ''),
+        'Passive dump: ' .. tostring(dump_path() or '(unavailable)'),
         'loadout=' .. tostring(state.loadout_source) .. ' (panel: ' .. (LOADOUT and LOADOUT.hotkey or 'F7') .. ')',
         'profiles: ' .. summary(),
         '',
@@ -913,6 +1003,7 @@ local function handle_block(address)
     -- read the payload only, so our own copy carries no LDLD header for a later sweep
     local blob = api.read(address + HEADER_BYTES, payload)
     if not blob then return end
+    pcall(note_for_dump, address + HEADER_BYTES, blob)
     capture(address + HEADER_BYTES, address, blob)
 end
 

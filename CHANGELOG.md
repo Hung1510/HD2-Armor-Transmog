@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.3 (2026-09-30)
+- **Patch-day tooling:** the mod writes every armor passive in the game (IDs and the game's own values, read before any change) to `PassivePicker\passives-dump.txt`. `python tools/picker.py check-dump` compares it with the catalog and prints new passives, changed values and new effect IDs as ready-to-paste lines.
+- The STATUS file flags armor passives that aren't in the catalog.
+- In-game panel redesign: yellow header with hazard stripe, toggle switches, underlined armor tabs, value cards.
+- The mod manager description shows the version and the panel key.
+
 ## 4.2 (2026-09-30)
 - **In-game panel (F7)**: every armor passive with a tick box, values with `-- - + ++ R` or typed in, one tab per armor stack, Stack all / Strongest only. Changes apply live and are saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\PassivePicker\loadout.ini` (web-builder format).
 - The engine now finds all 31 armor passives and can add, change or remove a stack at any time; removing one restores the game's original data exactly. Updates go through two alternating buffers so the game never sees a half-written array.

@@ -63,7 +63,8 @@ update = function() end
 
 
 class FakeGame:
-    def __init__(self, lua_path, retire=None, appdata=None, perks=None):
+    def __init__(self, lua_path, retire=None, appdata=None, perks=None, game=None):
+        # game: {perk: (name, rows, stats)} the fake game holds; default = the catalog
         src = open(lua_path, encoding="utf-8").read()
         if retire is not None:
             src = src.replace("retire = true,", "retire = %s," % ("true" if retire else "false"), 1)
@@ -78,7 +79,8 @@ class FakeGame:
         self.L = LuaRuntime(unpack_returned_tuples=True, encoding=None)
         self.mem = {}
         self.nalloc = 0
-        self._build_memory(perks or list(picker.CATALOG))
+        self.game = game or picker.CATALOG
+        self._build_memory(perks or list(self.game))
         g = self.L.globals()
         self.L.execute(MOCK.encode())
         g[b"TEST_API"] = self.L.table_from({
@@ -131,7 +133,7 @@ class FakeGame:
         self.records = {}
         off = 0x100
         for pid in perks:
-            name, rows, stats = picker.CATALOG[pid]
+            name, rows, stats = self.game[pid]
             rec = GAME_BASE + off + 24
             body = bytearray(56)
             struct.pack_into("<I", body, 0, pid)

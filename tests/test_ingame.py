@@ -205,5 +205,45 @@ g4.advance_wall(10)
 g4.tick(30)
 check(live(g4, 7) == want, "retire = false: stack put back after the game resets it")
 
+# ------------------------------------------------------------------ 4. passive dump + check-dump
+import subprocess  # noqa: E402
+
+def check_dump(dump):
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "picker.py"), "check-dump", dump],
+                       capture_output=True, text=True)
+    return r.returncode, r.stdout
+
+
+appdata = tempfile.mkdtemp()
+g5 = FakeGame(path, appdata=appdata)
+g5.tick(420)
+dumps = glob.glob(os.path.join(appdata, "**", "passives-dump.txt"), recursive=True)
+check(len(dumps) == 1, "passives-dump.txt written after the scan")
+code, out = check_dump(dumps[0])
+check(code == 0 and "matches the game" in out, "check-dump: unchanged game matches CATALOG")
+check(g5.record_bytes(7) != g5.pristine_record_bytes(7) and "row 0x2875F44A 1 2" in open(dumps[0]).read(),
+      "dump holds the game's own values, not the stacked ones")
+
+patched = dict(picker.CATALOG)
+name, rows, stats = patched[7]
+patched[7] = (name, [(0x2875F44A, 1, 3.0)] + list(rows[1:]), stats)            # balance change: stims +3
+patched[42] = ("Brand New", [(0xDEADBEEF, 2, 1.25), (0x2875F44A, 1, 1.0)], [(18, 0.0, 1.1)])  # new passive
+del patched[5]                                                                  # removed passive
+appdata = tempfile.mkdtemp()
+g6 = FakeGame(path, appdata=appdata, game=patched)
+g6.tick(420)
+dump = glob.glob(os.path.join(appdata, "**", "passives-dump.txt"), recursive=True)[0]
+code, out = check_dump(dump)
+check(code == 1, "check-dump: a patched game reports differences")
+check("NEW       perk 42" in out and "(0xDEADBEEF, 2, 1.25)" in out and "(18, 0.0, 1.1)" in out,
+      "check-dump: new passive printed as a ready-to-paste CATALOG line")
+check("CHANGED   perk 7 Med-Kit" in out and "(0x2875F44A, 1, 3.0)" in out, "check-dump: balance change found")
+check("MISSING   perk 5" in out, "check-dump: removed passive found")
+check('0xDEADBEEF: ("effect_deadbeef"' in out and '18: ("stat_18"' in out, "check-dump: new effect ids listed")
+check("NOT in the catalog=1" in open(glob.glob(os.path.join(appdata, "**", "PassivePickerV4-STATUS.txt"),
+                                                recursive=True)[0]).read(),
+      "STATUS file flags passives missing from the catalog")
+check(len(live(g6, 7)[0]) > 2, "stacking still works on a patched game")
+
 print("\n%d FAILED" % len(failed) if failed else "\nall in-game checks passed")
 sys.exit(1 if failed else 0)

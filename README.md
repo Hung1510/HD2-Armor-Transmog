@@ -116,6 +116,22 @@ tests/test_web_parity.js   web builder output must be byte-identical to Python
 TESTING.md                 in-game verification status per effect
 ```
 
+## When the game updates
+
+Nothing to do for new armor that uses an existing passive; stacks are per passive, not per armor.
+
+On patch day:
+1. Start the game once with the mod. Check `PassivePickerV4-STATUS.txt`:
+   - `found=31 of 31`: all good.
+   - `NOT in the catalog=N`: new passives exist.
+   - `found=0`: the game's data layout changed. The mod safely does nothing; disable it until it's updated.
+2. The mod has written every armor passive the game has, with the game's own values, to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\PassivePicker\passives-dump.txt`. Compare it with the catalog:
+   ```
+   python tools\picker.py check-dump
+   ```
+   It prints **NEW** passives and **CHANGED** values as ready-to-paste `CATALOG` lines, **MISSING** passives, and new effect IDs for `EFFECTS`. It exits 0 when nothing changed.
+3. Paste the lines into `tools/picker.py`, give new passives and effects real names, then run `python tools\picker.py export-web` and `python tests\test_ingame.py`. Commit, tag and release.
+
 ## Contributing
 
 - **Effect name confirmed or wrong:** edit `EFFECTS` / `STAT_EFFECTS` in `tools/picker.py`, update `TESTING.md`, run `python tools/picker.py export-web`.
