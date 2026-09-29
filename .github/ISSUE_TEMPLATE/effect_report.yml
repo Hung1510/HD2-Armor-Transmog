@@ -1,0 +1,39 @@
+name: Effect test result
+description: You tested an effect in game - confirm it works, or tell us its real meaning
+labels: [verification]
+body:
+  - type: markdown
+    attributes:
+      value: See TESTING.md for how to test each effect. One effect per report, please.
+  - type: input
+    id: effect
+    attributes:
+      label: Passive and effect
+      placeholder: e.g. Democracy Protects.death_save
+    validations:
+      required: true
+  - type: input
+    id: value
+    attributes:
+      label: Value you set
+      placeholder: e.g. 2.0
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works as described
+        - Works, but the description / name is wrong
+        - No visible effect
+        - Crashes or breaks something
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What you observed
+      description: How you tested it and what happened. Screenshots or clips help a lot.
+    validations:
+      required: true

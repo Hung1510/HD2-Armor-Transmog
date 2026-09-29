@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2128"/><stop offset="1" stop-color="#0b0d10"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a414c"/><stop offset="1" stop-color="#232830"/>
+    </linearGradient>
+    <pattern id="haz" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="14" height="28" fill="#f4d21f"/><rect x="14" width="14" height="28" fill="#141414"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" rx="72" fill="url(#bg)"/>
+  <rect x="0" y="452" width="512" height="60" fill="url(#haz)" opacity=".9" clip-path="inset(0 round 0 0 72px 72px)"/>
+  <!-- chest plate -->
+  <path d="M256 70 L386 116 L386 250 C386 336 330 392 256 424 C182 392 126 336 126 250 L126 116 Z"
+        fill="url(#plate)" stroke="#5a6270" stroke-width="6"/>
+  <path d="M256 96 L362 134 L362 250 C362 322 316 370 256 398 C196 370 150 322 150 250 L150 134 Z"
+        fill="none" stroke="#11151a" stroke-width="4" opacity=".6"/>
+  <!-- stacked chevrons -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M186 292 L256 330 L326 292" stroke="#f4d21f" stroke-width="22" opacity=".45"/>
+    <path d="M186 244 L256 282 L326 244" stroke="#f4d21f" stroke-width="22" opacity=".72"/>
+    <path d="M186 196 L256 234 L326 196" stroke="#f4d21f" stroke-width="22"/>
+  </g>
+  <!-- plus badge -->
+  <circle cx="392" cy="108" r="58" fill="#f4d21f" stroke="#0b0d10" stroke-width="10"/>
+  <path d="M392 80 V136 M364 108 H420" stroke="#141414" stroke-width="16" stroke-linecap="round"/>
+</svg>

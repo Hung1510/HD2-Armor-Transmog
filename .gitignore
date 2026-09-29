@@ -3,3 +3,4 @@ __pycache__/
 *.zip
 *.patch_0*
 build/
+dist/

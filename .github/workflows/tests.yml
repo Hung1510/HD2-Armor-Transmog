@@ -1,0 +1,38 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: pip install lupa
+
+      - name: Web builder data is in sync with tools/
+        run: python tools/picker.py export-web --check
+
+      - name: Every loadout builds
+        run: |
+          for f in presets/*.ini examples/*.ini loadout.ini; do
+            echo "== $f"; python tools/picker.py build "$f" > /dev/null
+          done
+
+      - name: Engine against a fake perk table (LuaJIT)
+        run: |
+          python tools/picker.py build examples/two-profiles.ini --dump-lua build/test.lua
+          python tests/test_engine.py build/test.lua
+
+      - name: Web builder produces identical bytes to Python
+        run: node tests/test_web_parity.js
+
+      - name: Release zip builds
+        run: python tools/picker.py release --zip dist/Passive-Picker-v4.zip

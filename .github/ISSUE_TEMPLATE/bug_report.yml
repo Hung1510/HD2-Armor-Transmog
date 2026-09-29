@@ -1,0 +1,36 @@
+name: Bug report
+description: The mod doesn't load, a passive doesn't apply, or the builder errors
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks! The STATUS file and your loadout make most bugs a 5-minute fix.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: PassivePickerV4-STATUS.txt
+      description: "%LOCALAPPDATA%\\CowboyBingus\\Helldivers2\\Logs\\PassivePickerV4-STATUS.txt"
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: loadout
+    attributes:
+      label: Your loadout.ini
+      description: It's inside the zip you installed (or use "Show loadout.ini" in the web builder).
+      render: ini
+  - type: input
+    id: where
+    attributes:
+      label: Preset or web builder?
+      placeholder: e.g. "Tank preset from v4.1 zip" or "web builder"
+  - type: input
+    id: versions
+    attributes:
+      label: Game patch / mod manager / Bingus loader version

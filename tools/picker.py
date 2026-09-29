@@ -35,7 +35,7 @@ ENGINE_PATH = os.path.join(HERE, "engine.lua")
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "PassivePickerV4"
 TITLE = "Passive Picker v4"
-VERSION = "4.0"
+VERSION = "4.1"
 AUTHOR = "mostlycloudy (original v3), Hung1510 (v4 edit)"
 
 # --------------------------------------------------------------------------- catalog
@@ -205,11 +205,15 @@ def strength(typ, v):
 
 
 def load_config(path):
+    with open(path, encoding="utf-8") as f:
+        return load_config_text(f.read(), path)
+
+
+def load_config_text(text, source="<loadout>"):
     cp = configparser.ConfigParser(delimiters=("=",), inline_comment_prefixes=(";", "#"),
                                    interpolation=None, strict=True)
     cp.optionxform = str
-    with open(path, encoding="utf-8") as f:
-        cp.read_file(f)
+    cp.read_string(text, source)
 
     settings = {"retire": True, "name": None}
     if cp.has_section("settings"):
@@ -342,6 +346,8 @@ def build_profile(trigger_text, sec, where):
                              % (r[3], fmt(bv), TYPE_NAMES[r[1]]))
 
     return dict(perk=trigger, name=tname, policy=policy, rows=rows, stats=stats,
+                enabled=[CATALOG[pid][0] for pid in sorted(enabled)],
+                tweaked=sorted("%s.%s" % (CATALOG[pid][0], key) for (pid, key) in tweaks),
                 overrides=overrides, stat_overrides=stat_overrides,
                 notes=notes + row_report + stat_report)
 
@@ -507,6 +513,29 @@ def compile_lua(text):
     return ok, err
 
 
+def compile_loadout(settings, profiles):
+    """Full Lua text (with the HD2-Addon marker) for one loadout."""
+    return "-- HD2-Addon: " + MOD_ID + "\n" + generate_lua(settings, profiles)
+
+
+def archive_for(full_lua):
+    body = full_lua.encode("utf-8")
+    return make_archive({MOD_ID: struct.pack("<II", len(body), ENVELOPE_VERSION) + body})
+
+
+def describe_profiles(profiles):
+    return "; ".join("%s armour: %s" % (
+        p["name"], ", ".join(enabled_names(p)) or "base perk tweaks only") for p in profiles)
+
+
+def enabled_names(p):
+    return list(p["enabled"])
+
+
+CREDIT = ("Passive Picker v4 by Hung1510, built on Passive Picker v3 by mostlycloudy. "
+          "Requires Bingus Shared Loader. Single-player / private lobbies only.")
+
+
 # --------------------------------------------------------------------------- commands
 def print_plan(settings, profiles):
     for p in profiles:
@@ -540,8 +569,7 @@ def cmd_build(args):
         print("CONFIG ERROR: %s" % e)
         return 1
     print_plan(settings, profiles)
-    lua = generate_lua(settings, profiles)
-    full = "-- HD2-Addon: " + MOD_ID + "\n" + lua
+    full = compile_loadout(settings, profiles)
     ok, err = compile_lua(full)
     print("Lua syntax        : %s" % ("OK" if ok else ("skipped - " + err if ok is None else "FAIL: %s" % err)))
     if ok is False:
@@ -555,15 +583,118 @@ def cmd_build(args):
     if not args.zip:
         print("\nPreview only. Add --zip \"My Stack.zip\" to build the installable mod.")
         return 0
-    body = full.encode("utf-8")
-    archive = make_archive({MOD_ID: struct.pack("<II", len(body), ENVELOPE_VERSION) + body})
+    archive = archive_for(full)
     display = args.name or settings["name"] or TITLE
-    desc = "; ".join("%s armour: +%d rows" % (p["name"], len(p["rows"]) + len(p["stats"]))
-                     for p in profiles)
-    desc = "Passive Picker v4 by Hung1510, built on Passive Picker v3 by mostlycloudy. %s. Requires Bingus Shared Loader. Single-player / private lobbies only." % desc
+    desc = "%s. %s" % (describe_profiles(profiles), CREDIT)
     guid = write_zip(archive, args.zip, display, desc)
-    print("Wrote zip         : %s  (%d bytes Lua, guid %s)" % (args.zip, len(body), guid))
+    print("Wrote zip         : %s  (%d bytes Lua, guid %s)" % (args.zip, len(full.encode("utf-8")), guid))
     print("Install it with your mod manager. Remove the original Passive Picker v3 first.")
+    return 0
+
+
+def _zip_write(z, path, content):
+    info = zipfile.ZipInfo(path, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o100644 << 16
+    z.writestr(info, content)
+
+
+def preset_files(folder):
+    return sorted(os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(".ini"))
+
+
+def cmd_release(args):
+    """One zip, every preset as a mod-manager SubOption (pick one), plus sources."""
+    root = os.path.dirname(HERE)
+    builds = []
+    for path in preset_files(args.presets):
+        try:
+            settings, profiles = load_config(path)
+        except (ConfigError, configparser.Error) as e:
+            print("CONFIG ERROR in %s: %s" % (path, e))
+            return 1
+        full = compile_loadout(settings, profiles)
+        ok, err = compile_lua(full)
+        if ok is False:
+            print("Lua FAIL in %s: %s" % (path, err))
+            return 1
+        name = settings["name"] or os.path.splitext(os.path.basename(path))[0]
+        folder = "Builds/" + re.sub(r"[^A-Za-z0-9_-]+", "_", name).strip("_")
+        builds.append((name, folder, archive_for(full), describe_profiles(profiles)))
+        print("  %-16s %s" % (name, describe_profiles(profiles)[:90]))
+    if not builds:
+        print("no presets in %s" % args.presets)
+        return 1
+
+    guid = str(uuid.uuid5(GUID_NS, MOD_ID))
+    manifest = {
+        "Version": 1, "Guid": guid, "Name": TITLE,
+        "Description": "Pick one preset stack for Med-Kit armour, or build your own at "
+                       "https://hung1510.github.io/HD2-Armor-Transmog/ . " + CREDIT,
+        "Options": [{
+            "Name": TITLE,
+            "Description": "Choose ONE preset.",
+            "Include": [],
+            "SubOptions": [{"Name": n, "Description": d, "Include": [f]}
+                           for n, f, _, d in builds],
+        }],
+    }
+    icon = os.path.join(root, "docs", "icon.png")
+    if os.path.exists(icon):
+        manifest["IconPath"] = "icon.png"
+    extras = ["README.md", "CREDITS.txt", "CHANGELOG.md", "TESTING.md", "loadout.ini"]
+    trees = ["tools", "examples", "presets"]
+    os.makedirs(os.path.dirname(os.path.abspath(args.zip)), exist_ok=True)
+    with zipfile.ZipFile(args.zip, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        _zip_write(z, "manifest.json", (json.dumps(manifest, indent=2) + "\n").encode())
+        if os.path.exists(icon):
+            _zip_write(z, "icon.png", open(icon, "rb").read())
+        for _, folder, archive, _ in builds:
+            _zip_write(z, folder + "/" + ARCHIVE_NAME, archive)
+            _zip_write(z, folder + "/" + ARCHIVE_NAME + ".stream", b"")
+            _zip_write(z, folder + "/" + ARCHIVE_NAME + ".gpu_resources", b"")
+        for f in extras:
+            fp = os.path.join(root, f)
+            if os.path.exists(fp):
+                _zip_write(z, f, open(fp, "rb").read())
+        for tree in trees:
+            for dirpath, dirs, files in os.walk(os.path.join(root, tree)):
+                dirs[:] = [d for d in dirs if d != "__pycache__"]
+                for f in sorted(files):
+                    fp = os.path.join(dirpath, f)
+                    _zip_write(z, os.path.relpath(fp, root).replace(os.sep, "/"),
+                               open(fp, "rb").read())
+    print("Wrote release     : %s  (%d presets, guid %s)" % (args.zip, len(builds), guid))
+    return 0
+
+
+def cmd_export_web(args):
+    """Write docs/data.json: catalog, effect names, engine and presets for the web builder."""
+    root = os.path.dirname(HERE)
+    data = {
+        "mod_id": MOD_ID, "global": GLOBAL, "title": TITLE, "version": VERSION,
+        "author": AUTHOR, "credit": CREDIT, "guid": str(uuid.uuid5(GUID_NS, MOD_ID)),
+        "catalog": [{"id": pid, "name": n, "rows": [list(r) for r in rows],
+                     "stats": [list(s) for s in stats]}
+                    for pid, (n, rows, stats) in CATALOG.items()],
+        "effects": {str(k): list(v) for k, v in EFFECTS.items()},
+        "stat_effects": {str(k): list(v) for k, v in STAT_EFFECTS.items()},
+        "aliases": ALIASES,
+        "engine": open(ENGINE_PATH, encoding="utf-8").read(),
+        "presets": [{"file": os.path.basename(p), "ini": open(p, encoding="utf-8").read()}
+                    for p in preset_files(os.path.join(root, "presets"))],
+    }
+    text = json.dumps(data, indent=1, sort_keys=True) + "\n"
+    if args.check:
+        cur = open(args.output, encoding="utf-8").read() if os.path.exists(args.output) else ""
+        if cur != text:
+            print("%s is out of date: run  python tools/picker.py export-web" % args.output)
+            return 1
+        print("%s is up to date" % args.output)
+        return 0
+    with open(args.output, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    print("Wrote %s (%d bytes)" % (args.output, len(text)))
     return 0
 
 
@@ -634,6 +765,14 @@ def main(argv=None):
     b.add_argument("--name", help="display name in the mod manager")
     b.add_argument("--dump-lua", help="also write the generated Lua here")
     b.set_defaults(func=cmd_build)
+    r = sub.add_parser("release", help="one zip with every preset as a pick-one option")
+    r.add_argument("--presets", default=os.path.join(os.path.dirname(HERE), "presets"))
+    r.add_argument("--zip", required=True)
+    r.set_defaults(func=cmd_release)
+    w = sub.add_parser("export-web", help="write docs/data.json for the web builder")
+    w.add_argument("-o", "--output", default=os.path.join(os.path.dirname(HERE), "docs", "data.json"))
+    w.add_argument("--check", action="store_true", help="fail if data.json is stale")
+    w.set_defaults(func=cmd_export_web)
     args = p.parse_args(argv)
     return args.func(args)
 

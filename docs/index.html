@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passive Picker v4 Builder</title>
+<meta name="description" content="Build a Helldivers 2 armor passive stack in your browser: pick passives, tune values, download a ready-to-install mod zip. No Python needed.">
+<link rel="icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f12;
+  --panel: #15181d;
+  --panel-2: #1b1f26;
+  --line: #2a2f38;
+  --text: #e8e6df;
+  --muted: #9aa0aa;
+  --accent: #f4d21f;
+  --accent-ink: #141414;
+  --good: #5fd08a;
+  --warn: #f0a33a;
+  --bad: #ff6b6b;
+  --info: #7cb7ff;
+  --radius: 10px;
+  --display: "Chakra Petch", "Bahnschrift", "Segoe UI", system-ui, sans-serif;
+  --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f2ee; --panel: #ffffff; --panel-2: #f7f6f2; --line: #dedbd2;
+    --text: #1b1c1e; --muted: #5e636b; --accent: #d9b400; --accent-ink: #111;
+    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.06);
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f2ee; --panel: #ffffff; --panel-2: #f7f6f2; --line: #dedbd2;
+  --text: #1b1c1e; --muted: #5e636b; --accent: #d9b400; --accent-ink: #111;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.06);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 14px/1.5 Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); }
+h1, h2, h3 { font-family: var(--display); letter-spacing: .02em; margin: 0; }
+code, .mono { font-family: "JetBrains Mono", ui-monospace, Consolas, monospace; font-size: 12.5px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 16px; }
+header.top { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(244,210,31,.07), transparent 70%); }
+header.top .wrap { display: flex; align-items: center; gap: 16px; padding-top: 18px; padding-bottom: 18px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; min-width: 0; }
+.brand img { width: 44px; height: 44px; border-radius: 8px; }
+.brand h1 { font-size: 22px; text-transform: uppercase; }
+.brand p { margin: 0; color: var(--muted); font-size: 13px; }
+.links { display: flex; gap: 8px; flex-wrap: wrap; }
+.links a, .ghost {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel); color: var(--text); text-decoration: none; font-size: 13px; cursor: pointer;
+}
+.links a:hover, .ghost:hover { border-color: var(--accent); }
+
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: flex; gap: 10px; align-items: center; }
+.step b { font-family: var(--display); color: var(--accent-ink); background: var(--accent); width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; flex: none; }
+.step span { font-size: 13px; color: var(--muted); }
+.step strong { color: var(--text); font-weight: 600; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; padding-bottom: 40px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.card > .hd { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.card > .hd h2 { font-size: 16px; text-transform: uppercase; margin-right: auto; }
+.card > .bd { padding: 14px 16px; }
+.stack { display: grid; gap: 18px; }
+
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field select, .field input { width: 100%; max-width: 100%; }
+.field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+input[type=text], input[type=number], input[type=search], select {
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0;
+}
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.grow { flex: 1 1 200px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 8px;
+  padding: 10px 14px; font-weight: 600; cursor: pointer; background: var(--panel-2); border: 1px solid var(--line);
+}
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-family: var(--display); text-transform: uppercase; letter-spacing: .04em; font-size: 15px; }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.primary:disabled { opacity: .45; cursor: not-allowed; }
+.btn.block { width: 100%; }
+.btn.small { padding: 6px 10px; font-size: 12.5px; font-weight: 500; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--panel-2); padding: 7px 12px; cursor: pointer; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 16px 0; }
+.tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px 8px 0 0; border: 1px solid var(--line); border-bottom: 0; background: var(--panel-2); cursor: pointer; font-size: 13px; }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; border-color: var(--accent); }
+.tab .x { opacity: .6; padding: 0 2px; }
+.tab .x:hover { opacity: 1; }
+.tabline { border-top: 2px solid var(--accent); }
+
+.hint { color: var(--muted); font-size: 12.5px; }
+.base { background: var(--panel-2); border: 1px dashed var(--accent); border-radius: var(--radius); padding: 12px; margin-bottom: 14px; }
+.base h3 { font-size: 14px; text-transform: uppercase; margin-bottom: 6px; }
+
+.toolbar input[type=search] { min-width: 0; flex: 1 1 160px; }
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; align-items: start; }
+.pcard { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); transition: border-color .15s; }
+.pcard.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.pcard .top { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; user-select: none; }
+.pcard .name { font-weight: 600; margin-right: auto; }
+.pcard .sum { padding: 0 12px 10px; display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: 11.5px; padding: 2px 7px; border-radius: 999px; background: rgba(127,127,127,.15); color: var(--muted); }
+.chip.changed { background: rgba(244,210,31,.18); color: var(--text); }
+.switch { width: 38px; height: 22px; border-radius: 999px; background: var(--line); position: relative; flex: none; border: 0; cursor: pointer; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"]::after { left: 19px; background: var(--accent-ink); }
+
+.effects { border-top: 1px solid var(--line); padding: 8px 12px 12px; display: grid; gap: 8px; }
+.eff { display: grid; grid-template-columns: minmax(0,1fr) 92px 26px; gap: 6px 8px; align-items: center; }
+.eff .lbl { min-width: 0; }
+.eff .lbl b { font-weight: 500; font-size: 13px; }
+.eff .lbl small { display: block; color: var(--muted); font-size: 11.5px; overflow-wrap: anywhere; }
+.eff input { width: 92px; padding: 6px 8px; text-align: right; }
+.eff .reset { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 0; }
+.eff .reset:disabled { visibility: hidden; }
+.eff .meaning { grid-column: 1 / -1; font-size: 11.5px; color: var(--accent); margin-top: -4px; }
+.eff.changed input { border-color: var(--accent); }
+
+aside { position: sticky; top: 14px; display: grid; gap: 14px; min-width: 0; }
+.layout > * { min-width: 0; }
+.install code { overflow-wrap: anywhere; word-break: break-all; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.stat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px; text-align: center; }
+.stat b { display: block; font-family: var(--display); font-size: 22px; }
+.stat span { font-size: 11.5px; color: var(--muted); }
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 260px; overflow: auto; }
+.notes li { font-size: 12.5px; padding: 6px 8px 6px 10px; border-left: 3px solid var(--info); background: var(--panel-2); border-radius: 0 6px 6px 0; overflow-wrap: anywhere; }
+.notes li.warn { border-color: var(--warn); }
+.notes li.bad { border-color: var(--bad); color: var(--bad); }
+.notes li.good { border-color: var(--good); }
+details.ini summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+details.ini pre { max-height: 280px; overflow: auto; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12px; white-space: pre; }
+.install ol { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+.credit { font-size: 12.5px; color: var(--muted); }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--accent); color: var(--accent-ink); padding: 10px 16px; border-radius: 8px; font-weight: 600; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); }
+.toast.show { opacity: 1; }
+.empty { color: var(--muted); padding: 20px; text-align: center; }
+dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--text); padding: 0; max-width: min(520px, calc(100% - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.55); }
+dialog .bd { padding: 16px; display: grid; gap: 12px; }
+footer { border-top: 1px solid var(--line); padding: 18px 0 30px; color: var(--muted); font-size: 12.5px; }
+
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+  aside { position: static; }
+  .steps { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .steps { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: 1fr; }
+  .brand h1 { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <img src="icon.png" alt="" width="44" height="44">
+      <div>
+        <h1>Passive Picker v4</h1>
+        <p>Helldivers 2 armor passive stacker &middot; build your mod in the browser, no Python needed</p>
+      </div>
+    </div>
+    <nav class="links">
+      <a href="https://github.com/Hung1510/HD2-Armor-Transmog" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/Hung1510/HD2-Armor-Transmog/releases/latest" target="_blank" rel="noopener">Presets zip</a>
+      <a href="https://ayakamods.com/mods/modular-armor-passives.4350/" target="_blank" rel="noopener">Original v3 by mostlycloudy</a>
+      <button class="ghost" id="themeBtn" type="button" aria-label="Toggle theme">&#9680;</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="steps" aria-label="How it works">
+    <div class="step"><b>1</b><span><strong>Pick your armor's passive</strong><br>that armor gets the stack</span></div>
+    <div class="step"><b>2</b><span><strong>Switch passives on</strong><br>or load a preset</span></div>
+    <div class="step"><b>3</b><span><strong>Tune any value</strong><br>open a card to edit</span></div>
+    <div class="step"><b>4</b><span><strong>Download &amp; install</strong><br>add the zip to your mod manager</span></div>
+  </div>
+
+  <div class="layout">
+    <div class="stack">
+      <section class="card">
+        <div class="hd"><h2>Stack</h2>
+          <button class="btn small" id="importBtn" type="button">Import loadout.ini</button>
+          <input type="file" id="importFile" accept=".ini,.txt" hidden>
+          <button class="btn small" id="resetBtn" type="button">Start over</button>
+        </div>
+        <div class="bd">
+          <div class="row">
+            <div class="field grow"><label for="modName">Mod name (shown in your mod manager)</label>
+              <input type="text" id="modName" maxlength="60"></div>
+            <div class="field grow"><label for="presetSel">Load a preset</label>
+              <select id="presetSel"><option value="">Choose a preset…</option></select></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="profileCard">
+        <div class="tabs" role="tablist" id="tabs"></div>
+        <div class="tabline"></div>
+        <div class="bd" id="profileBody"></div>
+      </section>
+    </div>
+
+    <aside>
+      <section class="card">
+        <div class="hd"><h2>Summary</h2></div>
+        <div class="bd">
+          <div class="stats">
+            <div class="stat"><b id="sPass">0</b><span>passives on</span></div>
+            <div class="stat"><b id="sRows">0</b><span>rows added</span></div>
+            <div class="stat"><b id="sTweaks">0</b><span>values changed</span></div>
+          </div>
+          <ul class="notes" id="notes"></ul>
+        </div>
+      </section>
+      <section class="card">
+        <div class="bd" style="display:grid; gap:10px">
+          <button class="btn primary block" id="dlZip" type="button">Download mod (.zip)</button>
+          <div class="row">
+            <button class="btn small grow" id="dlIni" type="button">Save loadout.ini</button>
+            <button class="btn small grow" id="shareBtn" type="button">Copy share link</button>
+          </div>
+          <details class="ini"><summary>Show loadout.ini</summary><pre id="iniView"></pre></details>
+        </div>
+      </section>
+      <section class="card install">
+        <div class="hd"><h2>Install</h2></div>
+        <div class="bd">
+          <ol>
+            <li>Install <a href="https://ayakamods.com/mods/bingus-shared-loader.3861/" target="_blank" rel="noopener">Bingus Shared Loader</a>.</li>
+            <li>Remove Passive Picker v3 and any older v4 build.</li>
+            <li>Add the downloaded zip to your mod manager and deploy.</li>
+            <li>Fully restart the game, then wear armor with the passive you picked.</li>
+            <li>Check <code>%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\PassivePickerV4-STATUS.txt</code> says <b>OK - perk stacked</b>.</li>
+          </ol>
+          <p class="hint" style="margin:10px 0 0">Single-player / private lobbies only.</p>
+        </div>
+      </section>
+      <p class="credit">Engine, archive format and passive data by <b>mostlycloudy</b> (engine credit also SHODAN). v4 config layer and builder by Hung1510. Effect names are inferred; ones marked <b>?</b> are guesses.</p>
+    </aside>
+  </div>
+</main>
+
+<dialog id="addDlg">
+  <form method="dialog" class="bd">
+    <h2 style="font-size:16px">Add another armor</h2>
+    <p class="hint" style="margin:0">Armor that has this passive gets its own separate stack.</p>
+    <select id="addSel"></select>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn small" value="cancel">Cancel</button>
+      <button class="btn small primary" value="ok" id="addOk">Add</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<footer>
+  <div class="wrap">
+    Passive Picker v4 &middot; <a href="https://github.com/Hung1510/HD2-Armor-Transmog">source</a> &middot;
+    built on <a href="https://ayakamods.com/mods/modular-armor-passives.4350/">Modular Armor Passives v3</a> by mostlycloudy &middot;
+    Found a wrong effect name? <a href="https://github.com/Hung1510/HD2-Armor-Transmog/issues/new/choose">Report it</a>.
+    Not affiliated with Arrowhead Game Studios.
+  </div>
+</footer>
+
+<script src="vendor/jszip.min.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,868 @@
+{
+ "aliases": {
+  "medkit": 7,
+  "rocksolid": 33,
+  "supplementaryadrenaline": 34
+ },
+ "author": "mostlycloudy (original v3), Hung1510 (v4 edit)",
+ "catalog": [
+  {
+   "id": 1,
+   "name": "Extra Padding",
+   "rows": [
+    [
+     2947431239,
+     1,
+     1.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 2,
+   "name": "Scout",
+   "rows": [
+    [
+     564640356,
+     3,
+     2.0
+    ],
+    [
+     351063573,
+     2,
+     0.7
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 3,
+   "name": "Fortified",
+   "rows": [
+    [
+     3278452137,
+     2,
+     0.7
+    ],
+    [
+     530108754,
+     2,
+     0.5
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 5,
+   "name": "Electrical Conduit",
+   "rows": [
+    [
+     1272920516,
+     2,
+     0.05
+    ],
+    [
+     2301880308,
+     2,
+     0.05
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 6,
+   "name": "Engineering Kit",
+   "rows": [
+    [
+     3278452137,
+     2,
+     0.7
+    ],
+    [
+     4143617574,
+     1,
+     2.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 7,
+   "name": "Med-Kit",
+   "rows": [
+    [
+     678818890,
+     1,
+     2.0
+    ],
+    [
+     2481657511,
+     3,
+     2.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 8,
+   "name": "Servo-Assisted",
+   "rows": [
+    [
+     650733985,
+     2,
+     1.3
+    ],
+    [
+     2259262393,
+     2,
+     1.5
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 9,
+   "name": "Democracy Protects",
+   "rows": [
+    [
+     3414248709,
+     2,
+     1.5
+    ],
+    [
+     2794008770,
+     2,
+     0.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 10,
+   "name": "Reinforced Epaulettes",
+   "rows": [
+    [
+     3427994401,
+     2,
+     1.3
+    ],
+    [
+     4227156544,
+     2,
+     1.5
+    ],
+    [
+     626635789,
+     2,
+     1.2
+    ]
+   ],
+   "stats": [
+    [
+     13,
+     0.0,
+     1.3
+    ]
+   ]
+  },
+  {
+   "id": 11,
+   "name": "Inflammable",
+   "rows": [
+    [
+     1307742833,
+     2,
+     0.25
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 12,
+   "name": "Peak Physique",
+   "rows": [
+    [
+     626635789,
+     2,
+     1.4
+    ],
+    [
+     3368859386,
+     1,
+     30.0
+    ],
+    [
+     234819138,
+     0,
+     1.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 13,
+   "name": "Advanced Filtration",
+   "rows": [
+    [
+     1855573221,
+     2,
+     0.2
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 14,
+   "name": "Unflinching",
+   "rows": [
+    [
+     1936936295,
+     0,
+     0.0
+    ],
+    [
+     2947431239,
+     1,
+     0.5
+    ],
+    [
+     564640356,
+     3,
+     2.0
+    ]
+   ],
+   "stats": [
+    [
+     11,
+     0.0,
+     0.05
+    ]
+   ]
+  },
+  {
+   "id": 15,
+   "name": "Acclimated",
+   "rows": [
+    [
+     3047489686,
+     2,
+     0.5
+    ],
+    [
+     2301880308,
+     2,
+     0.05
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 16,
+   "name": "Siege-Ready",
+   "rows": [
+    [
+     3427994401,
+     2,
+     1.3
+    ],
+    [
+     868861715,
+     2,
+     1.2
+    ]
+   ],
+   "stats": [
+    [
+     13,
+     0.0,
+     1.3
+    ],
+    [
+     12,
+     0.0,
+     1.2
+    ]
+   ]
+  },
+  {
+   "id": 17,
+   "name": "Integrated Explosives",
+   "rows": [
+    [
+     1420202628,
+     3,
+     1.5
+    ],
+    [
+     4143617574,
+     1,
+     2.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 18,
+   "name": "Gunslinger",
+   "rows": [
+    [
+     3036184873,
+     2,
+     1.4
+    ],
+    [
+     2907867646,
+     2,
+     1.5
+    ],
+    [
+     570646332,
+     2,
+     0.3
+    ]
+   ],
+   "stats": [
+    [
+     15,
+     0.0,
+     1.6
+    ],
+    [
+     16,
+     0.0,
+     1.5
+    ],
+    [
+     17,
+     0.0,
+     0.3
+    ]
+   ]
+  },
+  {
+   "id": 19,
+   "name": "Adreno-Defibrillator",
+   "rows": [
+    [
+     0,
+     0,
+     0.0
+    ],
+    [
+     2481657511,
+     3,
+     2.0
+    ],
+    [
+     1272920516,
+     2,
+     0.5
+    ],
+    [
+     2301880308,
+     2,
+     0.05
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 20,
+   "name": "Ballistic Padding",
+   "rows": [
+    [
+     754642083,
+     2,
+     0.75
+    ],
+    [
+     530108754,
+     2,
+     0.75
+    ],
+    [
+     2794008770,
+     2,
+     0.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 21,
+   "name": "Desert Stormer",
+   "rows": [
+    [
+     3047489686,
+     2,
+     0.6
+    ],
+    [
+     2301880308,
+     2,
+     0.06
+    ],
+    [
+     650733985,
+     2,
+     1.2
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 31,
+   "name": "Feet First",
+   "rows": [
+    [
+     2945151250,
+     2,
+     0.5
+    ],
+    [
+     1126857107,
+     2,
+     1.3
+    ],
+    [
+     3056290557,
+     0,
+     1.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 32,
+   "name": "Reduced Signature",
+   "rows": [
+    [
+     2945151250,
+     2,
+     0.5
+    ],
+    [
+     351063573,
+     2,
+     0.6
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 33,
+   "name": "Rock-Solid",
+   "rows": [
+    [
+     626635789,
+     2,
+     1.4
+    ],
+    [
+     234819138,
+     0,
+     1.0
+    ],
+    [
+     295944268,
+     2,
+     0.7
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 34,
+   "name": "Supplemental Adrenaline",
+   "rows": [
+    [
+     2710154678,
+     1,
+     2.0
+    ],
+    [
+     2947431239,
+     1,
+     0.5
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 35,
+   "name": "Concussive Padding, Reinforced",
+   "rows": [
+    [
+     530108754,
+     2,
+     0.5
+    ],
+    [
+     2947431239,
+     1,
+     0.6
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 36,
+   "name": "Concussive Padding, Grenadier",
+   "rows": [
+    [
+     530108754,
+     2,
+     0.5
+    ],
+    [
+     4143617574,
+     1,
+     2.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 37,
+   "name": "Concussive Padding, Hazmat",
+   "rows": [
+    [
+     530108754,
+     2,
+     0.5
+    ],
+    [
+     1855573221,
+     2,
+     0.75
+    ],
+    [
+     570646332,
+     2,
+     0.7
+    ]
+   ],
+   "stats": [
+    [
+     17,
+     0.0,
+     0.7
+    ]
+   ]
+  },
+  {
+   "id": 38,
+   "name": "Oxygenator",
+   "rows": [
+    [
+     3447301767,
+     2,
+     1.1
+    ],
+    [
+     4141249299,
+     2,
+     1.1
+    ],
+    [
+     1765326166,
+     0,
+     0.0
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 39,
+   "name": "Kinetic Displacement Mitigation",
+   "rows": [
+    [
+     1307742833,
+     2,
+     0.5
+    ],
+    [
+     4227156544,
+     2,
+     1.5
+    ],
+    [
+     631608425,
+     2,
+     0.7
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 40,
+   "name": "Blunt-Force Mitigation",
+   "rows": [
+    [
+     295944268,
+     2,
+     0.7
+    ],
+    [
+     631608425,
+     2,
+     0.7
+    ],
+    [
+     2947431239,
+     1,
+     0.5
+    ]
+   ],
+   "stats": []
+  },
+  {
+   "id": 41,
+   "name": "True Grit",
+   "rows": [
+    [
+     905018348,
+     2,
+     1.3
+    ],
+    [
+     3368859386,
+     1,
+     20.0
+    ]
+   ],
+   "stats": [
+    [
+     14,
+     0.0,
+     1.3
+    ]
+   ]
+  }
+ ],
+ "credit": "Passive Picker v4 by Hung1510, built on Passive Picker v3 by mostlycloudy. Requires Bingus Shared Loader. Single-player / private lobbies only.",
+ "effects": {
+  "0": [
+   "revive_marker",
+   "set; placeholder row - revive is probably tied to perk id"
+  ],
+  "1126857107": [
+   "poi_range",
+   "mul; 1.3 = +30%"
+  ],
+  "1272920516": [
+   "arc_damage_taken",
+   "mul; 0.05 = 95% resist"
+  ],
+  "1307742833": [
+   "fire_damage_taken",
+   "mul; 0.25 = 75% resist"
+  ],
+  "1420202628": [
+   "death_explosion_delay",
+   "time; seconds"
+  ],
+  "1765326166": [
+   "slide_flag",
+   "set; slide-related ?"
+  ],
+  "1855573221": [
+   "gas_damage_taken",
+   "mul; 0.2 = 80% resist"
+  ],
+  "1936936295": [
+   "flinch",
+   "set; 0.0 = no flinch"
+  ],
+  "2259262393": [
+   "limb_health",
+   "mul; 1.5 = +50%"
+  ],
+  "2301880308": [
+   "arc_secondary",
+   "mul; arc-related, exact effect ?"
+  ],
+  "234819138": [
+   "melee_flag",
+   "set; flag, effect ?"
+  ],
+  "2481657511": [
+   "stim_duration",
+   "time; extra seconds"
+  ],
+  "2710154678": [
+   "stamina_on_damage",
+   "add"
+  ],
+  "2794008770": [
+   "chest_bleed",
+   "mul; 0.0 = no chest bleeding"
+  ],
+  "2907867646": [
+   "sidearm_draw_speed",
+   "mul; 1.5 = +50%"
+  ],
+  "2945151250": [
+   "movement_noise",
+   "mul; 0.5 = -50%"
+  ],
+  "2947431239": [
+   "armor_rating",
+   "add; 1.0 = +50 armour"
+  ],
+  "295944268": [
+   "stagger",
+   "mul; 0.7 = -30%"
+  ],
+  "3036184873": [
+   "sidearm_reload_speed",
+   "mul; 1.4 = +40%"
+  ],
+  "3047489686": [
+   "elemental_damage_taken",
+   "mul; fire/gas/acid/arc"
+  ],
+  "3056290557": [
+   "leg_injury_immunity",
+   "set; 1.0 = immune"
+  ],
+  "3278452137": [
+   "crouch_prone_recoil",
+   "mul; 0.7 = -30%"
+  ],
+  "3368859386": [
+   "ergonomics",
+   "add; +ergo"
+  ],
+  "3414248709": [
+   "death_save",
+   "mul; 1.5 = the stock 50% chance. 2.0 = 100%? (untested)"
+  ],
+  "3427994401": [
+   "primary_reload_speed",
+   "mul; 1.3 = +30%"
+  ],
+  "3447301767": [
+   "move_speed_a",
+   "mul; walk or run speed ?"
+  ],
+  "351063573": [
+   "detection_radius",
+   "mul; 0.7 = -30%"
+  ],
+  "4141249299": [
+   "move_speed_b",
+   "mul; walk or run speed ?"
+  ],
+  "4143617574": [
+   "throwables",
+   "add; extra grenades"
+  ],
+  "4227156544": [
+   "limb_injury_avoid",
+   "mul; 1.5 = stock 50% chance"
+  ],
+  "530108754": [
+   "explosive_damage_taken",
+   "mul; 0.5 = 50% resist"
+  ],
+  "564640356": [
+   "radar_ping",
+   "time; seconds between radar pings"
+  ],
+  "570646332": [
+   "sidearm_recoil",
+   "mul; 0.3 = -70%"
+  ],
+  "626635789": [
+   "melee_damage",
+   "mul; 1.4 = +40%"
+  ],
+  "631608425": [
+   "impact_damage_taken",
+   "mul; 0.7 = -30%"
+  ],
+  "650733985": [
+   "throw_range",
+   "mul; 1.3 = +30%"
+  ],
+  "678818890": [
+   "stims",
+   "add; extra stims"
+  ],
+  "754642083": [
+   "chest_damage_taken",
+   "mul; 0.75 = 25% resist"
+  ],
+  "868861715": [
+   "ammo_capacity",
+   "mul; 1.2 = +20% ?"
+  ],
+  "905018348": [
+   "support_reload_speed",
+   "mul; 1.3 = +30%"
+  ]
+ },
+ "engine": "-- ================================================================ passive-picker engine\n-- Shared by every MostlyCloudy tuning mod (credit to SHODAN); the MOD table above says what to change.\n--\n-- This engine extends one armour PERK's modifier list. It is not a stat patcher:\n-- instead of overwriting a field, it grows a variable-length array inside a live\n-- game record and repoints the record's descriptor at the enlarged copy.\n--\n-- The game lays its settings tables down in memory as LDLD blocks. The perk table\n-- (HelldiverCustomizationPassiveBonusSettings, type 0x63CE0FEB) stores, per perk:\n--\n--   +0  u32     PassiveBonus        <- the perk id (19 = Adreno-Defibrillator)\n--   +4  u32     Name\n--   +8  u64     Icon\n--   +16 DLArray PassiveModifiers    <- (i64 pointer, u64 count)  <-- we grow this\n--   +32 DLArray StatModifiers       <- also grown when the perk is a stat user\n--   +48 u32     SomeHash\n--\n-- In the FILE the DLArray holds a relative offset (always 56, i.e. the modifier\n-- rows sit inline right after the 56-byte record). In MEMORY it holds an absolute\n-- pointer. We detect which one we are looking at by checking whether the pointer\n-- equals record+56; that is the only form we rewrite. Anything else means another\n-- mod has already replaced the array, so we leave it alone rather than fight.\n--\n-- Every write is read back and the descriptor is checked, or it is rolled back.\n-- Changes live in memory only.\n--\n-- ---- v4 changes (community edit, built on mostlycloudy's v3) --------------------\n--   * MULTIPLE PROFILES: MOD.profiles holds one stack per trigger perk, so e.g.\n--     Med-Kit armour and Siege-Ready armour can carry different stacks at once.\n--     Each profile owns its own destination buffers.\n--   * OVERRIDES: a profile can REPLACE the value of the trigger perk's own rows\n--     (matched on modifier id + type, or stat id), so the base perk is tunable\n--     too -- v3 could only append, which stacked a second copy on top.\n--   * The old single trigger_perk / rows / stat_rows layout is still accepted.\n--\n-- ---- v3 changes -----------------------------------------------------------------\n--   * ROWS ARE SKIPPED WHEN ALREADY PRESENT, compared on identity (modifier id +\n--     type + value). v3 lists EVERY passive including the base perk, so without\n--     this the base perk would be applied twice. Identity, not the whole row,\n--     because we write description=0 while the game's own rows carry a hash.\n--   * AN ABSENT ARRAY IS NOW CREATED, not refused. A perk that ships zero stat\n--     rows stores offset -1; the old code called that \"foreign\" and returned\n--     'partial: stat array ...' AFTER the passive array had already been repointed.\n--     add_site() counts that as refused, so the mod mutated the record and still\n--     reported \"perk not found\". That hit 25 of the 31 passives.\n--   * Conflicting rows are KEPT, not deduplicated: two passives sharing a modifier\n--     id at different values both apply. Only exact repeats are collapsed.\n--\n-- Safety rules, learned from the previous implementation of this idea:\n--   * the pointer and the count are written as ONE 16-byte store, so the game can\n--     never observe a fresh pointer with a stale count;\n--   * a record whose array is already relocated is treated as another mod's work;\n--   * retire = true patches once and unregisters, so nothing races an armour swap.\n\nif rawget(_G, MOD.global) then return end\n\nlocal HEADER_BYTES = 24\nlocal MAX_PAYLOAD = 64 * 1024 * 1024\nlocal FRAME_BUDGET = 0.006\nlocal CHUNK = 262144\nlocal START_FRAME = 300\nlocal PROBE_MIN_ALLOC = 64 * 1024\nlocal PROBE_BYTES = 128 * 1024\nlocal SELF_MARGIN = 4096\nlocal MAX_ROUNDS = 12\nlocal ROUND_DELAY_SECONDS = 10\nlocal ENFORCE_SECONDS = 5\nlocal MAX_LOG_LINES = 400\n\n-- record layout offsets, from FileDiver datalibrary/passive_bonuses.go\nlocal REC_ID = 0\nlocal REC_PM = 16            -- DLArray for PassiveModifiers\nlocal REC_SM = 32            -- DLArray for StatModifiers\nlocal REC_HEAD = 56          -- rows sit inline at record+56 in the shipped form\nlocal ROW_BYTES = 16         -- one passive modifier\nlocal STAT_BYTES = 12        -- one stat modifier\n-- Row IDENTITY, used to decide \"this row is already present\". The description\n-- field is deliberately excluded from a passive row's identity: we write 0 there\n-- while the game's own rows carry a real hash, so a whole-row compare would never\n-- match the base perk's rows -- and v3's tables list the base perk, so that would\n-- apply it twice.\nlocal ROW_IDENT = ROW_BYTES - 4    -- modifier id + type + value\nlocal STAT_IDENT = STAT_BYTES      -- stat + unk1 + unk2 (no description field)\n\nlocal MEM_COMMIT, MEM_PRIVATE = 0x1000, 0x20000\nlocal PAGE_READONLY, PAGE_READWRITE = 0x02, 0x04\n\nlocal state = {\n    title = MOD.title, version = MOD.version, phase = 'starting', status = 'starting',\n    frame = 0, rounds = 0, applied = 0, reapplied = 0, refused = 0,\n}\nrawset(_G, MOD.global, state)\n\n-- ---------------------------------------------------------------- byte helpers\nlocal function u32_bytes(value)\n    value = value % 4294967296\n    return string.char(value % 256,\n                       math.floor(value / 256) % 256,\n                       math.floor(value / 65536) % 256,\n                       math.floor(value / 16777216) % 256)\nend\n\nlocal function u32(blob, offset)\n    local a, b, c, d = blob:byte(offset + 1, offset + 4)\n    if not d then return nil end\n    return a + b * 256 + c * 65536 + d * 16777216\nend\n\nlocal function u64(blob, offset)\n    local lo = u32(blob, offset)\n    local hi = u32(blob, offset + 4)\n    if not lo or not hi then return nil end\n    return lo + hi * 4294967296\nend\n\nlocal function u64_bytes(value)\n    local lo = value % 4294967296\n    local hi = math.floor(value / 4294967296) % 4294967296\n    return u32_bytes(lo) .. u32_bytes(hi)\nend\n\nlocal NEEDLE = 'LDLD' .. u32_bytes(1)\n\n-- ---------------------------------------------------------------- windows api\nlocal ffi_ok, ffi = pcall(require, 'ffi')\nlocal api = nil\nlocal REGION_TYPE = MOD.global .. 'Region'\n\nlocal function build_api()\n    for _, declaration in ipairs({\n        'void *GetCurrentProcess(void);',\n        'int ReadProcessMemory(void *process, const void *address, void *buffer, size_t size, size_t *read);',\n        'int WriteProcessMemory(void *process, void *address, const void *buffer, size_t size, size_t *written);',\n        'size_t VirtualQuery(const void *address, void *region, size_t size);',\n        'int VirtualProtect(void *address, size_t size, uint32_t new_protection, uint32_t *old_protection);',\n        'void *VirtualAllocEx(void *process, void *address, size_t size, uint32_t type, uint32_t protect);',\n        'int CreateDirectoryA(const char *path, void *security);',\n        'uint32_t GetLastError(void);',\n    }) do\n        pcall(ffi.cdef, declaration)\n    end\n    pcall(ffi.cdef, [[typedef struct {\n        void *base; void *allocation_base; uint32_t allocation_protection;\n        uint16_t partition; uint16_t reserved; size_t size;\n        uint32_t state; uint32_t protection; uint32_t type;\n    } ]] .. REGION_TYPE .. ';')\n\n    local kernel = ffi.load('kernel32')\n    local query = ffi.cast('size_t (*)(const void *, void *, size_t)', kernel.VirtualQuery)\n    local virtual_protect = ffi.cast('int (*)(void *, size_t, uint32_t, uint32_t *)', kernel.VirtualProtect)\n    local process = kernel.GetCurrentProcess()\n    local region = ffi.new(REGION_TYPE .. '[1]')\n    local region_size = ffi.sizeof(region[0])\n    local counter = ffi.new('size_t[1]')\n\n    local self = {}\n\n    function self.read(address, size)\n        if size <= 0 then return nil end\n        local buffer = ffi.new('uint8_t[?]', size)\n        if kernel.ReadProcessMemory(process, ffi.cast('const void *', address),\n                                    buffer, size, counter) == 0 then return nil end\n        if tonumber(counter[0]) ~= size then return nil end\n        return ffi.string(buffer, size)\n    end\n\n    function self.query(address)\n        if query(ffi.cast('const void *', address), region, region_size) ~= region_size then\n            return nil\n        end\n        local base = tonumber(ffi.cast('uintptr_t', region[0].base))\n        local size = tonumber(region[0].size)\n        if not base or not size or size <= 0 then return nil end\n        return { base = base, size = size, state = region[0].state,\n                 protection = region[0].protection, kind = region[0].type }\n    end\n\n    function self.write(address, bytes)\n        if #bytes <= 0 then return false end\n        local info = self.query(address)\n        if not info or info.state ~= MEM_COMMIT or info.kind ~= MEM_PRIVATE\n            or address < info.base or address + #bytes > info.base + info.size\n            or (info.protection ~= PAGE_READONLY and info.protection ~= PAGE_READWRITE) then\n            return false\n        end\n        local old_protection = ffi.new('uint32_t[1]')\n        local changed = info.protection == PAGE_READONLY\n        if changed and virtual_protect(ffi.cast('void *', address), #bytes,\n                                       PAGE_READWRITE, old_protection) == 0 then\n            return false\n        end\n        local wrote = kernel.WriteProcessMemory(process, ffi.cast('void *', address),\n                                                bytes, #bytes, counter) ~= 0\n                      and tonumber(counter[0]) == #bytes\n        local restored = not changed or virtual_protect(\n            ffi.cast('void *', address), #bytes, old_protection[0], old_protection) ~= 0\n        return wrote and restored\n    end\n\n    -- Private committed block for the enlarged modifier array.\n    function self.alloc(size)\n        if type(size) ~= 'number' or size <= 0 or size > 1048576 then return nil end\n        local p = kernel.VirtualAllocEx(process, nil, size, 0x3000, PAGE_READWRITE)\n        if p == nil then return nil end\n        local v = tonumber(ffi.cast('uintptr_t', p))\n        if not v or v < 65536 then return nil end\n        return v\n    end\n\n    function self.regions()\n        local out = {}\n        local address = 0\n        while address < 0x7FFFFFFF0000 do\n            if query(ffi.cast('const void *', address), region, region_size) ~= region_size then break end\n            local base = tonumber(ffi.cast('uintptr_t', region[0].base))\n            local size = tonumber(region[0].size)\n            if not base or not size or size <= 0 then break end\n            if region[0].state == MEM_COMMIT and region[0].type == MEM_PRIVATE\n                and (region[0].protection == PAGE_READONLY or region[0].protection == PAGE_READWRITE) then\n                out[#out + 1] = { base = base, size = size,\n                                  allocation_base = tonumber(ffi.cast('uintptr_t', region[0].allocation_base)) }\n            end\n            address = base + size\n        end\n        table.sort(out, function(a, b) return a.size > b.size end)\n        return out\n    end\n\n    function self.address_of(text)\n        local ok, value = pcall(function()\n            return tonumber(ffi.cast('uintptr_t', ffi.cast('const char *', text)))\n        end)\n        if ok then return value end\n        return nil\n    end\n\n    function self.mkdir(path)\n        return kernel.CreateDirectoryA(path, nil) ~= 0 or kernel.GetLastError() == 183\n    end\n\n    return self\nend\n\n-- ---------------------------------------------------------------- log\nlocal log_path, status_path, log_lines, log_counts = nil, nil, {}, {}\nlocal last_status_seen = nil\nlocal write_status\n\nlocal function write_file(path, text)\n    if not path then return false end\n    local ok, handle = pcall(io.open, path, 'wb')\n    if not ok or not handle then return false end\n    pcall(function() handle:write(text) end)\n    pcall(function() handle:close() end)\n    return true\nend\n\nlocal function ensure_path(file)\n    local ok, resolved = pcall(function()\n        local base = os.getenv('LOCALAPPDATA')\n        if not base or base == '' then return nil end\n        for _, part in ipairs({ 'CowboyBingus', 'Helldivers2', 'Logs' }) do\n            base = base .. '/' .. part\n            if not api.mkdir(base) then return nil end\n        end\n        return base .. '/' .. file\n    end)\n    if ok and resolved then return resolved end\n    return nil\nend\n\nlocal function ensure_log_path()\n    if log_path ~= nil then return log_path end\n    log_path = ensure_path(MOD.log) or false\n    return log_path\nend\n\nlocal function ensure_status_path()\n    if status_path ~= nil then return status_path end\n    status_path = ensure_path(MOD.global .. '-STATUS.txt') or false\n    return status_path\nend\n\nlocal function flush_log()\n    local path = ensure_log_path()\n    if not path then return end\n    local lines = {\n        MOD.title .. ' v' .. MOD.version .. ' by ' .. MOD.author,\n        'status: ' .. tostring(state.phase) .. ' - ' .. tostring(state.status),\n        'applied ' .. state.applied .. ', re-applied ' .. state.reapplied .. ', refused ' .. state.refused,\n        '',\n    }\n    for _, line in ipairs(log_lines) do lines[#lines + 1] = line end\n    write_file(path, table.concat(lines, '\\r\\n') .. '\\r\\n')\nend\n\nlocal function log(message)\n    local count = (log_counts[message] or 0) + 1\n    log_counts[message] = count\n    if count > 3 or #log_lines >= MAX_LOG_LINES then return end\n    local line = '[frame ' .. tostring(state.frame) .. '] ' .. message\n    if count == 3 then line = line .. ' (further repeats not logged)' end\n    log_lines[#log_lines + 1] = line\n    print('[' .. MOD.global .. '] ' .. line)\nend\n\nlocal function set_status(phase, status)\n    state.phase, state.status = phase, status\n    log(phase .. ': ' .. status)\n    pcall(flush_log)\n    if last_status_seen ~= phase and write_status then\n        last_status_seen = phase\n        pcall(write_status)\n    end\nend\n\nlocal function hex(n) return string.format('0x%X', n) end\n\n-- ---------------------------------------------------------------- the rows\n-- v4: MOD.profiles is a list, one entry per trigger perk. Each profile carries\n--   rows           passive rows to APPEND   { modifier_id, type, value }\n--   stat_rows      stat rows to APPEND      { stat, unk1, unk2 }\n--   overrides      REPLACE the value of the perk's OWN rows, matched on\n--                  modifier id + type        { modifier_id, type, value }\n--   stat_overrides REPLACE the perk's own stat rows, matched on stat id\n--                                            { stat, unk1, unk2 }\n-- Everything is validated once at load and packed into byte blobs.\nlocal PROFILES = {}      -- perk id -> prepared profile\nlocal PROFILE_LIST = {}  -- same profiles, in config order\nlocal row_count = 0\nlocal stat_count = 0\n\nlocal function f32(value)\n    local cell = ffi.new('float[1]')\n    cell[0] = value\n    return ffi.string(cell, 4)\nend\n\nlocal function check_row(where, id, kind, value)\n    assert(type(id) == 'number' and id >= 0 and id <= 4294967295,\n           where .. ' modifier id is not a u32')\n    assert(type(kind) == 'number' and kind >= 0 and kind <= 3,\n           where .. ' type must be 0..3 (0 Set, 1 Add, 2 Multiply, 3 Time)')\n    assert(type(value) == 'number', where .. ' value is not a number')\nend\n\nlocal function check_stat(where, stat, unk1, unk2)\n    assert(type(stat) == 'number' and stat >= 0 and stat <= 4294967295,\n           where .. ' stat is not a u32')\n    assert(type(unk1) == 'number' and type(unk2) == 'number',\n           where .. ' values must be numbers')\nend\n\nlocal function prepare_profile(index, p)\n    local tag = 'profiles[' .. index .. ']'\n    assert(type(p.perk) == 'number', tag .. '.perk is not a number')\n    assert(not PROFILES[p.perk], tag .. ': perk ' .. p.perk .. ' is listed twice')\n\n    local blob = {}\n    for i, row in ipairs(p.rows or {}) do\n        check_row(tag .. '.rows[' .. i .. ']', row[1], row[2], row[3])\n        blob[#blob + 1] = u32_bytes(row[1]) .. u32_bytes(row[2]) .. f32(row[3]) .. u32_bytes(0)\n    end\n    local sblob = {}\n    for i, row in ipairs(p.stat_rows or {}) do\n        check_stat(tag .. '.stat_rows[' .. i .. ']', row[1], row[2], row[3])\n        sblob[#sblob + 1] = u32_bytes(row[1]) .. f32(row[2]) .. f32(row[3])\n    end\n    -- overrides: key = the bytes that identify a row, repl = the bytes that follow it\n    local ovr = { key_len = 8, map = {}, n = 0 }\n    for i, row in ipairs(p.overrides or {}) do\n        check_row(tag .. '.overrides[' .. i .. ']', row[1], row[2], row[3])\n        ovr.map[u32_bytes(row[1]) .. u32_bytes(row[2])] = f32(row[3])\n        ovr.n = ovr.n + 1\n    end\n    local sovr = { key_len = 4, map = {}, n = 0 }\n    for i, row in ipairs(p.stat_overrides or {}) do\n        check_stat(tag .. '.stat_overrides[' .. i .. ']', row[1], row[2], row[3])\n        sovr.map[u32_bytes(row[1])] = f32(row[2]) .. f32(row[3])\n        sovr.n = sovr.n + 1\n    end\n\n    local prof = {\n        perk = p.perk, name = p.name or ('perk ' .. p.perk),\n        ROWS = table.concat(blob), STATS = table.concat(sblob),\n        OVR = ovr, SOVR = sovr, sites = 0,\n    }\n    assert(#prof.ROWS % ROW_BYTES == 0, tag .. ': row blob is not whole 16-byte rows')\n    assert(#prof.STATS % STAT_BYTES == 0, tag .. ': stat blob is not whole 12-byte rows')\n    PROFILES[p.perk] = prof\n    PROFILE_LIST[#PROFILE_LIST + 1] = prof\n    row_count = row_count + #prof.ROWS / ROW_BYTES\n    stat_count = stat_count + #prof.STATS / STAT_BYTES\nend\n\nlocal function prepare_rows()\n    -- v3 compatibility: a single trigger_perk + rows/stat_rows still works.\n    local list = MOD.profiles\n    if not list then\n        list = { { perk = MOD.trigger_perk, rows = MOD.rows, stat_rows = MOD.stat_rows } }\n    end\n    for i, p in ipairs(list) do prepare_profile(i, p) end\n    return row_count, stat_count\nend\n\n-- Each profile gets its own private block per array: two perks can hold\n-- different stacks, so they cannot share one destination buffer.\nlocal function alloc_buffers()\n    for _, prof in ipairs(PROFILE_LIST) do\n        prof.buffer = api.alloc(#prof.ROWS + 4096)\n        assert(prof.buffer, 'could not allocate the passive buffer for ' .. prof.name)\n        if #prof.STATS > 0 or prof.SOVR.n > 0 then\n            prof.stat_buffer = api.alloc(#prof.STATS + 4096)\n            assert(prof.stat_buffer, 'could not allocate the stat buffer for ' .. prof.name)\n        end\n    end\nend\n\n-- ---------------------------------------------------------------- record location\n-- The perk block's payload is one record, so the perk id is the first u32.\nlocal function locate_perk(blob)\n    return PROFILES[u32(blob, REC_ID)]\nend\n\n-- ---------------------------------------------------------------- sites\nlocal sites = {}\n\n-- Rewrite rows already present whose identity key is in ovr.map. Only the value\n-- bytes change; the game's own description hash (and everything else) is kept.\n-- Returns the new blob and whether anything changed.\nlocal function apply_overrides(existing, row_bytes, ovr)\n    if not ovr or ovr.n == 0 or #existing == 0 then return existing, false end\n    local parts, changed = {}, false\n    for i = 0, #existing / row_bytes - 1 do\n        local row = existing:sub(i * row_bytes + 1, (i + 1) * row_bytes)\n        local key = row:sub(1, ovr.key_len)\n        local repl = ovr.map[key]\n        if repl then\n            local new = key .. repl .. row:sub(ovr.key_len + #repl + 1)\n            if new ~= row then row, changed = new, true end\n        end\n        parts[#parts + 1] = row\n    end\n    return table.concat(parts), changed\nend\n\n-- Grow ONE array and repoint its descriptor. Both arrays share this logic; only\n-- the row width, the descriptor offset, the inline offset, the appended rows,\n-- the overrides and the destination buffer differ.\n--\n-- inline_off matters: the shipped form points each array at its OWN inline\n-- position. The passive rows start at record+56; the stat rows start after them.\n-- Returns: 'applied', before_n, after_n | 'already' | 'foreign...' | reason\nlocal function grow_array(record, pointer, count, desc_off, inline_off, row_bytes, ident_bytes, rows, ovr, dest)\n    local pointer_off = record + desc_off\n    local inline = record + inline_off\n\n    --   count == 0            the perk ships no rows in this array: CREATE it.\n    --   pointer == dest       we already own it; read back what we wrote.\n    --   pointer == inline     the shipped inline form.\n    -- Anything else is another mod's array, which we leave alone rather than fight.\n    local existing\n    if count == 0 then\n        existing = ''\n    elseif pointer == dest then\n        existing = api.read(pointer, count * row_bytes)\n        if not existing or #existing ~= count * row_bytes then return 'our buffer unreadable' end\n    elseif pointer == inline then\n        existing = api.read(pointer, count * row_bytes)\n        if not existing then return 'inline rows unreadable' end\n        if #existing ~= count * row_bytes then return 'inline rows truncated' end\n    else\n        return 'foreign pointer ' .. hex(pointer)\n    end\n\n    -- v4: overrides first, so the base perk's own values can be changed. This is\n    -- idempotent: once our buffer holds the new value, a re-check changes nothing.\n    local changed\n    existing, changed = apply_overrides(existing, row_bytes, ovr)\n\n    -- A row is skipped ONLY when an identical row is already present, compared on\n    -- IDENTITY (modifier id + type + value), never on the description field.\n    local seen = {}\n    for i = 0, #existing / row_bytes - 1 do\n        seen[existing:sub(i * row_bytes + 1, i * row_bytes + ident_bytes)] = true\n    end\n    local kept = {}\n    for i = 0, #rows / row_bytes - 1 do\n        local row = rows:sub(i * row_bytes + 1, (i + 1) * row_bytes)\n        local key = row:sub(1, ident_bytes)\n        if not seen[key] then\n            seen[key] = true\n            kept[#kept + 1] = row\n        end\n    end\n    if #kept == 0 and not changed then\n        return 'already'\n    end\n\n    local total = existing .. table.concat(kept)\n    if #total > 65536 then return 'array would be too large' end\n    if #total > #rows + 4096 then return 'array larger than our buffer' end\n    if not api.write(dest, total) then return 'dest write failed' end\n    if api.read(dest, #total) ~= total then return 'dest read-back failed' end\n    -- ONE 16-byte store: pointer and count together.\n    local new_count = #existing / row_bytes + #kept\n    local descriptor = u64_bytes(dest) .. u64_bytes(new_count)\n    local before = api.read(pointer_off, 16)\n    if not before then return 'descriptor unreadable before write' end\n    if not api.write(pointer_off, descriptor) then return 'descriptor write failed' end\n    local after = api.read(pointer_off, 16)\n    if after ~= descriptor then\n        api.write(pointer_off, before)              -- roll back\n        return 'descriptor read-back did not match'\n    end\n    return 'applied', count, new_count\nend\n\n-- Grow BOTH arrays of one record for one profile. Returns:\n--   'applied', pm_before, pm_after | 'already' | 'partial: ...' | reason\nlocal function apply_stack(record, prof)\n    if not prof or not prof.buffer then return 'no buffer' end\n    local head = api.read(record, REC_HEAD)\n    if not head then return 'unreadable' end\n    local id = u32(head, REC_ID)\n    if id ~= prof.perk then return 'not our perk (' .. tostring(id) .. ')' end\n\n    local pm_ptr, pm_cnt = u64(head, REC_PM), u64(head, REC_PM + 8)\n    if not pm_ptr or not pm_cnt then return 'passive descriptor unreadable' end\n\n    local before_n, after_n = pm_cnt, pm_cnt\n    local final_res = 'already'\n    if #prof.ROWS > 0 or prof.OVR.n > 0 then\n        local res\n        res, before_n, after_n = grow_array(\n            record, pm_ptr, pm_cnt, REC_PM, REC_HEAD, ROW_BYTES, ROW_IDENT,\n            prof.ROWS, prof.OVR, prof.buffer)\n        if res ~= 'applied' and res ~= 'already' then return res end\n        if res == 'applied' then final_res = res else before_n, after_n = pm_cnt, pm_cnt end\n    end\n\n    if prof.stat_buffer then\n        local head2 = api.read(record, REC_HEAD)\n        if not head2 then return 'partial: record unreadable' end\n        local sm_ptr, sm_cnt = u64(head2, REC_SM), u64(head2, REC_SM + 8)\n        if not sm_ptr or not sm_cnt then return 'partial: stat descriptor unreadable' end\n        -- The stat rows sit inline AFTER the shipped passive rows. pm_cnt is read\n        -- before the passive grow, so on the first patch this is exact; on later\n        -- re-checks the stat array already points at our buffer and this is unused.\n        local inline_stat = record + REC_HEAD + pm_cnt * ROW_BYTES\n        local sres = grow_array(\n            record, sm_ptr, sm_cnt, REC_SM, inline_stat - record,\n            STAT_BYTES, STAT_IDENT, prof.STATS, prof.SOVR, prof.stat_buffer)\n        if sres ~= 'applied' and sres ~= 'already' then\n            return 'partial: stat array ' .. tostring(sres)\n        end\n        if sres == 'applied' then final_res = 'applied' end\n    end\n    return final_res, before_n, after_n\nend\n\nlocal function complete()\n    for _, prof in ipairs(PROFILE_LIST) do\n        if prof.sites == 0 then return false end\n    end\n    return #PROFILE_LIST > 0\nend\n\nlocal function summary()\n    local parts = {}\n    for _, prof in ipairs(PROFILE_LIST) do\n        parts[#parts + 1] = prof.name .. ' (perk ' .. prof.perk .. '): ' ..\n            (prof.sites > 0 and ('stacked on ' .. prof.sites .. ' record(s)') or 'not found yet')\n    end\n    return table.concat(parts, '; ')\nend\n\nwrite_status = function()\n    local path = ensure_status_path()\n    if not path then return false end\n    local verdict\n    if state.phase == 'done' or state.phase == 'active' then\n        verdict = complete() and 'OK - perk stacked' or 'PARTIAL - perk not found yet'\n    elseif state.phase == 'gave_up' then\n        verdict = 'FAILED - ' .. tostring(state.status)\n    elseif state.phase == 'waiting' then\n        verdict = 'WAITING - ' .. tostring(state.status)\n    else\n        verdict = 'WORKING - ' .. tostring(state.status)\n    end\n    local lines = {\n        verdict,\n        'mod=' .. MOD.id,\n        'version=' .. MOD.version .. ' author=' .. MOD.author,\n        'phase=' .. tostring(state.phase) .. ' frame=' .. tostring(state.frame),\n        'applied=' .. state.applied .. ' re-applied=' .. state.reapplied\n            .. ' refused=' .. state.refused,\n        'rows_appended=' .. tostring(row_count) .. ' passive, ' .. tostring(stat_count) .. ' stat',\n        'records_patched=' .. tostring(#sites),\n        'profiles: ' .. summary(),\n        'revision=' .. MOD.version .. '+v4',\n        '',\n        'Per-record detail:',\n    }\n    for i, s in ipairs(sites) do\n        lines[#lines + 1] = string.format('  [%d] record=0x%X block=0x%X', i, s.record, s.block)\n    end\n    lines[#lines + 1] = ''\n    lines[#lines + 1] = 'Bingus Shared Loader: see BingusSharedLoader.log first line for loader-vN; API N'\n    lines[#lines + 1] = 'Log: ' .. tostring(ensure_log_path() or '(log path unavailable)')\n    lines[#lines + 1] = ''\n    lines[#lines + 1] = 'This file is rewritten only when the mod changes state.'\n    return write_file(path, table.concat(lines, '\\r\\n') .. '\\r\\n')\nend\n\nlocal function add_site(record, block, prof)\n    for _, s in ipairs(sites) do\n        if s.record == record then return end\n    end\n    local result, before_n, after_n = apply_stack(record, prof)\n    if result == 'applied' or result == 'already' then\n        sites[#sites + 1] = { record = record, block = block, prof = prof }\n        prof.sites = prof.sites + 1\n        state.applied = state.applied + 1\n        log('stacked at ' .. hex(record) .. ' rows ' ..\n            tostring(before_n or '?') .. ' -> ' .. tostring(after_n or '?'))\n    else\n        state.refused = state.refused + 1\n        log('record at ' .. hex(record) .. ' left alone: ' .. tostring(result))\n    end\nend\n\n-- ---------------------------------------------------------------- scanning\nlocal self_addresses = {}\nlocal seen_blocks = {}\nlocal LUA_HEAP_LIMIT = 0x80000000\nlocal skip_low = false\n\nlocal function handle_block(address)\n    if seen_blocks[address] then return end\n    seen_blocks[address] = true\n    if skip_low and address < LUA_HEAP_LIMIT then return end\n    local header = api.read(address, HEADER_BYTES)\n    if not header or header:sub(1, 8) ~= NEEDLE then return end\n    local kind, payload = u32(header, 8), u32(header, 12)\n    if not payload or payload < REC_HEAD or payload > MAX_PAYLOAD then return end\n    if kind ~= MOD.type_passive then return end\n    -- read the payload only, so our own copy carries no LDLD header for a later sweep\n    local blob = api.read(address + HEADER_BYTES, payload)\n    if not blob then return end\n    local prof = locate_perk(blob)\n    if prof then\n        add_site(address + HEADER_BYTES, address, prof)\n    end\nend\n\nlocal function scan_chunk(addr, size)\n    local blob = api.read(addr, size)\n    if not blob then return end\n    local position = 1\n    while true do\n        local hit = blob:find(NEEDLE, position, true)\n        if not hit then break end\n        local address = addr + hit - 1\n        local skip = false\n        for _, own in ipairs(self_addresses) do\n            if own and math.abs(address - own) <= SELF_MARGIN then skip = true break end\n        end\n        if not skip then pcall(handle_block, address) end\n        position = hit + 1\n    end\nend\n\nlocal probe, scan\n\nlocal function begin_round()\n    probe = { regions = {}, index = 1, seen = {}, done = false }\n    scan = { regions = {}, index = 1, cursor = 0, overlap = #NEEDLE - 1 }\n    seen_blocks = {}\n    state.rounds = state.rounds + 1\n    for _, region in ipairs(api.regions()) do\n        if region.allocation_base and region.size >= PROBE_MIN_ALLOC then\n            probe.regions[#probe.regions + 1] = region\n        end\n        scan.regions[#scan.regions + 1] = region\n    end\nend\n\nlocal function scan_step()\n    local deadline = os.clock() + FRAME_BUDGET\n    while not probe.done and probe.index <= #probe.regions do\n        local region = probe.regions[probe.index]\n        probe.index = probe.index + 1\n        local key = string.format('%X', region.allocation_base)\n        if not probe.seen[key] then\n            probe.seen[key] = true\n            pcall(scan_chunk, region.allocation_base, math.min(PROBE_BYTES, region.size))\n        end\n        if os.clock() >= deadline then return false end\n    end\n    probe.done = true\n    if complete() and skip_low then return true end\n    while scan.index <= #scan.regions do\n        local region = scan.regions[scan.index]\n        if scan.cursor >= region.size then\n            scan.index = scan.index + 1\n            scan.cursor = 0\n        else\n            local take = math.min(CHUNK, region.size - scan.cursor)\n            pcall(scan_chunk, region.base + scan.cursor, take)\n            scan.cursor = scan.cursor + math.max(take - scan.overlap, 1)\n            if os.clock() >= deadline then return false end\n        end\n    end\n    return true\nend\n\n-- ---------------------------------------------------------------- keeping values applied\nlocal function enforce()\n    local kept = {}\n    for _, site in ipairs(sites) do\n        local header = api.read(site.block, HEADER_BYTES)\n        if header and header:sub(1, 8) == NEEDLE and u32(header, 8) == MOD.type_passive then\n            local result = apply_stack(site.record, site.prof)\n            if result == 'applied' then\n                state.reapplied = state.reapplied + 1\n                log('was changed by something else; restacked at ' .. hex(site.record))\n                pcall(flush_log)\n            elseif result ~= 'already' then\n                log('no longer fits: ' .. tostring(result))\n            end\n            kept[#kept + 1] = site\n        else\n            log('perk table at ' .. hex(site.block) .. ' is gone')\n            site.prof.sites = site.prof.sites - 1\n        end\n    end\n    sites = kept\nend\n\n-- ---------------------------------------------------------------- tick\nlocal BUS = nil\nlocal next_action = 0\n\nlocal function tick()\n    state.frame = state.frame + 1\n    if state.frame < START_FRAME or state.phase == 'gave_up' then return end\n    local now = os.time()\n\n    if state.phase == 'searching' then\n        local ok, finished = pcall(scan_step)\n        if not ok then\n            set_status('gave_up', 'scan error: ' .. tostring(finished))\n            if BUS then BUS.jobs[MOD.global] = nil end\n            return\n        end\n        if not finished then return end\n        if complete() then\n            set_status(MOD.retire and 'done' or 'active', 'perk stacked (' .. summary() .. ')')\n            next_action = now + ENFORCE_SECONDS\n        elseif state.rounds >= MAX_ROUNDS then\n            set_status(MOD.retire and 'done' or 'active', 'perk not found (' .. summary() .. ')')\n            next_action = now + ENFORCE_SECONDS\n        end\n        if state.phase == 'done' then\n            if BUS then BUS.jobs[MOD.global] = nil end\n            return\n        end\n        if state.phase ~= 'active' then\n            set_status('waiting', 'round ' .. state.rounds .. ' incomplete (' .. summary() .. ')')\n            next_action = now + ROUND_DELAY_SECONDS\n        end\n        return\n    end\n\n    if now < next_action then return end\n    if state.phase == 'active' then\n        pcall(enforce)\n        next_action = now + ENFORCE_SECONDS\n        if complete() or state.rounds >= MAX_ROUNDS then return end\n        state.rounds = 0\n    end\n    begin_round()\n    state.phase = 'searching'\nend\n\n-- ---------------------------------------------------------------- startup\nlocal ok, failure = pcall(function()\n    local loader = rawget(_G, 'CowboyBingusModLoader')\n    assert(type(loader) == 'table' and type(loader.api) == 'number' and loader.api >= 1,\n           'Bingus Shared Loader v15 or newer (API 1) is required')\n    assert(ffi_ok and ffi, 'LuaJIT FFI is unavailable')\n    assert(ffi.abi('64bit'), 'Windows x64 is required')\n    assert(type(update) == 'function', 'the game update hook is unavailable')\n    api = build_api()\n    row_count, stat_count = prepare_rows()\n    alloc_buffers()\n    self_addresses = { api.address_of(NEEDLE) }\n    skip_low = (self_addresses[1] or LUA_HEAP_LIMIT) < LUA_HEAP_LIMIT\nend)\n\nif not ok then\n    state.phase, state.status = 'gave_up', tostring(failure)\n    print('[' .. MOD.global .. '] ' .. tostring(failure))\n    if api then pcall(flush_log) end\n    return\nend\n\nset_status('starting', 'waiting for the game to settle')\n\nBUS = rawget(_G, 'OCLAW_UPDATE_BUS')\nif not BUS then\n    BUS = { jobs = {}, base = update }\n    if type(BUS.base) ~= 'function' then return end\n    local dispatcher\n    dispatcher = function(...)\n        local ok, first, second = pcall(BUS.base, ...)\n        for _, job in pairs(BUS.jobs) do pcall(job) end\n        if ok then return first, second end\n    end\n    BUS.dispatcher = dispatcher\n    _G.OCLAW_UPDATE_BUS = BUS\n    update = dispatcher\nend\nBUS.jobs[MOD.global] = tick",
+ "global": "PassivePickerV4",
+ "guid": "e6ba95c4-beaa-54c0-96c2-a2ab56021b87",
+ "mod_id": "mods/community/passive_picker_v4",
+ "presets": [
+  {
+   "file": "01-kitchen-sink.ini",
+   "ini": "; Kitchen Sink: 22 passives stacked on Med-Kit armour. The in-game-tested default.\n[settings]\nname = Kitchen Sink\n\n[profile: Med-Kit]\nconflicts = stack\nExtra Padding                      = on\nFortified                          = on\nElectrical Conduit                 = on\nEngineering Kit                    = on\nServo-Assisted                     = on\nDemocracy Protects                 = on\nInflammable                        = on\nAdvanced Filtration                = on\nUnflinching                        = on\nSiege-Ready                        = on\nGunslinger                         = on\nBallistic Padding                  = on\nReduced Signature                  = on\nRock-Solid                         = on\nSupplemental Adrenaline            = on\nConcussive Padding, Reinforced     = on\nConcussive Padding, Grenadier      = on\nConcussive Padding, Hazmat         = on\nOxygenator                         = on\nKinetic Displacement Mitigation    = on\nBlunt-Force Mitigation             = on\nTrue Grit                          = on\nMed-Kit.stims                      = 6\nDemocracy Protects.death_save      = 2.0\n"
+  },
+  {
+   "file": "02-tank.ini",
+   "ini": "; Tank: armour, damage resistance and no flinch on Med-Kit armour.\n[settings]\nname = Tank\n\n[profile: Med-Kit]\nconflicts = stack\nExtra Padding                      = on\nFortified                          = on\nBallistic Padding                  = on\nConcussive Padding, Reinforced     = on\nBlunt-Force Mitigation             = on\nKinetic Displacement Mitigation    = on\nUnflinching                        = on\nDemocracy Protects                 = on\nSupplemental Adrenaline            = on\n"
+  },
+  {
+   "file": "03-stealth.ini",
+   "ini": "; Stealth: low detection, quiet movement, speed on Med-Kit armour.\n[settings]\nname = Stealth\n\n[profile: Med-Kit]\nconflicts = stack\nScout                              = on\nReduced Signature                  = on\nFeet First                         = on\nOxygenator                         = on\n"
+  },
+  {
+   "file": "04-survivor.ini",
+   "ini": "; Survivor: more stims, death save, elemental resistance on Med-Kit armour.\n[settings]\nname = Survivor\n\n[profile: Med-Kit]\nconflicts = strongest\nDemocracy Protects                 = on\nServo-Assisted                     = on\nAcclimated                         = on\nAdvanced Filtration                = on\nInflammable                        = on\nElectrical Conduit                 = on\nSupplemental Adrenaline            = on\nMed-Kit.stims                      = 4\n"
+  },
+  {
+   "file": "05-demolitionist.ini",
+   "ini": "; Demolitionist: extra grenades, throw range, explosive resistance on Med-Kit armour.\n[settings]\nname = Demolitionist\n\n[profile: Med-Kit]\nconflicts = strongest\nEngineering Kit                    = on\nConcussive Padding, Grenadier      = on\nServo-Assisted                     = on\nFortified                          = on\nEngineering Kit.throwables         = 4\n"
+  },
+  {
+   "file": "06-gunner.ini",
+   "ini": "; Gunner: reload speed, ammo, sidearm handling, ergonomics on Med-Kit armour.\n[settings]\nname = Gunner\n\n[profile: Med-Kit]\nconflicts = stack\nSiege-Ready                        = on\nReinforced Epaulettes              = on\nGunslinger                         = on\nTrue Grit                          = on\nPeak Physique                      = on\n"
+  }
+ ],
+ "stat_effects": {
+  "11": [
+   "stat_flinch",
+   "stat; 0.05 = -95%"
+  ],
+  "12": [
+   "stat_ammo_capacity",
+   "stat; 1.2 = +20%"
+  ],
+  "13": [
+   "stat_primary_reload",
+   "stat; 1.3 = +30%"
+  ],
+  "14": [
+   "stat_support_reload",
+   "stat; 1.3 = +30%"
+  ],
+  "15": [
+   "stat_sidearm_reload",
+   "stat"
+  ],
+  "16": [
+   "stat_sidearm_draw",
+   "stat"
+  ],
+  "17": [
+   "stat_sidearm_recoil",
+   "stat"
+  ]
+ },
+ "title": "Passive Picker v4",
+ "version": "4.1"
+}
