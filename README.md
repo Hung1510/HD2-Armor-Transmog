@@ -45,7 +45,6 @@ Then:
 - **Quick-swap (F9):** cycles your presets in game without opening the panel (built-ins if you have none saved). Set `swap_hotkey = F9` or `OFF` in `[settings]`.
 - **Undo / Ctrl+Z** takes back the last change (up to 30).
 - **Copy code / Paste code:** your build as one line of text for Discord etc. Web-builder share links paste too.
-
 - The key is set with `hotkey = F7` in `[settings]` (the web builder has a dropdown). SHODAN Stat Editor uses F8, and its panel sits on the right while this one sits on the left.
 - If a change doesn't show, re-equip the armor or start a mission.
 
