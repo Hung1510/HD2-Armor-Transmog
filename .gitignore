@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.zip
+*.patch_0*
+build/
