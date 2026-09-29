@@ -890,7 +890,7 @@ local function note_for_dump(record, blob)
     end
     dump[perk] = e
     dump_order[#dump_order + 1] = perk
-    if not CAT[perk] then
+    if not CAT[perk] and perk ~= 0 then       -- perk 0: the game's empty "no passive" entry
         unknown_found = unknown_found + 1
         log('armor passive ' .. perk .. ' is not in the catalog (new in this game version?); see passives-dump.txt')
     end

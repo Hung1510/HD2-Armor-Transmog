@@ -841,6 +841,9 @@ def cmd_check_dump(args):
         if e["modified"]:
             print("WARNING   perk %d was already changed by another mod when dumped; its values may not be the game's." % pid)
             issues += 1
+        if pid == 0 and rows in ([], [(0, 0, 0.0)]) and not stats:
+            print("OK        perk 0 is the game's empty \"no passive\" entry (gear without a passive); ignored.")
+            continue
         if pid not in CATALOG:
             issues += 1
             print("NEW       perk %d (name hash 0x%08X): not in CATALOG. Add to CATALOG in tools/picker.py,"

@@ -227,6 +227,7 @@ check(g5.record_bytes(7) != g5.pristine_record_bytes(7) and "row 0x2875F44A 1 2"
 patched = dict(picker.CATALOG)
 name, rows, stats = patched[7]
 patched[7] = (name, [(0x2875F44A, 1, 3.0)] + list(rows[1:]), stats)            # balance change: stims +3
+patched[0] = ("none", [(0, 0, 0.0)], [])                                         # the game's empty entry
 patched[42] = ("Brand New", [(0xDEADBEEF, 2, 1.25), (0x2875F44A, 1, 1.0)], [(18, 0.0, 1.1)])  # new passive
 del patched[5]                                                                  # removed passive
 appdata = tempfile.mkdtemp()
@@ -239,6 +240,7 @@ check("NEW       perk 42" in out and "(0xDEADBEEF, 2, 1.25)" in out and "(18, 0.
       "check-dump: new passive printed as a ready-to-paste CATALOG line")
 check("CHANGED   perk 7 Med-Kit" in out and "(0x2875F44A, 1, 3.0)" in out, "check-dump: balance change found")
 check("MISSING   perk 5" in out, "check-dump: removed passive found")
+check("NEW       perk 0" not in out and "perk 0 is the game's empty" in out, "check-dump: perk 0 (no passive) ignored")
 check('0xDEADBEEF: ("effect_deadbeef"' in out and '18: ("stat_18"' in out, "check-dump: new effect ids listed")
 check("NOT in the catalog=1" in open(glob.glob(os.path.join(appdata, "**", "PassivePickerV4-STATUS.txt"),
                                                 recursive=True)[0]).read(),
