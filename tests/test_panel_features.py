@@ -162,7 +162,7 @@ g.click("paste")
 check(live_matches(g, stealth), "Paste code with a web-builder share link loads it into the game")
 g.clipboard("hello, not a code")
 g.click("paste")
-check(live_matches(g, stealth) and any("No Passive Picker code" in t for t in g.texts()),
+check(live_matches(g, stealth) and any("No Armory Forge code" in t for t in g.texts()),
       "junk on the clipboard is refused with a message")
 g.click("undo")
 check(2.0 in values(g, 7, 0xAFAE3B47), "Undo after a paste brings the previous stacks back")
@@ -218,7 +218,7 @@ g3.key(F9)
 g3.tick(3)
 check(live_matches(g3, preset("01-kitchen-sink.ini")) and g3.state[b"ui"][b"open"] is False,
       "F9 with the panel closed: first built-in preset applied, panel stays closed")
-check(any("Kitchen Sink" in t for t in g3.texts()) and any("PASSIVE PICKER" in t for t in g3.texts()),
+check(any("Kitchen Sink" in t for t in g3.texts()) and any("ARMORY FORGE" in t for t in g3.texts()),
       "F9 draws a toast with the preset's name")
 g3.render("/tmp/pp-toast.png", crop=False)
 g3.tick(30)                                          # presses closer than 0.25 s are ignored on purpose

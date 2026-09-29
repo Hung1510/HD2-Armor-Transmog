@@ -95,7 +95,7 @@ class FakeGame:
             b"now": lambda: self.L.globals()[b"FAKE_NOW"], b"module_base": lambda n: None,
         })
         self.L.execute(src.encode("utf-8"))
-        self.state = g[b"PassivePickerV4"]
+        self.state = g[b"ArmoryForge"]
 
     # ------------------------------------------------------------- memory
     def _region(self, addr, size):

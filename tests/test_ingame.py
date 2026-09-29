@@ -128,7 +128,7 @@ check(g.state[b"loadout_source"] == b"built-in", "first start uses the built-in 
 g.key(F7)
 g.tick(120)
 ui = g.state[b"ui"]
-check(ui[b"open"] is True and "PASSIVE PICKER" in g.texts(), "F7 opens the panel and it draws")
+check(ui[b"open"] is True and "SUPER EARTH ARMORY FORGE" in g.texts(), "F7 opens the panel and it draws")
 xs = [c[1] for c in g.draw_calls() if c[0] == b"rect"]
 check(min(xs) < 100, "panel sits on the left (SHODAN Stat Editor uses the right)")
 check("value:1" in g.regions(), "opens on the base perk's values")
@@ -243,7 +243,7 @@ check("CHANGED   perk 7 Med-Kit" in out and "(0x2875F44A, 1, 3.0)" in out, "chec
 check("MISSING   perk 5" in out, "check-dump: removed passive found")
 check("NEW       perk 0" not in out and "perk 0 is the game's empty" in out, "check-dump: perk 0 (no passive) ignored")
 check('0xDEADBEEF: ("effect_deadbeef"' in out and '18: ("stat_18"' in out, "check-dump: new effect ids listed")
-check("NOT in the catalog=1" in open(glob.glob(os.path.join(appdata, "**", "PassivePickerV4-STATUS.txt"),
+check("NOT in the catalog=1" in open(glob.glob(os.path.join(appdata, "**", "ArmoryForge-STATUS.txt"),
                                                 recursive=True)[0]).read(),
       "STATUS file flags passives missing from the catalog")
 check(len(live(g6, 7)[0]) > 2, "stacking still works on a patched game")

@@ -1,20 +1,22 @@
-Passive Picker v4
-=================
-v4 edit ............ Hung1510
-Original mod ....... mostlycloudy - Passive Picker v3 / Modular Armor Passives
+Super Earth Armory Forge
+========================
+Author ............. Hung1510 (formerly released as "Passive Picker v4")
+Where it started ... mostlycloudy - Passive Picker v3 / Modular Armor Passives
                      https://ayakamods.com/mods/modular-armor-passives.4350/
                      (the author invited edits: "feel free to mess with the files
                      yourself and maybe you can make a better version")
+                     The memory-patching engine, archive format and passive data
+                     come from that mod.
 Engine lineage ..... mostlycloudy, with credit to SHODAN (as noted in v3)
-In-game panel ...... drawing, input and font handling adapted from SHODAN Stat
-                     Editor v1.4.1 by SHODAN (public domain / Unlicense)
+In-game panel ...... drawing, input and font handling techniques adapted from
+                     SHODAN Stat Editor v1.4.1 by SHODAN (public domain / Unlicense)
                      https://github.com/SHODAN-HORAI/SHODAN-Stat-Editor
 Source ............. https://github.com/Hung1510/HD2-Armor-Transmog
 Web builder ........ uses JSZip (MIT) - docs/vendor/
 Loader ............. Bingus Shared Loader (required)
                      https://ayakamods.com/mods/bingus-shared-loader.3861/
 
-What v4 changed: config file instead of hex rows, per-effect value tweaks,
-base-perk overrides, multiple armour profiles, conflict policy, input
-validation. The memory-patching engine, archive format and passive data
-are mostlycloudy's work.
+Armory Forge's own work: the in-game armory terminal (F7) and its look, loadouts
+and quick-swap (F9), undo, share codes, plain-language values, the loadout.ini
+config layer (per-effect values, base-perk overrides, several armour stacks,
+conflict policy, validation), the web builder, the offline test harness.

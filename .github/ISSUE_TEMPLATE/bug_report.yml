@@ -14,8 +14,8 @@ body:
   - type: textarea
     id: status
     attributes:
-      label: PassivePickerV4-STATUS.txt
-      description: "%LOCALAPPDATA%\\CowboyBingus\\Helldivers2\\Logs\\PassivePickerV4-STATUS.txt"
+      label: ArmoryForge-STATUS.txt
+      description: "%LOCALAPPDATA%\\CowboyBingus\\Helldivers2\\Logs\\ArmoryForge-STATUS.txt"
       render: text
     validations:
       required: true

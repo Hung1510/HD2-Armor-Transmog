@@ -1,6 +1,7 @@
-<p align="center"><img src="docs/icon.png" width="96" alt=""></p>
+<p align="center"><img src="docs/icon.png" width="112" alt=""></p>
 
-# Passive Picker v4: HD2 armor passive stacker
+<h1 align="center">Super Earth Armory Forge</h1>
+<p align="center"><i>Ministry of Defense armor requisition terminal for Helldivers 2</i></p>
 
 [![tests](https://github.com/Hung1510/HD2-Armor-Transmog/actions/workflows/tests.yml/badge.svg)](https://github.com/Hung1510/HD2-Armor-Transmog/actions/workflows/tests.yml)
 [![latest release](https://img.shields.io/github/v/release/Hung1510/HD2-Armor-Transmog)](https://github.com/Hung1510/HD2-Armor-Transmog/releases/latest)
@@ -10,14 +11,14 @@
 [![GitHub downloads](https://img.shields.io/github/downloads/Hung1510/HD2-Armor-Transmog/total?label=GitHub%20downloads)](https://github.com/Hung1510/HD2-Armor-Transmog/releases)
 [![passives](https://img.shields.io/badge/armor%20passives-31%2F31-f4d21f)](TESTING.md)
 
-Stack any of the 31 Helldivers 2 armor passives onto your armor and tune every value.
+Forge your own armor: stack any of the 31 Helldivers 2 armor passives onto the armor you wear and set every value yourself.
 
-**Press F7 in game** to open the panel: tick passives, change any value, and it applies at once. Or build before you play with the **[web builder](https://hung1510.github.io/HD2-Armor-Transmog/)**. No Python, nothing to install.
+**Install it, then press F7 in game.** Tick passives, type values like `75%` or `+50 armor`, save loadouts and swap them with **F9**. Everything applies at once. Prefer to plan ahead? Use the **[web builder](https://hung1510.github.io/HD2-Armor-Transmog/)**. No Python, nothing to set up.
 
 <p align="center"><img src="docs/img/panel-preview.png" width="640" alt="In-game panel"><br>
-<sub>The F7 panel, drawn by the offline test harness (the game uses its own UI font).</sub></p>
+<sub>The F7 armory terminal, drawn by the offline test harness (the game uses its own UI font).</sub></p>
 
-Built on **[Modular Armor Passives / Passive Picker v3](https://ayakamods.com/mods/modular-armor-passives.4350/) by mostlycloudy**. The memory-patching engine, archive format and passive data are mostlycloudy's work (engine credit also to SHODAN); v4 adds the config layer, presets and builder. See [CREDITS.txt](CREDITS.txt).
+Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3](https://ayakamods.com/mods/modular-armor-passives.4350/) by mostlycloudy**, and its memory-patching core, archive format and passive data still come from that mod (engine credit also to SHODAN). The in-game terminal, loadouts, config layer and web builder are Armory Forge's own. See [CREDITS.txt](CREDITS.txt).
 
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
@@ -27,26 +28,26 @@ Built on **[Modular Armor Passives / Passive Picker v3](https://ayakamods.com/mo
 
 | You want | Do this |
 |---|---|
-| Change things while playing | Install any build, then press **F7** in game (see below) |
-| A ready-made build | Download **[Passive-Picker-v4.zip](https://github.com/Hung1510/HD2-Armor-Transmog/releases/latest)**, add it to your mod manager, pick a preset: *Kitchen Sink, Tank, Stealth, Survivor, Demolitionist, Gunner* |
-| Your own build, no setup | **[Web builder](https://hung1510.github.io/HD2-Armor-Transmog/)**, then *Download mod (.zip)* |
+| Build in game (most people) | Download **[Super-Earth-Armory-Forge.zip](https://github.com/Hung1510/HD2-Armor-Transmog/releases/latest)**, add it to your mod manager (there are no options to pick), start the game, press **F7** |
+| A ready-made build | Same zip, then F7, then **Presets**: *Kitchen Sink, Tank, Stealth, Survivor, Demolitionist, Gunner* |
+| Plan a build before playing | **[Web builder](https://hung1510.github.io/HD2-Armor-Transmog/)**, then *Download mod (.zip)* |
 | Scripting / version control | `python tools\picker.py build loadout.ini --zip "My Stack.zip"` (below) |
 
 <p align="center"><img src="docs/img/web-builder.png" width="720" alt="Web builder"></p>
 
 Then:
-1. Remove Passive Picker v3 and any older v4 build.
-2. Deploy, **fully restart the game**, and wear armor with the passive the stack is on (Med-Kit by default; use Armor Transmog if you want a different look).
-3. Check `%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\PassivePickerV4-STATUS.txt`. It should say `OK - perk stacked`.
+1. Remove Passive Picker v3 if you have it. Passive Picker v4 is this mod under its old name; the update replaces it and keeps your saved builds.
+2. Deploy, **fully restart the game**, and wear armor with the passive your stack is on (for example Med-Kit; use Armor Transmog if you want a different look).
+3. Check `%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ArmoryForge-STATUS.txt`. It should say `OK - perk stacked` once something is stacked; a fresh install shows a *Press F7* card when the game is ready.
 
-## The in-game panel (F7)
+## The armory terminal (F7)
 
 - **Left:** every armor passive with a tick box. Ticked = stacked onto your armor. Click a name to see its values.
 - **Right:** the chosen passive's values, in plain terms (`75%` resist, `+30%`, `+50` armor). `--` `-` `+` `++` change them, `R` resets, or click a value and type one, e.g. `75` for 75% (Enter to set, Esc to cancel). The armor's own passive (e.g. Med-Kit) is listed first; its values **replace** the originals.
 - **Tabs:** one per armor passive you stack onto. **+ Armor** adds another (e.g. a separate Siege-Ready stack), **Remove this armor** puts the game's own values back.
 - **When two passives change the same thing:** *Stack all* or *Strongest only*.
-- Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\PassivePicker\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a different build starts fresh from that build.
-- **Presets tab:** load the installed build, a built-in preset or one of yours. **+ Save current stack** saves what you have; rename, overwrite or delete your own. Saved in `PassivePicker\my-presets.txt`.
+- Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a web-builder build starts fresh from that build; the release zip always keeps what you made.
+- **Presets tab:** load a standard preset or one of yours. **+ Save current stack** saves what you have; rename, overwrite or delete your own. Saved in `ArmoryForge\my-presets.txt`.
 - **Quick-swap (F9):** cycles your presets in game without opening the panel (built-ins if you have none saved). Set `swap_hotkey = F9` or `OFF` in `[settings]`.
 - **Undo / Ctrl+Z** takes back the last change (up to 30).
 - **Copy code / Paste code:** your build as one line of text for Discord etc. Web-builder share links paste too.
@@ -55,9 +56,9 @@ Then:
 
 <p align="center"><img src="docs/img/panel-presets.png" width="560" alt="Presets tab"></p>
 
-## What v4 adds over v3
+## What Armory Forge adds over Passive Picker v3
 
-| v3 | v4 |
+| Passive Picker v3 | Armory Forge |
 |---|---|
 | comment out hex rows in a 1,000-line Lua | web builder, or `Democracy Protects = on` in `loadout.ini` |
 | one trigger armor | one stack per armor passive, several at once |
@@ -65,7 +66,8 @@ Then:
 | hex values | named effects: `Democracy Protects.death_save = 2.0` |
 | conflicts always multiply | `conflicts = stack` or `strongest` |
 | rebuild and reinstall for every change | F7 in-game panel, live |
-| one build per zip | six presets in one zip, chosen in the mod manager |
+| one build per zip | one install; loadouts saved, loaded and swapped (F9) in game |
+| raw game numbers | plain values: `75%` resist, `+30%`, `+50` armor |
 
 ## What's confirmed in game
 
@@ -86,7 +88,7 @@ pip install lupa                                   # optional: Lua syntax check
 python tools\picker.py list                        # every passive, effect, default
 python tools\picker.py build loadout.ini           # preview
 python tools\picker.py build loadout.ini --zip "My Stack.zip"
-python tools\picker.py release --zip dist\Passive-Picker-v4.zip   # presets zip
+python tools\picker.py release --zip dist\Super-Earth-Armory-Forge.zip   # the release zip
 ```
 
 The web builder can import and export the same `loadout.ini`.
@@ -120,10 +122,13 @@ tools/panel.lua            the F7 in-game panel (drawing, mouse, keyboard)
 tools/main.lua             per-frame tick and startup
 docs/                      web builder (GitHub Pages): index.html, app.js (UI), core.js (build logic)
 docs/data.json             generated by `picker.py export-web`, never hand-edited
-presets/*.ini              the presets shipped in the release zip
+presets/*.ini              the standard presets (Presets tab, F9)
 tests/harness.py           fake game for LuaJIT: memory, engine GUI, keyboard, mouse
 tests/test_ingame.py       real mod vs fake game: rows match picker.py, panel flows, save/restore
+tests/test_panel_features.py  presets, quick-swap, undo, share codes, plain values
+tests/test_release.py      release zip, blank install, saves from before the rename
 tests/test_web_parity.js   web builder output must be byte-identical to Python
+tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, every 6 h)
 TESTING.md                 in-game verification status per effect
 ```
 
@@ -132,11 +137,11 @@ TESTING.md                 in-game verification status per effect
 Nothing to do for new armor that uses an existing passive; stacks are per passive, not per armor.
 
 On patch day:
-1. Start the game once with the mod. Check `PassivePickerV4-STATUS.txt`:
+1. Start the game once with the mod. Check `ArmoryForge-STATUS.txt`:
    - `found=31 of 31`: all good.
    - `NOT in the catalog=N`: new passives exist.
    - `found=0`: the game's data layout changed. The mod safely does nothing; disable it until it's updated.
-2. The mod has written every armor passive the game has, with the game's own values, to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\PassivePicker\passives-dump.txt`. Compare it with the catalog:
+2. The mod has written every armor passive the game has, with the game's own values, to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\passives-dump.txt`. Compare it with the catalog:
    ```
    python tools\picker.py check-dump
    ```
@@ -154,17 +159,19 @@ On patch day:
   pip install lupa
   python tools/picker.py export-web --check
   python tests/test_ingame.py
+  python tests/test_panel_features.py
+  python tests/test_release.py
   node tests/test_web_parity.js
   ```
   Preview the site locally with `cd docs && python -m http.server`.
-- **Releasing:** bump `VERSION` in `tools/picker.py` and add a `CHANGELOG.md` entry. Then run `export-web`, commit, and push a tag (`git tag v4.2 && git push --tags`). GitHub Actions builds the presets zip and attaches it to the release.
+- **Releasing:** bump `VERSION` in `tools/picker.py` and add a `CHANGELOG.md` entry. Then run `export-web`, commit, and push a tag (`git tag v5.0 && git push origin v5.0`). GitHub Actions builds the zip and attaches it to the release.
 
 ## Credits
 
-- **mostlycloudy**: original mod, engine, passive data ([AyakaMods](https://ayakamods.com/mods/modular-armor-passives.4350/))
+- **mostlycloudy**: Passive Picker v3, where this started: memory-patching engine, archive format, passive data ([AyakaMods](https://ayakamods.com/mods/modular-armor-passives.4350/))
 - **SHODAN**: engine credit, as noted in v3; the panel's drawing, input and font handling are adapted from [SHODAN Stat Editor](https://github.com/SHODAN-HORAI/SHODAN-Stat-Editor) v1.4.1 (public domain)
 - **Bingus Shared Loader**: the loader this runs on
 - **JSZip** (MIT): zip writing in the web builder
-- **Hung1510**: v4 config layer, presets, web builder, in-game panel
+- **Hung1510**: Super Earth Armory Forge: armory terminal, loadouts, config layer, web builder
 
 Not affiliated with Arrowhead Game Studios.

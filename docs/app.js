@@ -1,4 +1,4 @@
-/* Passive Picker v4 web builder - UI. All build logic lives in core.js. */
+/* Super Earth Armory Forge web builder - UI. All build logic lives in core.js. */
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
@@ -40,7 +40,7 @@
   }
 
   function blankProfile(perk) { return { perk, conflicts: "stack", enabled: [], tweaks: {} }; }
-  function blankState() { return { name: "My Passive Stack", retire: true, hotkey: "F7", swap_hotkey: "F9", profiles: [blankProfile(7)] }; }
+  function blankState() { return { name: "My Armory Build", retire: true, hotkey: "F7", swap_hotkey: "F9", profiles: [blankProfile(7)] }; }
 
   // tweaks on passives that are off are kept in state (so toggling back restores them)
   // but left out of the ini so they don't produce "ignored" notes
@@ -387,7 +387,7 @@
     zip.file("Addon/" + core.ARCHIVE_NAME + ".gpu_resources", new Uint8Array(0), { date });
     zip.file("loadout.ini", lastIni, { date });
     const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-    const file = (display.replace(/[^A-Za-z0-9 _-]+/g, "").trim() || "Passive Picker v4") + ".zip";
+    const file = (display.replace(/[^A-Za-z0-9 _-]+/g, "").trim() || "Super Earth Armory Forge") + ".zip";
     saveBlob(blob, file);
     toast(`Downloaded ${file}`);
   }

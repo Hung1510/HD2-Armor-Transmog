@@ -1,6 +1,15 @@
 # Changelog
 
-## 4.4 (2026-09-30)
+## 5.0 (2026-09-30): Super Earth Armory Forge
+Passive Picker v4 has a new name and its own identity. Includes everything listed under 4.4 (never released on its own).
+- **New name: Super Earth Armory Forge.** It has a new icon, a new in-game terminal look (navy and Super Earth gold, ember marks on values you change, numbered requisition boxes) and a matching web builder.
+- **One install, no mod-manager options.** The release zip no longer asks you to pick a preset. You build in game with F7, and the six presets are in the Presets tab and on F9. A fresh install shows a *Press F7 to forge your armor* card once the game is ready.
+- **The release keeps what you make in the panel,** even your edits from 4.x made under another preset. Web-builder zips still install their own build.
+- Files moved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\` (`loadout.ini`, `my-presets.txt`, `passives-dump.txt`). Saves in the old `PassivePicker` folder are read until the first new save. The status file is now `Logs\ArmoryForge-STATUS.txt`.
+- Same mod GUID, so the mod manager updates it in place.
+- README badges show AyakaMods downloads, views and rating, refreshed every 6 hours.
+
+## 4.4 (2026-09-30, shipped as part of 5.0)
 - **Presets in the panel:** a Presets tab with the installed build, the 6 built-in presets and your own. Save the current stacks, rename, overwrite or delete. Your presets live in `PassivePicker\my-presets.txt`.
 - **Quick-swap (F9):** cycles your presets (or the built-ins if you have none) without opening the panel; a small card at the top of the screen shows which one is on. `swap_hotkey = F1..F12 | OFF` in `[settings]`, also a dropdown in the web builder.
 - **Undo:** Undo button and Ctrl+Z (last 30 changes).

@@ -32,8 +32,11 @@ jobs:
       - name: Panel presets, quick-swap, undo, share codes, units
         run: python tests/test_panel_features.py
 
+      - name: Release zip, blank install, old saves
+        run: python tests/test_release.py
+
       - name: Web builder produces identical bytes to Python
         run: node tests/test_web_parity.js
 
       - name: Release zip builds
-        run: python tools/picker.py release --zip dist/Passive-Picker-v4.zip
+        run: python tools/picker.py release --zip dist/Super-Earth-Armory-Forge.zip

@@ -6,7 +6,7 @@ Effect names come from the passive descriptions; the game only stores hashes. Th
 
 1. Build a stack with **only the passive you're testing** (web builder: *Start over*, switch one passive on). Use a big value so the difference is obvious.
 2. Test in a **solo, trivial-difficulty** mission, once with the mod and once without, same weapon, same spot.
-3. Check `PassivePickerV4-STATUS.txt` says `OK - perk stacked` before judging anything.
+3. Check `ArmoryForge-STATUS.txt` says `OK - perk stacked` before judging anything.
 
 Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect · ❔ untested
 
@@ -15,7 +15,9 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Check | Status | Notes |
 |---|---|---|
 | Loads with Bingus Shared Loader, patches the Med-Kit record | ✅ | STATUS `OK - perk stacked`, `rows_appended=39 passive, 8 stat` (v4.0, 2026-09-30) |
-| Mod manager shows presets as a pick-one option | ❔ | v4.1 feature |
+| Release zip installs with no options (5.0) | ❔ | manifest has no Options; patch at the zip root |
+| Fresh install shows the *Press F7* card | ❔ | 5.0; offline test passes |
+| Updating from Passive Picker 4.x keeps panel edits and presets | ❔ | 5.0; offline test passes |
 | Two armor profiles at once | ❔ | offline engine test passes; untested in game |
 | F7 opens the panel and text is readable | ✅ | v4.2, confirmed in game 2026-09-30 |
 | Mouse clicks and typing work in the panel | ❔ | v4.2 |
@@ -26,7 +28,7 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Undo and Ctrl+Z | ❔ | v4.4; offline test passes |
 | Copy code / Paste code use the Windows clipboard | ❔ | v4.4; clipboard mocked offline |
 | `%` and `+` signs show in the panel font | ❔ | v4.4 |
-| Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Passive Picker leaves that passive alone |
+| Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Armory Forge leaves that passive alone |
 
 ## Effects
 

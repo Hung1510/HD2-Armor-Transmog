@@ -1,5 +1,5 @@
 /*
- * Passive Picker v4 - core logic for the web builder.
+ * Super Earth Armory Forge - core logic for the web builder.
  * A line-for-line port of tools/picker.py: same config rules, same Lua text,
  * same .patch_0 bytes (tests/test_web_parity.js checks this against Python).
  * Pure functions only; works in the browser (window.PPCore) and in Node.
@@ -505,11 +505,11 @@
   // state: {name, retire, profiles: [{perk, conflicts, enabled: [pid], tweaks: {"pid.key": value}}]}
   function serializeIni(cat, state) {
     const L = [];
-    L.push("; Passive Picker v4 loadout - made with the web builder");
+    L.push("; Super Earth Armory Forge loadout - made with the web builder");
     L.push("; https://hung1510.github.io/HD2-Armor-Transmog/");
     L.push("");
     L.push("[settings]");
-    L.push(`name   = ${(state.name || "My Passive Stack").replace(/[;#\r\n]/g, " ").trim()}`);
+    L.push(`name   = ${(state.name || "My Armory Build").replace(/[;#\r\n]/g, " ").trim()}`);
     L.push(`retire = ${state.retire ? "true" : "false"}`);
     L.push(`hotkey = ${state.hotkey || "F7"}`);
     L.push(`swap_hotkey = ${state.swap_hotkey || "F9"}`);
@@ -538,7 +538,7 @@
   function stateFromText(cat, text) {
     const sections = parseIni(text);
     const parsed = loadConfigText(cat, text); // validates
-    const state = { name: parsed.settings.name || "My Passive Stack", retire: parsed.settings.retire,
+    const state = { name: parsed.settings.name || "My Armory Build", retire: parsed.settings.retire,
       hotkey: parsed.settings.hotkey || "F7", swap_hotkey: parsed.settings.swap_hotkey || "F9", profiles: [] };
     for (const sec of sections) {
       const m = sec.name.match(/^\s*profile\s*:\s*(.+?)\s*$/i);

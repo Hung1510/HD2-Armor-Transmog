@@ -1,4 +1,4 @@
--- ================================================================ passive-picker engine
+-- ================================================================ Super Earth Armory Forge engine
 -- Shared by every MostlyCloudy tuning mod (credit to SHODAN); the MOD table above says what to change.
 --
 -- This engine extends armour PERK modifier lists. It is not a stat patcher:
@@ -33,7 +33,7 @@
 --   * The inline rows are re-read on every apply, so values another mod edits in place
 --     (e.g. SHODAN Stat Editor's Armors tab) are kept.
 --   * The panel's changes are saved to %LOCALAPPDATA%\CowboyBingus\Helldivers2\
---     PassivePicker\loadout.ini (same format as the web builder). Installing a build
+--     ArmoryForge\loadout.ini (same format as the web builder). Installing a build
 --     with a different built-in loadout starts from that loadout again.
 --
 -- ---- v4 -----------------------------------------------------------------------------
@@ -315,6 +315,21 @@ local function data_dir(leaf)
     return nil
 end
 
+-- Files the mod keeps: %LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\. Saves made
+-- before the rename (the PassivePicker folder) are still read until a new one is written.
+local function forge_file(name)
+    local dir = data_dir('ArmoryForge')
+    return dir and (dir .. '/' .. name) or nil
+end
+
+local function read_saved(name)
+    local text = read_file(forge_file(name))
+    if text then return text end
+    local base = os.getenv('LOCALAPPDATA')
+    if not base or base == '' then return nil end
+    return read_file(base .. '/CowboyBingus/Helldivers2/PassivePicker/' .. name)
+end
+
 local function ensure_path(file)
     local dir = data_dir('Logs')
     return dir and (dir .. '/' .. file) or nil
@@ -535,7 +550,7 @@ end
 
 local function serialize(l, base_key)
     local L = {
-        '; Passive Picker loadout, saved by the in-game panel (' .. (l.hotkey or 'F7') .. ').',
+        '; Super Earth Armory Forge loadout, saved by the in-game panel (' .. (l.hotkey or 'F7') .. ').',
         '; Same format as the web builder: https://hung1510.github.io/HD2-Armor-Transmog/',
         '',
         '[settings]',
@@ -648,10 +663,7 @@ local function fingerprint(l)
     return string.format('%08x', h)
 end
 
-local function save_path()
-    local dir = data_dir('PassivePicker')
-    return dir and (dir .. '/loadout.ini') or nil
-end
+local function save_path() return forge_file('loadout.ini') end
 
 local save_at = nil
 local function save_now()
@@ -667,10 +679,11 @@ local function load_loadout()
     local def = default_loadout()
     DEFAULT_KEY = fingerprint(def)
     local path = save_path()
-    local text = read_file(path)
+    local text = read_saved('loadout.ini')
     if text then
         local ok, saved = pcall(parse_loadout, text)
-        if ok and saved.base == DEFAULT_KEY and #saved.profiles > 0 then
+        -- a blank install (the release zip) always keeps what you built in the panel
+        if ok and (saved.base == DEFAULT_KEY or MOD.blank) and (#saved.profiles > 0 or MOD.blank) then
             saved.name = saved.name or def.name
             if saved.retire == nil then saved.retire = def.retire end
             saved.hotkey = saved.hotkey or def.hotkey
@@ -859,7 +872,7 @@ end
 
 -- ---------------------------------------------------------------- passive dump
 -- Every armor passive the game has, as the game shipped it (read before anything is
--- changed), written to PassivePicker\passives-dump.txt once the scan is done. After a
+-- changed), written to ArmoryForge\passives-dump.txt once the scan is done. After a
 -- game patch, `python tools/picker.py check-dump` compares it with the catalog and
 -- prints new passives and changed values, ready to paste.
 local dump, dump_order, unknown_found = {}, {}, 0
@@ -912,10 +925,7 @@ local function game_stamp()
     return u32(head, 8)
 end
 
-local function dump_path()
-    local dir = data_dir('PassivePicker')
-    return dir and (dir .. '/passives-dump.txt') or nil
-end
+local function dump_path() return forge_file('passives-dump.txt') end
 
 local dump_written = 0
 local function write_dump()
@@ -924,7 +934,7 @@ local function write_dump()
     table.sort(dump_order)
     local ok_stamp, stamp = pcall(game_stamp)
     local L = {
-        '# Passive Picker passive dump v1: every armor passive in the game, as shipped.',
+        '# Armory Forge passive dump v1: every armor passive in the game, as shipped.',
         '# Compare with the catalog: python tools/picker.py check-dump "' .. path .. '"',
         'mod ' .. MOD.version,
         'game_stamp ' .. ((ok_stamp and stamp) and string.format('0x%08X', stamp) or 'unknown'),

@@ -24,9 +24,10 @@ jobs:
       - run: |
           python tests/test_ingame.py
           python tests/test_panel_features.py
+          python tests/test_release.py
           node tests/test_web_parity.js
-      - run: python tools/picker.py release --zip dist/Passive-Picker-v4.zip
+      - run: python tools/picker.py release --zip dist/Super-Earth-Armory-Forge.zip
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/Passive-Picker-v4.zip
+          files: dist/Super-Earth-Armory-Forge.zip
           generate_release_notes: true
