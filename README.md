@@ -16,7 +16,7 @@ Built on **[Modular Armor Passives / Passive Picker v3](https://ayakamods.com/mo
 
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
-- AyakaMods page: *(link here once posted)*
+- AyakaMods page: https://ayakamods.com/mods/passive-picker-v4.4359/
 
 ## Ways to use it
 
