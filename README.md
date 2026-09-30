@@ -3,9 +3,9 @@
 <p align="center">
 <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/actions/workflows/tests.yml"><img src="https://github.com/Hung1510/Super-Earth-Armory-Forge/actions/workflows/tests.yml/badge.svg" alt="tests"></a>
 <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest"><img src="https://img.shields.io/github/v/release/Hung1510/Super-Earth-Armory-Forge?color=ffe710&labelColor=0b0c0d" alt="latest release"></a>
-<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-downloads.json" alt="AyakaMods downloads"></a>
-<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-views.json" alt="AyakaMods views"></a>
-<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-rating.json" alt="rating"></a>
+<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FHung1510%2F996afff3a389ecbb7e77691ec94cab6a%2Fraw%2Fayakamods-downloads.json" alt="AyakaMods downloads"></a>
+<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FHung1510%2F996afff3a389ecbb7e77691ec94cab6a%2Fraw%2Fayakamods-views.json" alt="AyakaMods views"></a>
+<a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FHung1510%2F996afff3a389ecbb7e77691ec94cab6a%2Fraw%2Fayakamods-rating.json" alt="rating"></a>
 <a href="https://www.nexusmods.com/helldivers2/mods/16763"><img src="https://img.shields.io/badge/Nexus%20Mods-16763-ffe710?labelColor=0b0c0d" alt="Nexus Mods"></a>
 <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases"><img src="https://img.shields.io/github/downloads/Hung1510/Super-Earth-Armory-Forge/total?label=GitHub%20downloads&color=ffe710&labelColor=0b0c0d&cacheSeconds=3600" alt="GitHub downloads"></a>
 <a href="TESTING.md"><img src="https://img.shields.io/badge/armor%20passives-31%2F31-ffe710?labelColor=0b0c0d" alt="passives"></a>
@@ -136,8 +136,8 @@ tests/test_panel_layout.py no overlapping or clipped text in any panel view, 720
 tests/test_panel_scale.py  panel size setting, Ctrl +/-, whole-pixel drawing
 tests/test_panel_scroll_drag.py  scrolling long lists, dragging the panel
 tests/test_web_parity.js   web builder output must be byte-identical to Python
-tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, hourly, retries on bot checks)
-tools/update_badges_local.ps1  same, through the installed Edge on a Windows PC (passes Cloudflare)
+tools/ayakamods_stats.py   reads AyakaMods downloads/views/rating into shields.io badge files
+tools/update_badges_local.ps1  runs it through the installed Edge on a Windows PC (passes Cloudflare) and pushes to the badges Gist
 TESTING.md                 in-game verification status per effect
 ```
 
@@ -159,7 +159,7 @@ On patch day:
 
 ## AyakaMods badges
 
-The download/view badges (and the numbers on the portfolio) come from `ayakamods.json` on the `badges` branch. The hourly workflow tries to refresh it, but AyakaMods sits behind a Cloudflare JavaScript challenge that plain HTTP clients can't pass, so a Windows PC reads it through the installed Edge instead (Playwright drives it off-screen; nothing extra to download):
+The download/view/rating badges (and the numbers on the portfolio) come from a public Gist: `https://gist.githubusercontent.com/Hung1510/996afff3a389ecbb7e77691ec94cab6a/raw/ayakamods.json`, plus one `ayakamods-*.json` badge file per number. The Gist's id is in `tools/badges-gist.txt`. A Gist rather than a branch of this repo, so updates don't show *"recent pushes, Compare & pull request"* on GitHub. AyakaMods sits behind a Cloudflare JavaScript challenge that plain HTTP clients (and GitHub Actions) can't pass, so a Windows PC reads it through the installed Edge (Playwright drives it off-screen; nothing extra to download):
 
 ```powershell
 python -m pip install playwright

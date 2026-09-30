@@ -1,4 +1,4 @@
-# Refresh the AyakaMods badges from this PC and push them to the "badges" branch.
+# Refresh the AyakaMods badges from this PC and push them to a GitHub Gist.
 #
 # Why: AyakaMods sits behind a Cloudflare JavaScript challenge, so plain HTTP
 # (the GitHub workflow, curl, urllib) gets a 403. This reads the page through
@@ -8,26 +8,30 @@
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\update_badges_local.ps1
 #
-# It keeps its own clone of the badges branch in %LOCALAPPDATA%\ArmoryForgeBadges,
+# The Gist's id is in tools\badges-gist.txt. Badges live in a Gist (not a branch of
+# this repo) so pushes don't show "recent pushes / Compare & pull request" on GitHub.
+# It keeps its own clone of the Gist in %LOCALAPPDATA%\ArmoryForgeBadges,
 # merges what it reads over the last numbers (a partly-read page never drops a
 # stat), and only commits when something changed. Log: last-run.log next to it.
 
 $ErrorActionPreference = "Stop"
 $repoDir = Split-Path -Parent $PSScriptRoot
 $home_   = Join-Path $env:LOCALAPPDATA "ArmoryForgeBadges"
-$clone   = Join-Path $home_ "badges"
+$clone   = Join-Path $home_ "gist"
 $log     = Join-Path $home_ "last-run.log"
-$remote  = "https://github.com/Hung1510/Super-Earth-Armory-Forge.git"
+$gistId  = (Get-Content (Join-Path $PSScriptRoot "badges-gist.txt") -Raw).Trim()
+if ($gistId -notmatch '^[0-9a-f]{20,40}$') { throw "put the Gist id in tools\badges-gist.txt (see README, AyakaMods badges)" }
+$remote  = "https://gist.github.com/$gistId.git"
 New-Item -ItemType Directory -Force -Path $home_ | Out-Null
 Start-Transcript -Path $log -Force | Out-Null
 
 try {
-    # 1. an up-to-date copy of the badges branch (the workflow force-pushes it)
+    # 1. an up-to-date copy of the Gist
     if (-not (Test-Path (Join-Path $clone ".git"))) {
-        git clone -q --single-branch -b badges $remote $clone
+        git clone -q $remote $clone
     }
-    git -C $clone fetch -q origin badges
-    git -C $clone reset -q --hard origin/badges
+    git -C $clone fetch -q origin
+    git -C $clone reset -q --hard "@{u}"
 
     # 2. read AyakaMods into a scratch folder
     $out = Join-Path $home_ "out"
@@ -68,7 +72,7 @@ try {
     git -C $clone diff --cached --quiet
     if ($LASTEXITCODE -eq 0) { Write-Output "no change: $(Get-Content $oldPath -Raw)"; return }
     git -C $clone commit -q -m "AyakaMods stats (local)"
-    git -C $clone push -q origin badges
+    git -C $clone push -q origin HEAD
     Write-Output "pushed: $(Get-Content $oldPath -Raw)"
 }
 finally {

@@ -5,7 +5,7 @@ Read the AyakaMods page and write shields.io endpoint badges:
     python tools/ayakamods_stats.py OUT_DIR [PAGE_URL]
 
 Writes OUT_DIR/ayakamods-downloads.json, -views.json, -rating.json (only the ones it
-could read). Used by .github/workflows/ayakamods-badges.yml; if nothing was found the old
+could read). Used by tools/update_badges_local.ps1; if nothing was found the old
 badges stay up.
 
 AyakaMods sits behind a Cloudflare JavaScript challenge that plain HTTP clients can't pass
