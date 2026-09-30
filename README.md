@@ -132,7 +132,7 @@ tests/test_panel_layout.py no overlapping or clipped text in any panel view, 720
 tests/test_panel_scale.py  panel size setting, Ctrl +/-, whole-pixel drawing
 tests/test_web_parity.js   web builder output must be byte-identical to Python
 tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, hourly, retries on bot checks)
-tools/update_badges_local.ps1  same, run from a home PC (AyakaMods often blocks GitHub's servers)
+tools/update_badges_local.ps1  same, through the installed Edge on a Windows PC (passes Cloudflare)
 TESTING.md                 in-game verification status per effect
 ```
 
@@ -154,9 +154,11 @@ On patch day:
 
 ## AyakaMods badges
 
-The download/view badges (and the numbers on the portfolio) come from `ayakamods.json` on the `badges` branch. The hourly workflow tries to refresh it, but AyakaMods often answers GitHub's servers with a 403, so a Windows PC can do it instead:
+The download/view badges (and the numbers on the portfolio) come from `ayakamods.json` on the `badges` branch. The hourly workflow tries to refresh it, but AyakaMods sits behind a Cloudflare JavaScript challenge that plain HTTP clients can't pass, so a Windows PC reads it through the installed Edge instead (Playwright drives it off-screen; nothing extra to download):
 
 ```powershell
+python -m pip install playwright
+
 # once, by hand: should print "pushed: {...}" or "no change: {...}"
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\update_badges_local.ps1
 

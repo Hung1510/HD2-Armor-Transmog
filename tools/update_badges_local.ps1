@@ -1,8 +1,10 @@
 # Refresh the AyakaMods badges from this PC and push them to the "badges" branch.
 #
-# Why: AyakaMods answers GitHub's servers with a 403, so the hourly workflow
-# often can't read the page. A home connection gets through. Run this by hand
-# or from Task Scheduler (see README, "AyakaMods badges").
+# Why: AyakaMods sits behind a Cloudflare JavaScript challenge, so plain HTTP
+# (the GitHub workflow, curl, urllib) gets a 403. This reads the page through
+# your installed Edge via Playwright (python -m pip install playwright), which
+# passes the challenge. Run it by hand or from Task Scheduler (README,
+# "AyakaMods badges"). Set $env:AYAKAMODS_BROWSER = "chrome" to use Chrome.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\update_badges_local.ps1
 #
@@ -32,6 +34,11 @@ try {
     if (Test-Path $out) { Remove-Item -Recurse -Force $out }
     $python = (Get-Command python -ErrorAction SilentlyContinue).Source
     if (-not $python) { $python = (Get-Command py -ErrorAction Stop).Source }
+    $ErrorActionPreference = "Continue"   # PS 5.1 turns redirected native stderr into errors
+    & $python -c "import playwright" 2>$null
+    $ErrorActionPreference = "Stop"
+    if ($LASTEXITCODE -ne 0) { throw "Playwright is missing: run  `"$python`" -m pip install playwright" }
+    if (-not $env:AYAKAMODS_BROWSER) { $env:AYAKAMODS_BROWSER = "msedge" }
     & $python (Join-Path $repoDir "tools\ayakamods_stats.py") $out
     $newJson = Join-Path $out "ayakamods.json"
     if (-not (Test-Path $newJson)) { Write-Output "could not read AyakaMods; badges unchanged"; return }

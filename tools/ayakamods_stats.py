@@ -5,8 +5,13 @@ Read the AyakaMods page and write shields.io endpoint badges:
     python tools/ayakamods_stats.py OUT_DIR [PAGE_URL]
 
 Writes OUT_DIR/ayakamods-downloads.json, -views.json, -rating.json (only the ones it
-could read). Used by .github/workflows/ayakamods-badges.yml; exits 1 if nothing was found
-so the old badges stay up.
+could read). Used by .github/workflows/ayakamods-badges.yml; if nothing was found the old
+badges stay up.
+
+AyakaMods sits behind a Cloudflare JavaScript challenge that plain HTTP clients can't pass
+(403 + "cf-mitigated: challenge"). Set AYAKAMODS_BROWSER=msedge (or chrome) to read the
+page through that installed browser instead, via Playwright (pip install playwright; no
+browser download needed). tools/update_badges_local.ps1 does this on a home PC.
 """
 import html
 import json
@@ -35,6 +40,42 @@ def fetch(url):
         "Accept-Language": "en"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return r.read().decode("utf-8", "replace")
+
+
+def browser_stats(urls, channel):
+    """Open the page in a real installed browser, wait out the Cloudflare check, read it.
+
+    Uses a persistent profile so the Cloudflare clearance cookie survives between runs.
+    The window is placed off-screen; it has to be a headed browser, headless ones get
+    challenged again.
+    """
+    from playwright.sync_api import sync_playwright
+    base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    profile = os.path.join(base, "ArmoryForgeBadges", "browser-profile")
+    with sync_playwright() as p:
+        ctx = p.chromium.launch_persistent_context(
+            profile, channel=channel, headless=False,
+            args=["--window-position=-32000,-32000", "--window-size=1280,900",
+                  "--disable-blink-features=AutomationControlled"])
+        try:
+            page = ctx.pages[0] if ctx.pages else ctx.new_page()
+            for url in urls:
+                try:
+                    page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                except Exception as e:
+                    print("%s: %s" % (url, e), file=sys.stderr)
+                    continue
+                for _ in range(45):                 # challenge usually clears in 5-15 s
+                    s = stats(page.content())
+                    if s:
+                        print("%s (%s): %s" % (url, channel, json.dumps(s)))
+                        return s
+                    page.wait_for_timeout(1000)
+                print("%s (%s): no stats after 45 s (challenge not cleared?)" % (url, channel),
+                      file=sys.stderr)
+        finally:
+            ctx.close()
+    return {}
 
 
 def num(s):
@@ -120,7 +161,16 @@ def main():
     urls = [sys.argv[2]] if len(sys.argv) > 2 else PAGES
     s = {}
     local = all(u.startswith("file://") for u in urls)
-    for wait in (0,) + (() if local else RETRY_WAITS):
+    channel = os.environ.get("AYAKAMODS_BROWSER", "").strip()
+    if channel and not local:
+        try:
+            s = browser_stats(urls, channel)
+        except Exception as e:                      # playwright missing, browser won't start...
+            print("browser (%s): %s" % (channel, e), file=sys.stderr)
+        urls = [] if s else urls                    # got it: skip the plain HTTP rounds
+    for wait in (0,) + (() if local or channel else RETRY_WAITS):
+        if s:
+            break
         if wait:
             print("no address worked; retrying in %ds" % wait, file=sys.stderr)
             time.sleep(wait)
