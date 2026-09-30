@@ -132,6 +132,7 @@ tests/test_panel_layout.py no overlapping or clipped text in any panel view, 720
 tests/test_panel_scale.py  panel size setting, Ctrl +/-, whole-pixel drawing
 tests/test_web_parity.js   web builder output must be byte-identical to Python
 tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, hourly, retries on bot checks)
+tools/update_badges_local.ps1  same, run from a home PC (AyakaMods often blocks GitHub's servers)
 TESTING.md                 in-game verification status per effect
 ```
 
@@ -150,6 +151,24 @@ On patch day:
    ```
    It prints **NEW** passives and **CHANGED** values as ready-to-paste `CATALOG` lines, **MISSING** passives, and new effect IDs for `EFFECTS`. It exits 0 when nothing changed.
 3. Paste the lines into `tools/picker.py`, give new passives and effects real names, then run `python tools\picker.py export-web` and `python tests\test_ingame.py`. Commit, tag and release.
+
+## AyakaMods badges
+
+The download/view badges (and the numbers on the portfolio) come from `ayakamods.json` on the `badges` branch. The hourly workflow tries to refresh it, but AyakaMods often answers GitHub's servers with a 403, so a Windows PC can do it instead:
+
+```powershell
+# once, by hand: should print "pushed: {...}" or "no change: {...}"
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\update_badges_local.ps1
+
+# then every 3 hours while you're logged in (run from the repo folder)
+$script = (Resolve-Path tools\update_badges_local.ps1).Path
+Register-ScheduledTask -TaskName "Armory Forge AyakaMods badges" `
+  -Action (New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script`"") `
+  -Trigger (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Hours 3)) `
+  -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 10))
+```
+
+It only commits when a number changed, never lowers downloads/views, and logs to `%LOCALAPPDATA%\ArmoryForgeBadges\last-run.log`. Remove it with `Unregister-ScheduledTask -TaskName "Armory Forge AyakaMods badges"`.
 
 ## Contributing
 
