@@ -92,6 +92,7 @@ local state = {
     frame = 0, rounds = 0, applied = 0, reapplied = 0, refused = 0,
 }
 rawset(_G, MOD.global, state)
+local research = nil         -- set by tools/research.lua in research builds only
 
 -- ---------------------------------------------------------------- byte helpers
 local function u32_bytes(value)
@@ -1100,6 +1101,7 @@ local function handle_block(address)
     if not header or header:sub(1, 8) ~= NEEDLE then return end
     local kind, payload = u32(header, 8), u32(header, 12)
     if not payload or payload < REC_HEAD or payload > MAX_PAYLOAD then return end
+    if research then pcall(research.block, address, kind, payload) end
     if kind ~= MOD.type_passive then return end
     if not found_lo or address < found_lo then found_lo = address end
     if not found_hi or address > found_hi then found_hi = address end
@@ -1219,7 +1221,7 @@ local function scan_step()
                 pcall(scan_chunk, h.base + h.cursor, take)
                 h.cursor = h.cursor + math.max(take - scan.overlap, 1)
             end
-        elseif complete() and scan.hot_done then
+        elseif complete() and scan.hot_done and not research then
             return true                      -- everything known found, its neighbourhood checked
         elseif scan.index <= #scan.regions then
             local region = scan.regions[scan.index]

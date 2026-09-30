@@ -158,6 +158,8 @@ tests/test_swap_edition.py the Passive Swap (Nexus) edition, incl. a hostile sav
 tests/test_controller.py   the whole panel driven with a fake Xbox controller
 tests/test_passive_info.py passive descriptions, armor lists, stack summary, Remove armor
 tests/test_report_share.py panel off, short share codes, the problem report
+tools/research.lua         research builds only (`picker.py research`): armor kit dump, weight experiment
+tests/test_research.py     the research build, and that no release carries it
 tools/passives.json        plain description + armors per passive (wiki data; corrections welcome)
 tests/run_all.py           runs every suite and prints one summary
 tools/release_notes.py     release notes for a tag, from CHANGELOG.md (release workflow)

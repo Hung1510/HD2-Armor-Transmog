@@ -19,6 +19,7 @@ local function tick()
         end
         if finished then
             pcall(write_dump)          -- after every pass; only rewrites when something new was found
+            if research then pcall(research.finish) end
             if good_enough() or state.rounds >= MAX_ROUNDS then
                 set_status('ready', (complete() and 'all ' .. #CAT_LIST .. ' armor passives found'
                                      or ('found ' .. perks_found .. ' of ' .. #CAT_LIST .. ' armor passives'))

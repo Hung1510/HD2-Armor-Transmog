@@ -958,6 +958,66 @@ def catalog_line(pid, name, rows, stats):
     return "    %d: (%s, [%s], [%s])," % (pid, json.dumps(name), r, s)
 
 
+RESEARCH_WEIGHTS = {"none": None, "light": 0, "medium": 1, "heavy": 2}
+RESEARCH_README = """Super Earth Armory Forge v%(v)s - RESEARCH BUILD (not a release)
+
+What it does:
+- Writes every armor kit in the game to
+  %%LOCALAPPDATA%%\\CowboyBingus\\Helldivers2\\ArmoryForge\\kits-dump.txt
+- Experiment: %(what)s
+  Memory only. Restart the game to undo; nothing on disk is changed.
+Everything else works as usual (F7 panel, your loadouts).
+
+When done, reinstall the normal Super Earth Armory Forge zip (same mod, it replaces this one).
+Single-player / private lobbies only.
+"""
+
+
+def research_lua(settings, weight):
+    """A blank full-edition build with tools/research.lua spliced in before the panel."""
+    full = compile_loadout(settings, [], blank=True)
+    with open(os.path.join(HERE, "research.lua"), encoding="utf-8") as f:
+        research = f.read()
+    with open(os.path.join(HERE, "panel.lua"), encoding="utf-8") as f:
+        panel = f.read()
+    assert full.count(panel) == 1 and full.count("    blank = true,") == 1
+    flag = "    research = { weight = %s },   -- research build: see tools/research.lua\n" % (
+        "nil" if weight is None else weight)
+    full = full.replace("    blank = true,", flag + "    blank = true,", 1)
+    return full.replace(panel, research + "\n" + panel, 1)
+
+
+def cmd_research(args):
+    """A research build (kits-dump.txt + optional weight experiment). Never a release."""
+    root = os.path.dirname(HERE)
+    settings, _ = load_config_text("[settings]\nname = %s\n[profile: Med-Kit]\n" % TITLE)
+    weight = RESEARCH_WEIGHTS[args.weight]
+    full = research_lua(settings, weight)
+    ok, err = compile_lua(full)
+    if ok is False:
+        print("Lua FAIL: %s" % err)
+        return 1
+    what = ("none, dump only" if weight is None else
+            "every armor's armor pieces are set to %s weight" % args.weight.upper())
+    manifest = {
+        "Version": 1, "Guid": str(uuid.uuid5(GUID_NS, MOD_ID)), "Name": TITLE + " (RESEARCH %s)" % args.weight,
+        "Description": "v%s research build. Dumps armor kits; experiment: %s. Not a release." % (VERSION, what),
+    }
+    icon = os.path.join(root, "docs", "icon.png")
+    if os.path.exists(icon):
+        manifest["IconPath"] = "icon.png"
+    with zipfile.ZipFile(args.zip, "w", compression=zipfile.ZIP_DEFLATED) as z:
+        _zip_write(z, "manifest.json", (json.dumps(manifest, indent=2) + "\n").encode())
+        if os.path.exists(icon):
+            _zip_write(z, "icon.png", open(icon, "rb").read())
+        _zip_write(z, ARCHIVE_NAME, archive_for(full))
+        _zip_write(z, ARCHIVE_NAME + ".stream", b"")
+        _zip_write(z, ARCHIVE_NAME + ".gpu_resources", b"")
+        _zip_write(z, "README.txt", (RESEARCH_README % {"v": VERSION, "what": what}).encode("utf-8"))
+    print("Wrote research    : %s  (experiment: %s)" % (args.zip, what))
+    return 0
+
+
 def cmd_check_dump(args):
     path = args.dump or default_dump_path()
     if not path or not os.path.exists(path):
@@ -1123,6 +1183,10 @@ def main(argv=None):
     w.add_argument("-o", "--output", default=os.path.join(os.path.dirname(HERE), "docs", "data.json"))
     w.add_argument("--check", action="store_true", help="fail if data.json is stale")
     w.set_defaults(func=cmd_export_web)
+    rs = sub.add_parser("research", help="research build: dump armor kits, optionally set every armor's weight")
+    rs.add_argument("--zip", required=True)
+    rs.add_argument("--weight", choices=list(RESEARCH_WEIGHTS), default="none")
+    rs.set_defaults(func=cmd_research)
     d = sub.add_parser("check-dump", help="compare the game's passives (passives-dump.txt) with CATALOG")
     d.add_argument("dump", nargs="?", help="path to passives-dump.txt (default: %%LOCALAPPDATA%%\\...\\ArmoryForge)")
     d.set_defaults(func=cmd_check_dump)
