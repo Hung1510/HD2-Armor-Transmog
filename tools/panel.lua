@@ -121,7 +121,8 @@ end
 local ui = { open = false, tab = 1, sel = nil, hover = nil, gui = nil, world = nil, signature = nil,
              regions = {}, version = 0, errors = 0, value = nil, adding = false, message = nil,
              confirm = nil, presets = false, psel = nil, naming = nil, history = {}, last_text = nil,
-             swap_at = 0, scroll = {}, scrolling = nil, pos = nil, drag = nil }
+             swap_at = 0, scroll = {}, scrolling = nil, pos = nil, drag = nil,
+             settings = false, search = '', search_on = false }
 local W, H = 1000, 990
 local font = nil
 local held, mouse_was_down, armed = {}, nil, nil
@@ -130,8 +131,16 @@ local toast = { text = nil, sub = nil, till = 0, gui = nil, world = nil }
 -- presets, share codes and units live in one table to keep the chunk's local count low
 local PP = { user = nil }
 
-local function hotkey() return (LOADOUT and LOADOUT.hotkey) or MOD.hotkey or 'F7' end
-local function swap_key() return (LOADOUT and LOADOUT.swap_hotkey) or MOD.swap_hotkey or 'F9' end
+-- The panel key and the quick-swap key: F1..F12 (quick-swap also OFF). A bad value in a
+-- hand-edited loadout.ini falls back to F7 / F9, so the panel can always be opened.
+function PP.fkey(k) return type(k) == 'string' and k:match('^F%d%d?$') and VK[k] and k or nil end
+local function hotkey() return PP.fkey(LOADOUT and LOADOUT.hotkey) or PP.fkey(MOD.hotkey) or 'F7' end
+local function swap_key()
+    local k = (LOADOUT and LOADOUT.swap_hotkey) or MOD.swap_hotkey or 'F9'
+    if k == 'OFF' then return 'OFF' end
+    k = PP.fkey(k) or 'F9'
+    return k ~= hotkey() and k or 'OFF'
+end
 -- panel size the player chose (0.8 .. 1.5), Ctrl +/- in the panel
 local function ui_scale()
     local v = tonumber((LOADOUT and LOADOUT.panel_scale) or MOD.panel_scale) or 1
@@ -267,6 +276,9 @@ function PP.undo()
     local ok, l = pcall(parse_loadout, prev)
     if not ok or not l then say('Could not undo'); return end
     ui.last_text = nil                      -- an undo is not itself undoable
+    if LOADOUT then                         -- keys and panel size are settings, not undo steps
+        l.hotkey, l.swap_hotkey, l.panel_scale = LOADOUT.hotkey, LOADOUT.swap_hotkey, LOADOUT.panel_scale
+    end
     PP.replace(l, 'Undone (' .. #ui.history .. ' more)', true)
 end
 
@@ -441,6 +453,40 @@ function PP.cycle_list()
 end
 
 -- panel size: +1 / -1 steps of 10 %, 0 resets. Saved with the loadout, not undoable.
+-- search: a passive matches when its name or one of its effects contains the text
+function PP.match(c)
+    local q = norm(ui.search or '')
+    if q == '' then return true end
+    if norm(c.name):find(q, 1, true) then return true end
+    for _, e in ipairs(c.effects) do
+        if norm(label_of(e)):find(q, 1, true) then return true end
+    end
+    return false
+end
+function PP.set_search(text, on)
+    if text ~= ui.search then ui.scroll = {} end         -- a new search starts at the top
+    ui.search, ui.search_on = text, on
+    ui.version = ui.version + 1
+end
+
+-- change the panel key or the quick-swap key from the Keys tab (saved, not an undo step)
+function PP.set_key(which, k)
+    if not LOADOUT then return end
+    LOADOUT.hotkey, LOADOUT.swap_hotkey = hotkey(), swap_key()     -- what actually works now
+    if which == 'hotkey' then
+        if not PP.fkey(k) or k == hotkey() then return end
+        if k == swap_key() then LOADOUT.swap_hotkey = 'OFF' end
+        LOADOUT.hotkey = k
+        say('The panel now opens with ' .. k, 3)
+    elseif which == 'swap_hotkey' then
+        if k ~= 'OFF' and (not PP.fkey(k) or k == hotkey()) then return end
+        LOADOUT.swap_hotkey = k
+        say(k == 'OFF' and 'Quick-swap key turned off' or ('Quick-swap is now ' .. k), 3)
+    else return end
+    ui.last_text = snapshot()          -- a key change is not an undo step
+    loadout_changed({})
+end
+
 function PP.zoom(step)
     if not LOADOUT then return end
     local v = step == 0 and 1 or math.floor((ui_scale() + step * 0.1) * 10 + 0.5) / 10
@@ -713,9 +759,14 @@ local function draw(width, height)
             k = k + 1
         end
     end
-    local function tab(key, caption, x, active, ink, n)
+    local function tab(key, caption, x, active, ink, n, maxw)
         caption = up(caption)
-        local w = math.min(230, measure(caption, 15) + (n and 44 or 30))
+        local w = math.min(maxw or 230, measure(caption, 15) + (n and 44 or 30))
+        local lim = w - (n and 36 or 20)
+        if measure(caption, 11) > lim then         -- too long even at 11: cut it, "CONCUSSIVE PADD.."
+            while #caption > 3 and measure(caption .. '..', 11) > lim do caption = caption:sub(1, -2) end
+            caption = caption:gsub('[%s,]+$', '') .. '..'
+        end
         rect(x, 0 + 108, w, 40, active and C.PANEL or C.BG, 951)
         border(x, 108, w, 40, active and C.TEXT or (ui.hover == key and C.MUTED or C.LINE2), 952)
         text(caption, x + 12, 116, 15, active and C.TEXT or (ui.hover == key and C.TEXT or ink or C.MUTED), w - (n and 36 or 20))
@@ -801,13 +852,19 @@ local function draw(width, height)
     -- tabs: one per armor stack, + Armor, Presets
     local p = current()
     local x = 22
+    -- armor tabs share what the other tabs and "Remove this stack" leave; long names are cut
+    local fixed = 0
+    for _, c in ipairs({ '+ Armor', 'Presets', 'Keys' }) do fixed = fixed + math.min(230, measure(up(c), 15) + 30) + 6 end
+    local room = W - 22 - (measure('CLICK AGAIN TO REMOVE', 11) + 20) - 22 - fixed
+    local each_tab = math.max(60, math.min(230, room / math.max(1, #LOADOUT.profiles) - 6))
     for n, prof in ipairs(LOADOUT.profiles) do
-        x = x + tab('tab:' .. n, CAT[prof.perk].name, x, n == ui.tab and not ui.adding and not ui.presets, nil, n) + 6
-        if x > W - 420 then break end
+        x = x + tab('tab:' .. n, CAT[prof.perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings, nil, n, each_tab) + 6
+        if x + each_tab > 22 + room then break end       -- 7+ stacks: the rest are reached with F9 / presets
     end
     x = x + tab('add', '+ Armor', x, ui.adding, C.YELLOW) + 6
-    tab('presets', 'Presets', x, ui.presets, C.YELLOW)
-    if p and not ui.adding and not ui.presets then
+    x = x + tab('presets', 'Presets', x, ui.presets, C.YELLOW) + 6
+    tab('settings', 'Keys', x, ui.settings, C.MUTED)
+    if p and not ui.adding and not ui.presets and not ui.settings then
         local sure = ui.confirm and ui.confirm.kind == 'remove'
         local cap = sure and 'CLICK AGAIN TO REMOVE' or (MOD.swap_only and 'REMOVE THIS ARMOR' or 'REMOVE THIS STACK')
         local rw = measure(cap, 11)
@@ -866,6 +923,24 @@ local function draw(width, height)
         if tpos + tsz < ty + th then region('scroll:pgdn', bx - 2, tpos + tsz, bw + 3, ty + th - tpos - tsz) end
         rect(bx + 2, tpos, bw - 4, tsz, ui.hover and ui.hover:find('^scroll:') and C.YELLOW or C.LINE2, 952)
         return off, fit
+    end
+    -- the search field above a passive list (click it or Ctrl+F, then type; Esc clears)
+    local function search_box(y)
+        local on, q = ui.search_on, ui.search or ''
+        rect(IX, y, IW, 26, C.FIELD, 951)
+        border(IX, y, IW, 26, on and C.YELLOW or (ui.hover == 'search' and C.TEXT or C.LINE2), 952)
+        local cw = q ~= '' and (measure('CLEAR', 10) + 16) or 0
+        text(q ~= '' and (up(q) .. (on and '_' or '')) or (on and '_' or 'SEARCH PASSIVES OR EFFECTS  (CTRL+F)'),
+             IX + 10, y + 7, 12, q ~= '' and C.TEXT or C.DIM, IW - 20 - cw)
+        region('search', IX, y, IW - cw, 26)
+        if q ~= '' then
+            text('CLEAR', IX + IW - 8, y + 8, 10, ui.hover == 'search:clear' and C.YELLOW or C.MUTED, nil, 'right')
+            region('search:clear', IX + IW - cw, y, cw, 26)
+        end
+        return y + 32
+    end
+    local function no_match(y, n)
+        if n == 0 then text('Nothing matches "' .. ui.search .. '".', IX + 4, y + 4, 13, C.DIM, IW - 8) end
     end
 
     -- ============================================================ Presets tab
@@ -949,14 +1024,62 @@ local function draw(width, height)
                       or 'Loading replaces your current stacks (Undo brings them back).', RX, by + 46, 12, C.DIM, RIW) end
         end
 
+    -- ============================================================ Keys (settings)
+    elseif ui.settings then
+        head(IX, TOP + 14, 'Settings', 'Keys', IW)
+        local each, gap = (IW - 3 * 8) / 4, 8
+        local function key_grid(which, current, other, y, with_off)
+            local keys = {}
+            for k = 1, 12 do keys[#keys + 1] = 'F' .. k end
+            if with_off then keys[#keys + 1] = 'OFF' end
+            for i, k in ipairs(keys) do
+                local col, row = (i - 1) % 4, math.floor((i - 1) / 4)
+                local on = k == current
+                -- the other key's F-key can't be taken (the panel key wins over quick-swap)
+                local free = on or k ~= other
+                button('key:' .. which .. ':' .. k, k, IX + col * (each + gap), y + row * 38, each, 30, free, on)
+            end
+            return y + math.ceil(#keys / 4) * 38
+        end
+        local y = TOP + 64
+        label('Open / close this panel', IX, y, nil, IW)
+        y = key_grid('hotkey', hotkey(), nil, y + 20, false) + 14
+        label('Quick-swap loadouts', IX, y, nil, IW)
+        y = key_grid('swap_hotkey', swap_key(), hotkey(), y + 20, true) + 6
+        text('Picking the quick-swap key as the panel key turns quick-swap off.', IX, y, 12, C.DIM, IW)
+
+        head(RX, TOP + 14, 'Settings', 'Panel', RIW)
+        local ry = TOP + 70
+        text('Size: ' .. string.format('%d%%', ui_scale() * 100 + 0.5) .. '  (Ctrl + / Ctrl -, or [-] [+] at the top)', RX, ry, 14, C.TEXT, RIW)
+        local bx = RX + button('zoom:-', '- Smaller', RX, ry + 26, nil, 32, ui_scale() > 0.8) + 8
+        bx = bx + button('zoom:+', '+ Bigger', bx, ry + 26, nil, 32, ui_scale() < 1.5) + 8
+        button('zoom:0', 'Reset size and position', bx, ry + 26, nil, 32, ui_scale() ~= 1 or ui.pos ~= nil)
+        ry = ry + 84
+        text('Move the panel: drag its top strip.', RX, ry, 14, C.TEXT, RIW)
+        ry = ry + 40
+        rect(RX, ry, RIW, 1, C.LINE, 951)
+        label('Fixed keys', RX, ry + 14, nil, RIW)
+        local fixed = { { 'CTRL+Z', 'Undo' }, { 'CTRL+F', 'Search passives' }, { 'CTRL +/-', 'Panel size' },
+                        { 'CTRL+0', 'Reset size and position' }, { 'PGUP/PGDN', 'Scroll a long list' } }
+        ry = ry + 38
+        for _, f in ipairs(fixed) do
+            local kw = keycap(f[1], RX, ry)
+            text(up(f[2]), RX + kw + 12, ry + 4, 12, C.TEXT, RIW - kw - 12)
+            ry = ry + 32
+        end
+        ry = ry + 10
+        text('SHODAN Stat Editor uses F8 by default: pick another key here if you run both.', RX, ry, 12, C.DIM, RIW)
+        text('Keys are saved with your loadout (hotkey / swap_hotkey in loadout.ini).', RX, ry + 18, 12, C.DIM, RIW)
+
     -- ============================================================ + Armor
     elseif ui.adding then
         head(IX, TOP + 14, MOD.swap_only and 'New swap' or 'New stack', 'Choose armor passive', IW)
         local used = {}
         for _, prof in ipairs(LOADOUT.profiles) do used[prof.perk] = true end
-        local y = TOP + 64
+        local y = search_box(TOP + 58)
         local free = {}
-        for _, c in ipairs(CAT_LIST) do if not used[c.id] then free[#free + 1] = c end end
+        for _, c in ipairs(CAT_LIST) do if not used[c.id] and PP.match(c) then free[#free + 1] = c end end
+        no_match(y, #free)
         local first, fit = scroller('add', y, BOT - 54, #free)
         for k = first + 1, math.min(#free, first + fit) do
             local c = free[k]
@@ -998,9 +1121,9 @@ local function draw(width, height)
     elseif MOD.swap_only then
         local cur = (p.swap and p.swap ~= p.perk and CAT[p.swap]) and p.swap or nil
         head(IX, TOP + 14, 'Armor ' .. ui.tab .. ' / ' .. #LOADOUT.profiles, 'Swap passive', IW)
-        local y = TOP + 60
+        local y = search_box(TOP + 58)
         local opts = { { id = 0, name = 'Original: ' .. CAT[p.perk].name } }
-        for _, c in ipairs(CAT_LIST) do if c.id ~= p.perk then opts[#opts + 1] = { id = c.id, name = c.name } end end
+        for _, c in ipairs(CAT_LIST) do if c.id ~= p.perk and PP.match(c) then opts[#opts + 1] = { id = c.id, name = c.name } end end
         local first, fit = scroller('swap', y, BOT - 6, #opts)
         local rw = LW - 2 - bar.w
         for k = first + 1, math.min(#opts, first + fit) do
@@ -1056,7 +1179,7 @@ local function draw(width, height)
         for _ in pairs(p.enabled) do n_on = n_on + 1 end
         head(IX, TOP + 14, 'Armor stack ' .. ui.tab .. ' / ' .. #LOADOUT.profiles, 'Choose passives', IW - 70)
         text(n_on .. ' ON', IX + IW, TOP + 14, 11, n_on > 0 and C.YELLOW or C.DIM, nil, 'right')
-        local y = TOP + 60
+        local y = search_box(TOP + 58)
         local base_key = 'sel:' .. p.perk
         if ui.sel == p.perk then rect(LX + 1, y, LW - 2, RH, C.ROW_HI, 951); rect(LX + 1, y, 3, RH, C.YELLOW, 952)
         elseif ui.hover == base_key then rect(LX + 1, y, LW - 2, RH, C.ROW, 951) end
@@ -1067,7 +1190,8 @@ local function draw(width, height)
         region(base_key, LX + 1, y, LW - 2, RH)
         y = y + RH + 4
         local rest = {}
-        for _, c in ipairs(CAT_LIST) do if c.id ~= p.perk then rest[#rest + 1] = c end end
+        for _, c in ipairs(CAT_LIST) do if c.id ~= p.perk and PP.match(c) then rest[#rest + 1] = c end end
+        no_match(y, #rest)
         local first, fit = scroller('stack', y, BOT - 6, #rest)
         local rw = LW - 2 - bar.w
         for k = first + 1, math.min(#rest, first + fit) do
@@ -1231,12 +1355,19 @@ local function click(key)
     if ui.value and (kind ~= 'value' or tonumber(arg) ~= ui.value.n or ui.sel ~= ui.value.pid) then finish_value(true) end
     if ui.naming and kind ~= 'pre' then finish_naming(true) end
     if ui.confirm and kind ~= ui.confirm.kind then ui.confirm = nil end
+    if ui.search_on and kind ~= 'search' then ui.search_on = false end
     local p = current()
     local n = tonumber(arg)
-    if kind == 'tab' and n then ui.tab, ui.sel, ui.adding, ui.presets = n, nil, false, false
-    elseif kind == 'add' then ui.adding, ui.presets = not ui.adding, false
+    if kind == 'tab' and n then ui.tab, ui.sel, ui.adding, ui.presets, ui.settings = n, nil, false, false, false
+    elseif kind == 'add' then ui.adding, ui.presets, ui.settings = not ui.adding, false, false
     elseif kind == 'addcancel' then ui.adding = false
-    elseif kind == 'presets' then ui.presets, ui.adding = not ui.presets, false; PP.load_user()
+    elseif kind == 'presets' then ui.presets, ui.adding, ui.settings = not ui.presets, false, false; PP.load_user()
+    elseif kind == 'search' then
+        if arg == 'clear' then PP.set_search('', false) else PP.set_search(ui.search, true) end
+    elseif kind == 'settings' then ui.settings, ui.adding, ui.presets = not ui.settings, false, false
+    elseif kind == 'key' then
+        local which, k = arg:match('^([%w_]+):(%w+)$')
+        PP.set_key(which, k)
     elseif kind == 'addpick' and n then
         LOADOUT.profiles[#LOADOUT.profiles + 1] = { perk = n, conflicts = 'stack', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
         ui.tab, ui.sel, ui.adding = #LOADOUT.profiles, nil, false
@@ -1260,7 +1391,7 @@ local function click(key)
         if p.swap then p.swap = nil; changed(p.perk, CAT[p.perk].name .. ' armor has its own passive again') end
     elseif kind == 'clear' and p then
         if confirm('clear') then p.enabled, p.tweaks = {}, {}; changed(p.perk, 'Turned everything off on this armor') end
-    elseif kind == 'zoom' then PP.zoom(arg == '+' and 1 or -1)
+    elseif kind == 'zoom' then PP.zoom((arg == '+' and 1) or (arg == '0' and 0) or -1)
     elseif kind == 'scroll' then
         local page = ui.scrolling and ui.scrolling.page or 1
         PP.scroll((arg == 'up' and -1) or (arg == 'down' and 1) or (arg == 'pgup' and -page) or page)
@@ -1353,6 +1484,20 @@ local function keyboard(now)
         end
         return
     end
+    if ui.search_on then
+        if pressed('Escape', VK.Escape, now) then PP.set_search('', false); return end
+        if pressed('Enter', VK.Enter, now) then PP.set_search(ui.search, false); return end
+        if pressed('Backspace', VK.Backspace, now) then PP.set_search(ui.search:sub(1, -2), true) end
+        if not input.key_down(VK.Ctrl) then          -- with Ctrl held, the shortcuts below run instead
+            for _, k in ipairs(NAME_KEYS) do
+                if pressed('N' .. k[1], k[1], now) and #ui.search < 24 then PP.set_search(ui.search .. k[2], true) end
+            end
+            return
+        end
+        for _, k in ipairs(NAME_KEYS) do         -- keys pressed with Ctrl aren't typed when Ctrl goes first
+            if input.key_down(k[1]) then held['N' .. k[1]] = { next = math.huge } end
+        end
+    end
     local v = ui.value
     if v then
         if pressed('Escape', VK.Escape, now) then finish_value(false); return end
@@ -1372,6 +1517,11 @@ local function keyboard(now)
         return
     end
     if input.key_down(VK.Ctrl) and pressed('Z', 0x5A, now) then PP.undo() end
+    if input.key_down(VK.Ctrl) and pressed('F', 0x46, now) and not ui.presets and not ui.settings
+       and (ui.adding or current()) and not ui.search_on then
+        PP.set_search(ui.search, true)
+        held['N' .. 0x46] = { next = math.huge }       -- the F of Ctrl+F is not typed into the field
+    end
     if ui.scrolling then
         if pressed('PgUp', VK.PageUp, now) then PP.scroll(-ui.scrolling.page) end
         if pressed('PgDn', VK.PageDown, now) then PP.scroll(ui.scrolling.page) end
@@ -1647,7 +1797,8 @@ local function open_panel(open)
         ui.worlds = nil
         held, mouse_was_down, armed = {}, nil, nil
         if ui.drag then ui.drag = nil; pcall(PP.save_pos) end
-        ui.confirm, ui.adding = nil, false
+        ui.search_on = false
+        ui.confirm, ui.adding, ui.settings = nil, false, false
         if save_at then pcall(save_now) end
     end
 end

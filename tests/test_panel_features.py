@@ -184,7 +184,7 @@ g.key(ENTER)
 mine = glob.glob(os.path.join(appdata, "**", "my-presets.txt"), recursive=True)
 text = open(mine[0], encoding="utf-8").read() if mine else ""
 check("### preset: My Tank" in text, "+ Save current stack, typed name 'My Tank' saved to my-presets.txt")
-check(live_matches(g, "\n".join(l for l in text.split("### preset: My Tank")[1].split("### end")[0].splitlines()[1:])),
+check(live_matches(g, "\n".join(line for line in text.split("### preset: My Tank")[1].split("### end")[0].splitlines()[1:])),
       "the saved preset holds the current stacks")
 
 g.click("tab:1")
@@ -271,7 +271,8 @@ g6.click("inc:1")
 g6.key(F7)
 g6.tick(120)
 saved = glob.glob(os.path.join(ad6, "**", "loadout.ini"), recursive=True)[0]
-old_style = "".join(l for l in open(saved, encoding="utf-8", newline="").readlines() if not l.startswith("swap_hotkey"))
+old_style = "".join(line for line in open(saved, encoding="utf-8", newline="").readlines()
+                    if not line.startswith("swap_hotkey"))
 open(saved, "w", encoding="utf-8", newline="").write(old_style)       # what 4.3 wrote
 g7 = FakeGame(path6, appdata=ad6)
 g7.tick(420)

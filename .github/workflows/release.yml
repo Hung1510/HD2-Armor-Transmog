@@ -1,6 +1,7 @@
 name: release
 
-# Push a tag like v4.1 and this builds the presets zip and attaches it to the release.
+# Push a tag like v5.4: runs every test, builds both editions and publishes the release
+# with its notes taken from CHANGELOG.md.
 on:
   push:
     tags: ["v*"]
@@ -21,20 +22,13 @@ jobs:
           node-version: "20"
       - run: pip install lupa pillow
       - run: python tools/picker.py export-web --check
-      - run: |
-          python tests/test_ingame.py
-          python tests/test_panel_features.py
-          python tests/test_release.py
-          python tests/test_panel_layout.py
-          python tests/test_panel_scale.py
-          python tests/test_panel_scroll_drag.py
-          python tests/test_swap_edition.py
-          node tests/test_web_parity.js
+      - run: python tests/run_all.py
       - run: python tools/picker.py release --zip dist/Super-Earth-Armory-Forge.zip
       - run: python tools/picker.py release --edition swap --zip dist/Super-Earth-Armory-Forge-Passive-Swap.zip
+      - run: python tools/release_notes.py "${{ github.ref_name }}" > dist/notes.md
       - uses: softprops/action-gh-release@v2
         with:
+          body_path: dist/notes.md
           files: |
             dist/Super-Earth-Armory-Forge.zip
             dist/Super-Earth-Armory-Forge-Passive-Swap.zip
-          generate_release_notes: true

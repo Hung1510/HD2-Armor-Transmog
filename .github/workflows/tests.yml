@@ -5,6 +5,22 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - name: Python lint (ruff, settings in pyproject.toml)
+        run: ruff check tools tests
+      - name: Lua compiles (engine + panel, both editions)
+        run: |
+          pip install lupa
+          python tools/picker.py release --zip /tmp/full.zip
+          python tools/picker.py release --edition swap --zip /tmp/swap.zip
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -41,6 +57,9 @@ jobs:
       - name: Scrolling lists and dragging the panel
         run: python tests/test_panel_scroll_drag.py
 
+      - name: Keys tab, bad-key fallback, passive search
+        run: python tests/test_panel_keys_search.py
+
       - name: Passive Swap edition (Nexus build)
         run: python tests/test_swap_edition.py
 
@@ -50,5 +69,5 @@ jobs:
       - name: Web builder produces identical bytes to Python
         run: node tests/test_web_parity.js
 
-      - name: Release zip builds
-        run: python tools/picker.py release --zip dist/Super-Earth-Armory-Forge.zip
+      - name: Summary of every suite
+        run: python tests/run_all.py

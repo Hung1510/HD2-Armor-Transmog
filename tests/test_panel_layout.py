@@ -130,10 +130,37 @@ for measure_mode, (rw, rh), scale in CONFIGS:
     views.append(("confirm delete", layout_problems(g)))
     g.click("add")
     views.append(("+ Armor", layout_problems(g)))
+    g.click("search")
+    g.type_text("padding")
+    views.append(("+ Armor, searching", layout_problems(g)))
+    g.key(0x1B)
     g.click("addpick:16")
     views.append(("second stack", layout_problems(g)))
+    g.click("search")
+    g.type_text("qqq")
+    views.append(("search, nothing found", layout_problems(g)))
+    g.key(0x1B)
+    g.click("settings")
+    views.append(("Keys tab", layout_problems(g)))
     for name, probs in views:
         check(not probs, "%s / %s%s" % (mode, name, ("\n        " + "\n        ".join(probs)) if probs else ""))
+
+# many armor stacks with long names: the tabs share the row without overlapping
+many = "[settings]\nname = many\n" + "".join("[profile: %s]\nScout = on\n" % n for n in (
+    "Concussive Padding, Reinforced", "Concussive Padding, Grenadier", "Kinetic Displacement Mitigation",
+    "Supplemental Adrenaline", "Integrated Explosives", "Adreno-Defibrillator"))
+for measure_mode, res in (("measured", (1920, 1080)), ("estimated", (1280, 720))):
+    g = FakeGame(build(many), appdata=tempfile.mkdtemp())
+    g.set_resolution(*res)
+    if measure_mode == "estimated":
+        g.L.execute(b"stingray.Gui.text_extents = nil")
+    g.tick(420)
+    g.key(F7)
+    g.tick(120)
+    probs = layout_problems(g)
+    check(not probs and all("tab:%d" % n in g.regions() for n in range(1, 7)),
+          "%s %dx%d / 6 armor tabs with long names%s" % (measure_mode, res[0], res[1],
+                                                          ("\n        " + "\n        ".join(probs)) if probs else ""))
 
 # Passive Swap edition (the Nexus build): its own views
 swap_lua = tempfile.mktemp(suffix=".lua")

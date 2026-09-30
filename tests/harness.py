@@ -365,8 +365,8 @@ class FakeGame:
         if crop:
             rects = [c for c in calls if c[0] == b"rect"]
             if rects:
-                x0 = min(c[1] for c in rects); x1 = max(c[1] + c[4] for c in rects)
-                y0 = min(height - c[2] - c[5] for c in rects); y1 = max(height - c[2] for c in rects)
+                x0, x1 = min(c[1] for c in rects), max(c[1] + c[4] for c in rects)
+                y0, y1 = min(height - c[2] - c[5] for c in rects), max(height - c[2] for c in rects)
                 img = img.crop((int(x0) - 10, int(y0) - 10, int(x1) + 10, int(y1) + 10))
         img.save(path)
         return path

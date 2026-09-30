@@ -260,5 +260,22 @@ g8.tick(420)
 check(g8.phase() == "ready" and g8.state[b"rounds"] == 1,
       "a passive removed by a patch: ready after one round (was 12 full rescans)")
 
+# ------------------------------------------------------------------ 6. another mod got there first
+# Med-Kit's modifier array already points somewhere else (another mod replaced it): the
+# engine must leave that record alone, say so, and still stack the other armors.
+g9 = FakeGame(path)
+other = g9._alloc(4096)
+rec = g9.records[7]
+g9._write(rec + 16, struct.pack("<QQ", other, 1))
+before = g9.record_bytes(7)
+g9.tick(420)
+check(g9.phase() == "ready" and g9.record_bytes(7) == before,
+      "a record another mod already changed is left exactly as that mod set it")
+check(g9.state[b"refused"] == 1, "... and counted as refused")
+g9.key(0x76)
+g9.tick(120)
+g9.click("tab:1")
+check(any("Another mod already changed" in t for t in g9.texts()), "... and the panel says why")
+
 print("\n%d FAILED" % len(failed) if failed else "\nall in-game checks passed")
 sys.exit(1 if failed else 0)

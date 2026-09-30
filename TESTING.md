@@ -32,6 +32,8 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Ctrl + / Ctrl - resize the panel in game | ❔ | v5.2; offline test passes |
 | Mouse wheel scrolls the passive lists | ❔ | v5.3; arrows / PageUp / PageDown work if the wheel doesn't |
 | Dragging the top strip moves the panel | ❔ | v5.3; offline test passes |
+| Keys tab: changing F7 / F9 works in game | ❔ | v5.4; offline test passes |
+| Ctrl+F search in the panel | ❔ | v5.4; offline test passes |
 | Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Armory Forge leaves that passive alone |
 
 ## Effects

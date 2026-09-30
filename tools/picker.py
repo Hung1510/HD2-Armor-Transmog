@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Super Earth Armory Forge - build a Helldivers 2 armour-passive stack from a plain config
 =======================================================================================
@@ -35,7 +34,7 @@ ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "panel.lua", "main
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "ArmoryForge"
 TITLE = "Super Earth Armory Forge"
-VERSION = "5.3.2"
+VERSION = "5.4"
 # The only tool files that go in the player zip: plain-text sources of the mod and the
 # builder. Dev scripts (badge updaters, PowerShell) stay out; mod sites quarantine
 # archives that carry scripts or executables.
@@ -199,7 +198,7 @@ def num(text: str, where: str) -> float:
     try:
         v = float(text)
     except ValueError:
-        raise ConfigError("%s: '%s' is not a number" % (where, text))
+        raise ConfigError("%s: '%s' is not a number" % (where, text)) from None
     if math.isnan(v) or math.isinf(v):
         raise ConfigError("%s: value must be finite" % where)
     return v
@@ -245,7 +244,7 @@ def load_config_text(text, source="<loadout>"):
                 try:
                     sc = float(v.strip().rstrip("%")) / (100.0 if v.strip().endswith("%") else 1.0)
                 except ValueError:
-                    raise ConfigError("[settings]: panel_scale must be a number from 0.8 to 1.5, got '%s'" % v.strip())
+                    raise ConfigError("[settings]: panel_scale must be a number from 0.8 to 1.5, got '%s'" % v.strip()) from None
                 if not (0.8 - 1e-9 <= sc <= 1.5 + 1e-9):
                     raise ConfigError("[settings]: panel_scale must be from 0.8 to 1.5, got '%s'" % v.strip())
                 settings["panel_scale"] = math.floor(sc * 10 + 0.5) / 10.0     # half up, like the web builder and the game
@@ -983,7 +982,7 @@ def _describe(kind, r):
 def cmd_list(args):
     for pid, (name, _, _) in CATALOG.items():
         print("%-34s perk %d" % (name, pid))
-        for key, kind, ident, default, hint in effects_of(pid):
+        for key, _kind, _ident, default, hint in effects_of(pid):
             print("    %-26s default %-6s %s" % (key, fmt(default), hint))
     return 0
 
@@ -1042,8 +1041,8 @@ def main(argv=None):
     i.add_argument("-o", "--output", default="loadout.ini")
     i.add_argument("--force", action="store_true")
     i.set_defaults(func=cmd_init)
-    l = sub.add_parser("list", help="show every passive, effect key and default")
-    l.set_defaults(func=cmd_list)
+    ls = sub.add_parser("list", help="show every passive, effect key and default")
+    ls.set_defaults(func=cmd_list)
     b = sub.add_parser("build", help="preview / build a mod from a loadout.ini")
     b.add_argument("config")
     b.add_argument("--zip", help="write an installable mod .zip")

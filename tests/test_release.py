@@ -11,7 +11,6 @@ The release zip and the blank build it installs, run against the fake game.
    picked up; new saves go to the ArmoryForge folder.
 """
 import glob
-import io
 import json
 import os
 import sys

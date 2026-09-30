@@ -26,7 +26,7 @@
 -- ---- v5 (community edit, built on mostlycloudy's v3) ------------------------------
 --   * The loadout (which passives, which values) is resolved HERE at runtime, so the
 --     in-game panel (F7) can change it live. tools/picker.py and the web builder only
---     store the loadout; tests/test_lua_resolver.py checks this resolver against them.
+--     store the loadout; tests/test_ingame.py and tests/test_web_parity.js check them against it.
 --   * Every perk record is snapshotted when first found. Each apply rebuilds the
 --     arrays from the record's own inline rows, so unticking a passive restores the
 --     game's data exactly (the descriptor is put back byte for byte).
@@ -633,8 +633,11 @@ local function parse_loadout(text)
                 if k and section == 'settings' then
                     if k == 'name' then l.name = val
                     elseif k == 'retire' then l.retire = TRUE_WORDS[val:lower()] or false
-                    elseif k == 'hotkey' then l.hotkey = val:upper()
-                    elseif k == 'swap_hotkey' then l.swap_hotkey = val:upper()
+                    elseif k == 'hotkey' or k == 'swap_hotkey' then
+                        -- F1..F12 (quick-swap also OFF); anything else keeps the default key
+                        local key, fn = val:upper(), tonumber(val:upper():match('^F(%d%d?)$'))
+                        if (fn and fn >= 1 and fn <= 12) or (key == 'OFF' and k == 'swap_hotkey') then l[k] = key
+                        else log('loadout: ' .. k .. ' = ' .. val .. ' is not F1..F12; using the default') end
                     elseif k == 'panel_scale' then
                         local sc = tonumber((val:gsub('%%$', '')))
                         if sc and val:find('%%$') then sc = sc / 100 end

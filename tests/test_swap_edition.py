@@ -95,7 +95,7 @@ g.key(F7)
 g.tick(200)
 saved = open(os.path.join(forge_dir(appdata), "loadout-swap.ini"), encoding="utf-8").read()
 check("swap = Fortified" in saved and " = on" not in saved, "loadout-swap.ini holds only the swap: %r" %
-      [l for l in saved.splitlines() if l.startswith("swap")])
+      [line for line in saved.splitlines() if line.startswith("swap")])
 check(os.path.exists(os.path.join(forge_dir(appdata), "my-swaps.txt")), "presets are saved to my-swaps.txt")
 
 # a hand-edited save that tries to stack and boost

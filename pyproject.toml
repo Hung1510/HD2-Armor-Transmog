@@ -1,0 +1,12 @@
+# Lint settings for the Python tools and tests (ruff: `ruff check tools tests`).
+[tool.ruff]
+line-length = 130
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP"]
+ignore = [
+    "E501",   # long lines: tables of game data and test messages read better unwrapped
+    "UP031",  # %-formatting is kept to match the Lua side and Python 3.8 support
+    "UP032",
+]

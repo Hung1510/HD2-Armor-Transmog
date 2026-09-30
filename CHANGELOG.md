@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.4 (2026-09-30)
+Both editions (full and Passive Swap):
+- **Keys tab:** pick the panel key (F1–F12) and the quick-swap key (F1–F12 or off) in the panel, no file editing needed. The two can't clash, and choosing the quick-swap key as the panel key turns quick-swap off. Saved with your loadout; not an undo step. The tab also lists the fixed shortcuts and has size/position controls.
+- **A bad key can't lock you out:** a key in `loadout.ini` that isn't F1–F12 (e.g. `hotkey = G`) now falls back to F7 / F9, so the panel always opens.
+- **Search:** **Ctrl+F**, or click the field above a list, and type part of a passive's name or effect (`reload`, `grit`). Works in the passive list, *+ Armor* and the swap list. Esc clears it.
+- **Every armor tab stays reachable:** with several stacks on armors with long names, the tabs share the row and long names are cut (`CONCUSSIVE PADD..`). Before, the tabs after the second or third weren't drawn at all.
+- **Undo leaves your keys and panel size alone.** It only takes back loadout changes.
+
+Under the hood:
+- `docs/ARCHITECTURE.md`: how the engine, its safety rules, the panel, the two editions and the tests work, with diagrams.
+- `tests/run_all.py` runs every suite with one summary: 360+ checks. New `tests/test_panel_keys_search.py`, and `test_ingame.py` now checks that records another mod changed are left alone.
+- Lint (ruff) in CI. GitHub releases now carry notes taken from this changelog (`tools/release_notes.py`).
+
 ## 5.3.2 (2026-09-30)
 - **New: Passive Swap edition** (`Super-Earth-Armory-Forge-Passive-Swap.zip`, the Nexus Mods build). Each armor gets **one** other armor passive, copied from the game's own record for that passive, so the values are always the game's. No stacking and no value editing. The engine enforces this, so no save file, preset or code can get around it. Its saves are its own (`loadout-swap.ini`, `my-swaps.txt`), so the full edition's builds are left alone. Both editions share one mod ID, so the mod manager keeps one or the other.
 - The full edition is unchanged.

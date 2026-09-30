@@ -90,7 +90,8 @@ for _ in range(20):
     g.click("scroll:down")
     seen |= {int(k.split(":")[1]) for k in keys_like(g, "tick:")}
 check(len(seen) == len(ALL) - 1, "720p: the down arrow reaches every passive (%d/%d)" % (len(seen), len(ALL) - 1))
-g.key(PGUP); g.key(PGUP); g.key(PGUP)
+for _ in range(3):
+    g.key(PGUP)
 check({int(k.split(":")[1]) for k in keys_like(g, "tick:")} == first_view, "PageUp goes back to the top")
 g.key(PGDN)
 check({int(k.split(":")[1]) for k in keys_like(g, "tick:")} != first_view, "PageDown moves down a page")
