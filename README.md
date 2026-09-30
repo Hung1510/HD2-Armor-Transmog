@@ -6,7 +6,7 @@
 <a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FHung1510%2F996afff3a389ecbb7e77691ec94cab6a%2Fraw%2Fayakamods-downloads.json" alt="AyakaMods downloads"></a>
 <a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FHung1510%2F996afff3a389ecbb7e77691ec94cab6a%2Fraw%2Fayakamods-views.json" alt="AyakaMods views"></a>
 <a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FHung1510%2F996afff3a389ecbb7e77691ec94cab6a%2Fraw%2Fayakamods-rating.json" alt="rating"></a>
-<a href="https://www.nexusmods.com/helldivers2/mods/16763"><img src="https://img.shields.io/badge/Nexus%20Mods-16763-ffe710?labelColor=0b0c0d" alt="Nexus Mods"></a>
+<a href="https://www.nexusmods.com/helldivers2/mods/16789"><img src="https://img.shields.io/badge/Nexus%20Mods-Lite%20edition-ffe710?labelColor=0b0c0d" alt="Nexus Mods"></a>
 <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases"><img src="https://img.shields.io/github/downloads/Hung1510/Super-Earth-Armory-Forge/total?label=GitHub%20downloads&color=ffe710&labelColor=0b0c0d&cacheSeconds=3600" alt="GitHub downloads"></a>
 <a href="TESTING.md"><img src="https://img.shields.io/badge/armor%20passives-31%2F31-ffe710?labelColor=0b0c0d" alt="passives"></a>
 <a href="https://ko-fi.com/phamtrangiahung"><img src="https://img.shields.io/badge/Ko--fi-support%20the%20mod-ffe710?logo=ko-fi&logoColor=ffe710&labelColor=0b0c0d" alt="Support on Ko-fi"></a>
@@ -26,7 +26,7 @@ Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3
 
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
-- Download: [AyakaMods](https://ayakamods.com/mods/super-earth-armory-forge.4359/) · [GitHub Releases](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest) (full edition) · [Nexus Mods](https://www.nexusmods.com/helldivers2/mods/16763) (Passive Swap edition)
+- Download: [AyakaMods](https://ayakamods.com/mods/super-earth-armory-forge.4359/) · [GitHub Releases](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest) (full edition) · [Nexus Mods: Passive Swap - Armory Forge Lite](https://www.nexusmods.com/helldivers2/mods/16789) (Passive Swap edition)
 - **Two editions:** the **full edition** (`Super-Earth-Armory-Forge.zip`) stacks passives and edits values. The **Passive Swap edition** (`Super-Earth-Armory-Forge-Passive-Swap.zip`) gives each armor one other passive at the game's own values, with no stacking and no value editing. Install one or the other.
 - **Support:** the mod is free and always will be. If it's worth a coffee to you, **[tip on Ko-fi](https://ko-fi.com/phamtrangiahung)**. I'd really appreciate it, and it helps me keep updating the mod.
 
