@@ -6,6 +6,7 @@
 <a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-downloads.json" alt="AyakaMods downloads"></a>
 <a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-views.json" alt="AyakaMods views"></a>
 <a href="https://ayakamods.com/mods/super-earth-armory-forge.4359/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FHung1510%2FSuper-Earth-Armory-Forge%2Fbadges%2Fayakamods-rating.json" alt="rating"></a>
+<a href="https://www.nexusmods.com/helldivers2/mods/16763"><img src="https://img.shields.io/badge/Nexus%20Mods-16763-ffe710?labelColor=0b0c0d" alt="Nexus Mods"></a>
 <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases"><img src="https://img.shields.io/github/downloads/Hung1510/Super-Earth-Armory-Forge/total?label=GitHub%20downloads&color=ffe710&labelColor=0b0c0d&cacheSeconds=3600" alt="GitHub downloads"></a>
 <a href="TESTING.md"><img src="https://img.shields.io/badge/armor%20passives-31%2F31-ffe710?labelColor=0b0c0d" alt="passives"></a>
 </p>
@@ -24,7 +25,7 @@ Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3
 
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
-- AyakaMods page: https://ayakamods.com/mods/super-earth-armory-forge.4359/
+- Download: [Nexus Mods](https://www.nexusmods.com/helldivers2/mods/16763) · [AyakaMods](https://ayakamods.com/mods/super-earth-armory-forge.4359/) · [GitHub Releases](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest)
 
 ## Ways to use it
 
