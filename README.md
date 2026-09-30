@@ -131,7 +131,7 @@ tests/test_release.py      release zip, blank install, saves from before the ren
 tests/test_panel_layout.py no overlapping or clipped text in any panel view, 720p to 4K
 tests/test_panel_scale.py  panel size setting, Ctrl +/-, whole-pixel drawing
 tests/test_web_parity.js   web builder output must be byte-identical to Python
-tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, every 6 h)
+tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, hourly, retries on bot checks)
 TESTING.md                 in-game verification status per effect
 ```
 

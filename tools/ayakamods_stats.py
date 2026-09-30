@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 
 # tried in order: the page moved when the mod was renamed; the id alone also redirects
@@ -20,6 +21,9 @@ PAGES = ["https://ayakamods.com/mods/super-earth-armory-forge.4359/",
          "https://ayakamods.com/mods/passive-picker-v4.4359/",
          "https://ayakamods.com/mods/4359/"]
 PAGE = PAGES[0]
+# AyakaMods sometimes answers CI runners with a 403 / bot-check page. If no
+# address works, wait and go round again before keeping the old badges.
+RETRY_WAITS = (20, 60, 120)
 COLOR = "ffe710"
 
 
@@ -115,14 +119,21 @@ def main():
     out_dir = sys.argv[1] if len(sys.argv) > 1 else "."
     urls = [sys.argv[2]] if len(sys.argv) > 2 else PAGES
     s = {}
-    for url in urls:
-        try:
-            page = open(url[7:], encoding="utf-8").read() if url.startswith("file://") else fetch(url)
-        except Exception as e:                      # blocked, moved, down: try the next address
-            print("%s: %s" % (url, e), file=sys.stderr)
-            continue
-        s = stats(page)
-        print("%s: %s" % (url, json.dumps(s)))
+    local = all(u.startswith("file://") for u in urls)
+    for wait in (0,) + (() if local else RETRY_WAITS):
+        if wait:
+            print("no address worked; retrying in %ds" % wait, file=sys.stderr)
+            time.sleep(wait)
+        for url in urls:
+            try:
+                page = open(url[7:], encoding="utf-8").read() if url.startswith("file://") else fetch(url)
+            except Exception as e:                  # blocked, moved, down: try the next address
+                print("%s: %s" % (url, e), file=sys.stderr)
+                continue
+            s = stats(page)
+            print("%s: %s" % (url, json.dumps(s)))
+            if s:
+                break
         if s:
             break
     if not s:
