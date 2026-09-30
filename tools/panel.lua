@@ -368,11 +368,12 @@ end
 -- ---------------------------------------------------------------- presets
 -- Built-in presets come with the build (MOD.presets); the player's own are kept in
 -- ArmoryForge\my-presets.txt as blocks of loadout text.
-function PP.user_path() return forge_file('my-presets.txt') end
+function PP.user_file() return MOD.swap_only and 'my-swaps.txt' or 'my-presets.txt' end
+function PP.user_path() return forge_file(PP.user_file()) end
 
 function PP.load_user()
     PP.user = {}
-    local text = read_saved('my-presets.txt')
+    local text = read_saved(PP.user_file())
     if not text then return end
     local name, lines = nil, nil
     for line in (text .. '\n'):gmatch('([^\n]*)\n') do
@@ -501,7 +502,8 @@ function PP.summary(l)
         for _, c in ipairs(CAT_LIST) do if p.enabled[c.id] and c.id ~= p.perk then names[#names + 1] = c.name end end
         local tweaks = 0
         for _ in pairs(p.tweaks) do tweaks = tweaks + 1 end
-        out[#out + 1] = { armor = CAT[p.perk].name, names = names, tweaks = tweaks, policy = p.conflicts }
+        out[#out + 1] = { armor = CAT[p.perk].name, names = names, tweaks = tweaks, policy = p.conflicts,
+                          swap = MOD.swap_only and CAT[p.swap] and p.swap ~= p.perk and CAT[p.swap].name or nil }
     end
     return out
 end
@@ -763,7 +765,8 @@ local function draw(width, height)
     rect(38, 59, 18, 4, C.INK, 953); rect(42, 63, 10, 4, C.INK, 953)
     local tw = text('ARMORY', 86, 50, 34, C.TEXT)
     text('FORGE', 86 + tw + 12, 50, 34, C.YELLOW)
-    text('Tick passives, change values: it all applies at once.', 88, 84, 12, C.MUTED, 420)
+    text(MOD.swap_only and 'Passive Swap: give any armor another passive, at the game\'s values.'
+         or 'Tick passives, change values: it all applies at once.', 88, 84, 12, C.MUTED, 420)
 
     local by0 = H - 40                           -- key-prompt bar
     local function prompts()
@@ -806,7 +809,7 @@ local function draw(width, height)
     tab('presets', 'Presets', x, ui.presets, C.YELLOW)
     if p and not ui.adding and not ui.presets then
         local sure = ui.confirm and ui.confirm.kind == 'remove'
-        local cap = sure and 'CLICK AGAIN TO REMOVE' or 'REMOVE THIS STACK'
+        local cap = sure and 'CLICK AGAIN TO REMOVE' or (MOD.swap_only and 'REMOVE THIS ARMOR' or 'REMOVE THIS STACK')
         local rw = measure(cap, 11)
         text(cap, W - 22, 126, 11, (sure or ui.hover == 'remove') and C.BAD or C.DIM, nil, 'right')
         region('remove', W - 22 - rw - 6, 114, rw + 12, 28)
@@ -870,14 +873,14 @@ local function draw(width, height)
         local list = PP.entries()
         head(IX, TOP + 14, 'Loadouts', 'Presets', IW)
         local y = TOP + 64
-        label('Standard issue', IX, y); y = y + 18
+        if not MOD.swap_only then label('Standard issue', IX, y); y = y + 18 end
         for _, e in ipairs(list) do
             if e.kind ~= 'user' then
                 list_row('pre:' .. e.kind .. ':' .. e.i, y, e.name, ui.psel and ui.psel.kind == e.kind and ui.psel.i == e.i)
                 y = y + RH
             end
         end
-        y = y + 12
+        if not MOD.swap_only then y = y + 12 end
         label('Your loadouts', IX, y)
         text(#PP.user .. ' SAVED', IX + IW, y, 11, #PP.user > 0 and C.YELLOW or C.DIM, nil, 'right')
         y = y + 18
@@ -896,15 +899,15 @@ local function draw(width, height)
             y = y + RH
         end
         bar.w = 0
-        if #PP.user == 0 then text('None yet. Save the current stack.', IX + 4, y + 4, 13, C.DIM, IW - 8); y = y + 26 end
-        button('psave', '+ Save current stack', IX, math.min(y + 10, BOT - 44), IW, 32, true, true)
+        if #PP.user == 0 then text(MOD.swap_only and 'None yet. Save your current swaps.' or 'None yet. Save the current stack.', IX + 4, y + 4, 13, C.DIM, IW - 8); y = y + 26 end
+        button('psave', MOD.swap_only and '+ Save current swaps' or '+ Save current stack', IX, math.min(y + 10, BOT - 44), IW, 32, true, true)
 
         local entry = nil
         for _, e in ipairs(list) do if ui.psel and e.kind == ui.psel.kind and e.i == ui.psel.i then entry = e end end
         if not entry then
             head(RX, TOP + 14, 'Loadouts', 'Choose a preset', RIW)
             text('Pick one on the left to see what it stacks, then load it.', RX, TOP + 70, 14, C.MUTED, RIW)
-            text('Save your own with "+ Save current stack".', RX, TOP + 92, 14, C.MUTED, RIW)
+            text(MOD.swap_only and 'Save your own with "+ Save current swaps".' or 'Save your own with "+ Save current stack".', RX, TOP + 92, 14, C.MUTED, RIW)
             if swap_key() ~= 'OFF' then
                 text(swap_key() .. ' in game cycles your loadouts (or the standard ones).', RX, TOP + 114, 14, C.MUTED, RIW)
             end
@@ -916,8 +919,9 @@ local function draw(width, height)
             for _, sm in ipairs(PP.summary(l)) do
                 rect(RX, y2, RIW, 1, C.LINE, 951)
                 text(up(sm.armor .. ' armor'), RX, y2 + 10, 14, C.YELLOW, RIW)
-                text(#sm.names .. ' passive(s), ' .. sm.tweaks .. ' value(s) changed, ' ..
-                     (sm.policy == 'strongest' and 'strongest only' or 'stack all'), RX, y2 + 30, 13, C.MUTED, RIW)
+                text(MOD.swap_only and (sm.swap and ('has ' .. sm.swap) or 'its own passive') or
+                     (#sm.names .. ' passive(s), ' .. sm.tweaks .. ' value(s) changed, ' ..
+                      (sm.policy == 'strongest' and 'strongest only' or 'stack all')), RX, y2 + 30, 13, C.MUTED, RIW)
                 y2 = y2 + 52
                 local line = ''
                 for i, nm in ipairs(sm.names) do
@@ -941,12 +945,13 @@ local function draw(width, height)
                 button('pdel', sure == 'pdel' and 'Click again' or 'Delete', bx, by, nil, 34, true, false, sure == 'pdel' and C.BAD or nil)
             end
             if ui.naming then text('Type a name, Enter to keep it, Esc to cancel.', RX, by + 46, 13, C.YELLOW, RIW)
-            else text('Loading replaces your current stacks (Undo brings them back).', RX, by + 46, 12, C.DIM, RIW) end
+            else text(MOD.swap_only and 'Loading replaces your current swaps (Undo brings them back).'
+                      or 'Loading replaces your current stacks (Undo brings them back).', RX, by + 46, 12, C.DIM, RIW) end
         end
 
     -- ============================================================ + Armor
     elseif ui.adding then
-        head(IX, TOP + 14, 'New stack', 'Choose armor passive', IW)
+        head(IX, TOP + 14, MOD.swap_only and 'New swap' or 'New stack', 'Choose armor passive', IW)
         local used = {}
         for _, prof in ipairs(LOADOUT.profiles) do used[prof.perk] = true end
         local y = TOP + 64
@@ -960,21 +965,90 @@ local function draw(width, height)
         end
         bar.w = 0
         button('addcancel', 'Cancel', IX, BOT - 44, nil, 32, true)
+        if MOD.swap_only then
+            head(RX, TOP + 14, 'New swap', 'Pick your armor', RIW)
+            text('Pick the passive of the armor you wear on the left,', RX, TOP + 70, 14, C.MUTED, RIW)
+            text('then choose which passive it should have instead.', RX, TOP + 92, 14, C.MUTED, RIW)
+            text('Example: Med-Kit armor with Siege-Ready.', RX, TOP + 122, 13, C.DIM, RIW)
+        else
         head(RX, TOP + 14, 'New stack', 'A second stack', RIW)
         text('Each armor passive can carry its own stack. Pick one on the left,', RX, TOP + 70, 14, C.MUTED, RIW)
         text('then wear any armor that has that passive to get the stack.', RX, TOP + 92, 14, C.MUTED, RIW)
         text('Example: Med-Kit armor for a tank build, Siege-Ready armor for a gunner build.', RX, TOP + 122, 13, C.DIM, RIW)
+        end
 
     elseif not p then
         head(IX, TOP + 14, 'No armor forged yet', 'Empty', IW)
-        text('Nothing is stacked.', IX, TOP + 70, 14, C.MUTED, IW)
+        text(MOD.swap_only and 'Nothing is swapped.' or 'Nothing is stacked.', IX, TOP + 70, 14, C.MUTED, IW)
         head(RX, TOP + 14, 'How it works', 'Forge your armor', RIW)
         text('Pick the armor passive you wear (for example Med-Kit),', RX, TOP + 72, 15, C.TEXT, RIW)
+        if MOD.swap_only then
+            text('then choose which of the game\'s passives it should', RX, TOP + 94, 15, C.TEXT, RIW)
+            text('have instead. The values are the game\'s own.', RX, TOP + 116, 15, C.TEXT, RIW)
+        else
         text('then tick any of the 31 passives to stack onto it and', RX, TOP + 94, 15, C.TEXT, RIW)
         text('change their values. Everything applies at once.', RX, TOP + 116, 15, C.TEXT, RIW)
+        end
         local bx = RX
         bx = bx + button('add', '+ Armor', bx, TOP + 152, nil, 36, true, true) + 8
         button('presets', 'Presets', bx, TOP + 152, nil, 36, true)
+
+    -- ============================================================ Passive Swap edition
+    -- One passive per armor, chosen from the game's own; its values are the game's.
+    elseif MOD.swap_only then
+        local cur = (p.swap and p.swap ~= p.perk and CAT[p.swap]) and p.swap or nil
+        head(IX, TOP + 14, 'Armor ' .. ui.tab .. ' / ' .. #LOADOUT.profiles, 'Swap passive', IW)
+        local y = TOP + 60
+        local opts = { { id = 0, name = 'Original: ' .. CAT[p.perk].name } }
+        for _, c in ipairs(CAT_LIST) do if c.id ~= p.perk then opts[#opts + 1] = { id = c.id, name = c.name } end end
+        local first, fit = scroller('swap', y, BOT - 6, #opts)
+        local rw = LW - 2 - bar.w
+        for k = first + 1, math.min(#opts, first + fit) do
+            local o = opts[k]
+            local on = (o.id == 0 and not cur) or o.id == cur
+            local key = 'swap:' .. o.id
+            if on then rect(LX + 1, y, rw, RH - 1, C.ROW_HI, 951); rect(LX + 1, y, 3, RH - 1, C.YELLOW, 952)
+            elseif ui.hover == key then rect(LX + 1, y, rw, RH - 1, C.ROW, 951) end
+            border(IX + 2, y + 3, 16, 16, (on or ui.hover == key) and C.YELLOW or C.MUTED, 952)
+            if on then rect(IX + 6, y + 7, 8, 8, C.YELLOW, 953) end
+            text(up(o.name), IX + 28, y + 5, 13, on and C.YELLOW or C.MUTED, IW - 34 - bar.w)
+            region(key, LX + 1, y, rw, RH - 1)
+            y = y + RH
+        end
+        bar.w = 0
+        -- right: the passive this armor has now, at the game's values
+        local shown = CAT[cur or p.perk]
+        head(RX, TOP + 14, cur and 'Swapped in' or 'Original passive', shown.name, RIW)
+        text(cur and ('Every ' .. CAT[p.perk].name .. ' armor has ' .. shown.name .. ' instead of its own passive.')
+             or 'This armor keeps its own passive. Pick another on the left to swap it.', RX, TOP + 52, 13, C.MUTED, RIW)
+        local y2 = TOP + 82
+        for _, e in ipairs(shown.effects) do
+            if y2 > BOT - 190 then break end
+            rect(RX, y2, RIW, 48, C.ROW, 950)
+            rect(RX, y2, 3, 48, C.LINE2, 951)
+            text(label_of(e), RX + 14, y2 + 8, 15, C.TEXT, RIW - 170)
+            text(PP.WHAT[PP.unit(e)], RX + 14, y2 + 28, 12, C.DIM, RIW - 170)
+            text(PP.text(e, e.def), RX + RIW - 16, y2 + 15, 16, C.TEXT, 140, 'right')
+            y2 = y2 + 54
+        end
+        local by = BOT - 130
+        rect(RX, by - 12, RIW, 1, C.LINE, 951)
+        label('Game values', RX, by, nil, RIW)
+        text('The passive is copied from the game\'s own data. One passive per armor, no stacking.', RX, by + 18, 13, C.MUTED, RIW)
+        if not sites_by_perk[p.perk] then
+            text('This armor passive was not found in the game\'s data yet.', RX, by + 42, 13, C.BAD, RIW)
+        elseif sites_by_perk[p.perk][1].foreign then
+            text('Another mod already changed this passive\'s data; Armory Forge leaves it alone.', RX, by + 42, 13, C.BAD, RIW)
+        elseif cur and not sites_by_perk[cur] then
+            text('Waiting for ' .. CAT[cur].name .. ' in the game\'s data...', RX, by + 42, 13, C.YELLOW, RIW)
+        else
+            rect(RX, by + 45, 7, 7, C.GOOD, 952)
+            text(cur and ('Active: ' .. CAT[p.perk].name .. ' armor has ' .. CAT[cur].name) or 'Active: the game\'s own passive',
+                 RX + 14, by + 42, 13, C.TEXT, RIW - 14)
+        end
+        local ay, each = BOT - 50, (RIW - 8) / 2
+        local ax = RX + button('undo', #ui.history > 0 and ('Undo (' .. #ui.history .. ')') or 'Undo', RX, ay, each, 34, #ui.history > 0) + 8
+        button('clear', 'Back to original', ax, ay, each, 34, cur ~= nil)
 
     -- ============================================================ an armor stack
     else
@@ -1166,7 +1240,7 @@ local function click(key)
     elseif kind == 'addpick' and n then
         LOADOUT.profiles[#LOADOUT.profiles + 1] = { perk = n, conflicts = 'stack', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
         ui.tab, ui.sel, ui.adding = #LOADOUT.profiles, nil, false
-        changed(n, 'Added a stack for ' .. CAT[n].name .. ' armor')
+        changed(n, (MOD.swap_only and 'Added ' or 'Added a stack for ') .. CAT[n].name .. ' armor')
     elseif kind == 'remove' and p then
         if confirm('remove') then
             table.remove(LOADOUT.profiles, ui.tab)
@@ -1176,6 +1250,14 @@ local function click(key)
     elseif kind == 'sel' and n then ui.sel = n; ui.value = nil
     elseif kind == 'tick' and n and p then toggle(p, n)
     elseif kind == 'policy' and p then p.conflicts = arg; changed(p.perk)
+    elseif kind == 'swap' and n and p and MOD.swap_only then
+        local pick = (n ~= 0 and n ~= p.perk and CAT[n]) and n or nil
+        if pick ~= p.swap then
+            p.swap = pick
+            changed(p.perk, pick and (CAT[p.perk].name .. ' armor now has ' .. CAT[pick].name) or (CAT[p.perk].name .. ' armor has its own passive again'))
+        end
+    elseif kind == 'clear' and p and MOD.swap_only then
+        if p.swap then p.swap = nil; changed(p.perk, CAT[p.perk].name .. ' armor has its own passive again') end
     elseif kind == 'clear' and p then
         if confirm('clear') then p.enabled, p.tweaks = {}, {}; changed(p.perk, 'Turned everything off on this armor') end
     elseif kind == 'zoom' then PP.zoom(arg == '+' and 1 or -1)
@@ -1184,8 +1266,8 @@ local function click(key)
         PP.scroll((arg == 'up' and -1) or (arg == 'down' and 1) or (arg == 'pgup' and -page) or page)
     elseif kind == 'drag' then return             -- a click on the handle without moving
     elseif kind == 'undo' then PP.undo()
-    elseif kind == 'copy' then PP.copy_code()
-    elseif kind == 'paste' then PP.paste_code()
+    elseif kind == 'copy' and not MOD.swap_only then PP.copy_code()
+    elseif kind == 'paste' and not MOD.swap_only then PP.paste_code()
     -- presets
     elseif kind == 'pre' then
         local k, i = arg:match('^(%a+):(%d+)$')

@@ -135,6 +135,36 @@ for measure_mode, (rw, rh), scale in CONFIGS:
     for name, probs in views:
         check(not probs, "%s / %s%s" % (mode, name, ("\n        " + "\n        ".join(probs)) if probs else ""))
 
+# Passive Swap edition (the Nexus build): its own views
+swap_lua = tempfile.mktemp(suffix=".lua")
+_s, _ = picker.load_config_text("[settings]\nname = x\n[profile: Med-Kit]\n")
+with open(swap_lua, "w", encoding="utf-8") as f:
+    f.write(picker.compile_loadout(_s, [], blank=True, swap_only=True))
+medkit = next(k for k, v in picker.CATALOG.items() if v[0] == "Med-Kit")
+for res in ((1920, 1080), (1280, 720)):
+    mode = "swap edition %dx%d" % res
+    g = FakeGame(swap_lua, appdata=tempfile.mkdtemp())
+    g.set_resolution(*res)
+    g.tick(420)
+    g.key(F7)
+    g.tick(120)
+    views = [("empty", layout_problems(g))]
+    g.click("add")
+    views.append(("+ Armor", layout_problems(g)))
+    g.click("addpick:%d" % medkit)
+    views.append(("original", layout_problems(g)))
+    for pid in (longest, most):
+        if "swap:%d" % pid not in g.regions():
+            g.click("scroll:down") if "scroll:down" in g.regions() else None
+        if "swap:%d" % pid in g.regions():
+            g.click("swap:%d" % pid)
+            views.append(("swapped to %d" % pid, layout_problems(g)))
+    g.click("presets")
+    g.click("psave")
+    views.append(("presets, naming", layout_problems(g)))
+    for name, probs in views:
+        check(not probs, "%s / %s%s" % (mode, name, ("\n        " + "\n        ".join(probs)) if probs else ""))
+
 if failed:
     print("\n%d FAILED" % len(failed))
     sys.exit(1)

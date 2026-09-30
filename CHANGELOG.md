@@ -1,5 +1,10 @@
 # Changelog
 
+## 5.3.2 (2026-09-30)
+- **New: Passive Swap edition** (`Super-Earth-Armory-Forge-Passive-Swap.zip`, the Nexus Mods build). Each armor gets **one** other armor passive, copied from the game's own record for that passive, so the values are always the game's. No stacking and no value editing. The engine enforces this, so no save file, preset or code can get around it. Its saves are its own (`loadout-swap.ini`, `my-swaps.txt`), so the full edition's builds are left alone. Both editions share one mod ID, so the mod manager keeps one or the other.
+- The full edition is unchanged.
+- New `tests/test_swap_edition.py`; the layout check covers the swap views.
+
 ## 5.3.1 (2026-09-30)
 - Same mod as 5.3. The release zip no longer includes developer scripts (a PowerShell badge updater had slipped into `tools/`), which made Nexus quarantine the 5.3 file. The zip now holds only the mod, its readme files, presets and the plain-text sources of the mod and builder, and a test checks that.
 

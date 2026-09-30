@@ -421,7 +421,7 @@ end
 --              tweaks = { ['pid.key'] = value }, raw = { {id,type,value} }, raw_stats = { {stat,u1,u2} } }
 local function copy_profile(p)
     local out = { perk = p.perk, conflicts = p.conflicts or 'stack', enabled = {}, tweaks = {},
-                  raw = {}, raw_stats = {} }
+                  raw = {}, raw_stats = {}, swap = p.swap }
     for k, v in pairs(p.enabled or {}) do out.enabled[k] = v end
     for k, v in pairs(p.tweaks or {}) do out.tweaks[k] = v end
     for _, r in ipairs(p.raw or {}) do out.raw[#out.raw + 1] = { r[1], r[2], r[3] } end
@@ -495,6 +495,15 @@ end
 
 -- profile -> the rows to append and the base-perk values to replace
 local function resolve_profile(p)
+    -- Passive Swap edition: the armor gets ONE other passive, exactly as the game ships
+    -- it (copied from that passive's own record). Nothing else in the loadout counts, so
+    -- no ini, preset or share code can stack passives or change values.
+    if MOD.swap_only then
+        local y = p.swap
+        if y == p.perk or not CAT[y] then y = nil end
+        return { swap = y, rows = {}, stats = {}, overrides = {}, stat_overrides = {},
+                 enabled = y and { y } or {}, conflicts = 0 }
+    end
     local rows, stats = {}, {}
     local function value_of(pid, e)
         local v = p.tweaks[pid .. '.' .. e.key]
@@ -565,6 +574,9 @@ local function serialize(l, base_key)
         local c = CAT[p.perk]
         L[#L + 1] = ''
         L[#L + 1] = '[profile: ' .. c.name .. ']'
+        if MOD.swap_only then
+            L[#L + 1] = 'swap = ' .. (CAT[p.swap] and p.swap ~= p.perk and CAT[p.swap].name or 'original')
+        else
         L[#L + 1] = 'conflicts = ' .. (p.conflicts or 'stack')
         for _, e in ipairs(CAT_LIST) do
             if e.id ~= p.perk then
@@ -587,6 +599,7 @@ local function serialize(l, base_key)
         raw = {}
         for _, r in ipairs(p.raw_stats or {}) do raw[#raw + 1] = string.format('%d %s %s', r[1], fmt_num(r[2]), fmt_num(r[3])) end
         if #raw > 0 then L[#L + 1] = 'raw_stats = ' .. table.concat(raw, ', ') end
+        end
     end
     return table.concat(L, '\r\n') .. '\r\n'
 end
@@ -629,7 +642,10 @@ local function parse_loadout(text)
                     elseif k == 'base' then l.base = val end
                 elseif k and prof then
                     local lk = k:lower()
-                    if lk == 'conflicts' then
+                    if lk == 'swap' then
+                        local pid = find_perk(val)
+                        prof.swap = (pid and pid ~= prof.perk) and pid or nil
+                    elseif lk == 'conflicts' then
                         prof.conflicts = (val:lower() == 'strongest') and 'strongest' or 'stack'
                     elseif lk == 'raw' or lk == 'raw_stats' then
                         for chunk in val:gmatch('[^,]+') do
@@ -673,7 +689,7 @@ local function fingerprint(l)
     return string.format('%08x', h)
 end
 
-local function save_path() return forge_file('loadout.ini') end
+local function save_path() return forge_file(MOD.swap_only and 'loadout-swap.ini' or 'loadout.ini') end
 
 local save_at = nil
 local function save_now()
@@ -689,7 +705,7 @@ local function load_loadout()
     local def = default_loadout()
     DEFAULT_KEY = fingerprint(def)
     local path = save_path()
-    local text = read_saved('loadout.ini')
+    local text = read_saved(MOD.swap_only and 'loadout-swap.ini' or 'loadout.ini')
     if text then
         local ok, saved = pcall(parse_loadout, text)
         -- a blank install (the release zip) always keeps what you built in the panel
@@ -747,6 +763,18 @@ end
 -- the arrays a site should hold for a resolved profile (nil profile = the game's own)
 local function desired(site, res, inline_pm, inline_sm)
     if not res then return inline_pm, inline_sm end
+    if MOD.swap_only then
+        -- the swapped-in passive's own rows, read fresh from its record; the game's own
+        -- rows until that record has been found
+        for _, src in ipairs(res.swap and sites_by_perk[res.swap] or {}) do
+            if not src.foreign then
+                local pm = src.pm_count0 > 0 and api.read(src.record + REC_HEAD, src.pm_count0 * ROW_BYTES) or ''
+                local sm = src.sm_count0 > 0 and api.read(src.sm_inline, src.sm_count0 * STAT_BYTES) or ''
+                if pm and sm then return pm, sm end
+            end
+        end
+        return inline_pm, inline_sm
+    end
     local omap, smap = {}, {}
     for _, r in ipairs(res.overrides) do omap[u32_bytes(r[1]) .. u32_bytes(r[2])] = f32(r[3]) end
     for _, r in ipairs(res.stat_overrides) do smap[u32_bytes(r[1])] = f32(r[2]) .. f32(r[3]) end
@@ -879,6 +907,11 @@ local function capture(record, block, blob)
     local list = sites_by_perk[perk]
     list[#list + 1] = site
     if not site.foreign then apply_perk(perk) end
+    if MOD.swap_only and LOADOUT then      -- armors that were waiting for this passive
+        for _, p in ipairs(LOADOUT.profiles) do
+            if p.swap == perk and p.perk ~= perk then apply_perk(p.perk) end
+        end
+    end
 end
 
 -- ---------------------------------------------------------------- passive dump

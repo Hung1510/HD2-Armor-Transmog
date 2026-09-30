@@ -28,9 +28,13 @@ jobs:
           python tests/test_panel_layout.py
           python tests/test_panel_scale.py
           python tests/test_panel_scroll_drag.py
+          python tests/test_swap_edition.py
           node tests/test_web_parity.js
       - run: python tools/picker.py release --zip dist/Super-Earth-Armory-Forge.zip
+      - run: python tools/picker.py release --edition swap --zip dist/Super-Earth-Armory-Forge-Passive-Swap.zip
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/Super-Earth-Armory-Forge.zip
+          files: |
+            dist/Super-Earth-Armory-Forge.zip
+            dist/Super-Earth-Armory-Forge-Passive-Swap.zip
           generate_release_notes: true
