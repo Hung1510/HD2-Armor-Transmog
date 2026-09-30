@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.3 (2026-09-30)
+- **Every passive can be picked again:** the *+ Armor* list stopped at Kinetic Displacement Mitigation on smaller screens, so Blunt-Force Mitigation and True Grit could not be chosen as a base armor. Long lists (+ Armor, a stack's passives, your presets) now scroll: mouse wheel over the list, the bar on its right (arrows, click the track to page), or PageUp / PageDown. The bar only appears when a list doesn't fit.
+- **Drag the panel:** grab the top strip (it says *Drag to move*) and put the panel anywhere, so it doesn't cover what you want to see when it's zoomed in. It always stays on screen, the spot is remembered (`ArmoryForge\panel-position.txt`, as a share of the screen so it survives a resolution change), and **Ctrl 0** puts it back.
+- Support link: the mod stays free; there's now a [Ko-fi](https://ko-fi.com/phamtrangiahung) link in the README and the web builder if you'd like to tip.
+- New `tests/test_panel_scroll_drag.py`.
+
 ## 5.2 (2026-09-30)
 - **Sharper text on 1440p / 4K:** the F7 panel is drawn at your screen's own resolution with every edge, text position and font size on a whole pixel. Fractional positions were what made text soft on bigger screens.
 - **Panel size:** `[-] 100% [+]` at the top of the panel, or **Ctrl +** / **Ctrl -** (**Ctrl 0** resets), from 80% to 150%. It is saved, kept when you load a preset, and not an undo step. Also `panel_scale = 0.8 .. 1.5` in `[settings]` and a *Panel size* dropdown in the web builder. The panel always fits the screen.

@@ -27,6 +27,7 @@ jobs:
           python tests/test_release.py
           python tests/test_panel_layout.py
           python tests/test_panel_scale.py
+          python tests/test_panel_scroll_drag.py
           node tests/test_web_parity.js
       - run: python tools/picker.py release --zip dist/Super-Earth-Armory-Forge.zip
       - uses: softprops/action-gh-release@v2

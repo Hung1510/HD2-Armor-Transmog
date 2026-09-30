@@ -121,7 +121,7 @@ end
 local ui = { open = false, tab = 1, sel = nil, hover = nil, gui = nil, world = nil, signature = nil,
              regions = {}, version = 0, errors = 0, value = nil, adding = false, message = nil,
              confirm = nil, presets = false, psel = nil, naming = nil, history = {}, last_text = nil,
-             swap_at = 0 }
+             swap_at = 0, scroll = {}, scrolling = nil, pos = nil, drag = nil }
 local W, H = 1000, 990
 local font = nil
 local held, mouse_was_down, armed = {}, nil, nil
@@ -444,11 +444,42 @@ function PP.zoom(step)
     if not LOADOUT then return end
     local v = step == 0 and 1 or math.floor((ui_scale() + step * 0.1) * 10 + 0.5) / 10
     v = math.max(0.8, math.min(1.5, v))
+    if step == 0 and ui.pos then                 -- Ctrl 0 also puts the panel back in place
+        ui.pos = nil
+        PP.save_pos()
+        ui.version = ui.version + 1
+        if v == LOADOUT.panel_scale then say('Panel back in place', 1.5); return end
+    end
     if v == LOADOUT.panel_scale then return end
     LOADOUT.panel_scale = v
     ui.last_text = snapshot()          -- a size change is not an undo step
     loadout_changed({})
     say(string.format('Panel size %d%%', v * 100 + 0.5), 1.5)
+end
+
+-- scroll the list that is too long for its box (wheel, PageUp/PageDown, its bar)
+function PP.scroll(rows)
+    local sc = ui.scrolling
+    if not sc then return end
+    local v = math.max(0, math.min(sc.max, (ui.scroll[sc.id] or 0) + rows))
+    if v ~= ui.scroll[sc.id] then ui.scroll[sc.id] = v; ui.version = ui.version + 1 end
+end
+
+-- where the panel sits: dragged by its top strip, kept in ArmoryForge\panel-position.txt
+-- as a fraction of the screen (so it survives a resolution change)
+function PP.load_pos()
+    local t = read_file(forge_file('panel-position.txt'))
+    local x, y = tostring(t or ''):match('x%s*=%s*([%d%.]+)'), tostring(t or ''):match('y%s*=%s*([%d%.]+)')
+    ui.pos = (tonumber(x) and tonumber(y)) and { fx = tonumber(x), fy = tonumber(y) } or nil
+end
+function PP.save_pos()
+    local path = forge_file('panel-position.txt')
+    if not path then return end
+    if ui.pos then
+        write_file(path, string.format('x = %.4f\ny = %.4f\n', ui.pos.fx, ui.pos.fy))
+    else
+        write_file(path, '')
+    end
 end
 
 function PP.swap()
@@ -563,6 +594,12 @@ local function draw(width, height)
     local s = math.min(height / 1080 * 0.8 * ui_scale(), height * 0.96 / H, (width - 60) / W)
     local function px(v) return math.floor(v + 0.5) end
     local ox, oy = px(30 * s), px((height - H * s) / 2)     -- left edge: SHODAN Stat Editor uses the right
+    if ui.pos then                                           -- dragged somewhere else; always on screen
+        ox = px(math.max(0, math.min(width - W * s, ui.pos.fx * width)))
+        oy = px(math.max(0, math.min(height - H * s, ui.pos.fy * height)))
+    end
+    ui.origin = { x = ox, y = oy, w = width, h = height }
+    ui.scrolling = nil
     local gui = ui.gui
     local regions = {}
     local ink_font, ink_material = font.font, font.material
@@ -691,6 +728,10 @@ local function draw(width, height)
     border(0, 0, W, H, C.LINE, 955)
     rect(0, 0, W, 3, C.YELLOW, 952)
     region('panel', 0, 0, W, H, false)
+    -- the top strip is the handle: drag it to move the panel (Ctrl 0 puts it back)
+    local grab = ui.hover == 'drag' or ui.drag ~= nil
+    if grab then rect(1, 3, W - 2, 29, C.ROW, 951) end
+    region('drag', 0, 0, W, 32)
     local mx = text('MINISTRY OF DEFENSE', 22, 12, 11, C.MUTED)
     text('SUPER EARTH ARMORY FORGE', 22 + mx + 12, 12, 11, C.TEXT)
     -- size control: [-] 100% [+]   (Ctrl +/- does the same)
@@ -709,7 +750,11 @@ local function draw(width, height)
             zx = zx - 6
         end
     end
-    text('SIZE', zx - 8, 12, 11, C.DIM, nil, 'right')
+    local sx = zx - 8 - text('SIZE', zx - 8, 12, 11, C.DIM, nil, 'right')
+    -- grip: two rows of dots, and "drag to move" while the mouse is on the strip
+    local gx = sx - 30
+    for k = 0, 3 do for j = 0, 1 do rect(gx + k * 5, 12 + j * 5, 2, 2, grab and C.YELLOW or C.DIM, 952) end end
+    if grab then text('DRAG TO MOVE', gx - 10, 12, 11, C.YELLOW, nil, 'right') end
     rect(0, 32, W, 1, C.LINE, 951)
     -- emblem box: the shield from the mod icon
     border(22, 44, 50, 50, C.TEXT, 952)
@@ -782,11 +827,42 @@ local function draw(width, height)
         label(lab, x, y)
         text(up(title), x, y + 16, 21, C.TEXT, limit)
     end
+    local bar = { w = 0 }            -- width the scroll bar takes from the list's rows
     local function list_row(key, y, name, chosen, name_c)
-        if chosen then rect(LX + 1, y, LW - 2, RH - 1, C.ROW_HI, 951); rect(LX + 1, y, 3, RH - 1, C.YELLOW, 952)
-        elseif ui.hover == key then rect(LX + 1, y, LW - 2, RH - 1, C.ROW, 951) end
-        text(name, IX + 4, y + 5, 14, name_c or (chosen and C.TEXT or C.MUTED), IW - 12)
-        region(key, LX + 1, y, LW - 2, RH - 1)
+        if chosen then rect(LX + 1, y, LW - 2 - bar.w, RH - 1, C.ROW_HI, 951); rect(LX + 1, y, 3, RH - 1, C.YELLOW, 952)
+        elseif ui.hover == key then rect(LX + 1, y, LW - 2 - bar.w, RH - 1, C.ROW, 951) end
+        text(name, IX + 4, y + 5, 14, name_c or (chosen and C.TEXT or C.MUTED), IW - 12 - bar.w)
+        region(key, LX + 1, y, LW - 2 - bar.w, RH - 1)
+    end
+    -- A list longer than its box (y0..y1) scrolls: mouse wheel over the left column,
+    -- PageUp / PageDown, or the bar on its right (arrows, and the track pages).
+    -- Returns the first row to draw (0-based) and how many rows fit.
+    local function scroller(id, y0, y1, count)
+        local fit = math.max(1, math.floor((y1 - y0) / RH))
+        local most = math.max(0, count - fit)
+        local off = math.max(0, math.min(most, ui.scroll[id] or 0))
+        ui.scroll[id] = off
+        bar.w = 0
+        if most == 0 then return 0, count end
+        bar.w = 16
+        ui.scrolling = { id = id, max = most, page = math.max(1, fit - 1),
+                         x = px(ox + LX * s), y = px(height - oy - y1 * s), w = px(LW * s), h = px((y1 - y0) * s) }
+        local bx, bw, h = LX + LW - 15, 12, fit * RH
+        rect(bx, y0, bw, h, C.FIELD, 951)
+        -- arrows: small stepped triangles
+        for _, a in ipairs({ { 'scroll:up', y0, 1 }, { 'scroll:down', y0 + h - 14, -1 } }) do
+            local on = ui.hover == a[1]
+            local cy = a[2] + (a[3] > 0 and 4 or 9)
+            for r = 0, 2 do rect(bx + 5 - r, cy + r * 2 * a[3], 2 + r * 2, 2, on and C.YELLOW or C.MUTED, 953) end
+            region(a[1], bx - 2, a[2], bw + 3, 14)
+        end
+        local ty, th = y0 + 16, h - 32
+        local tsz = math.max(24, th * fit / count)
+        local tpos = ty + (th - tsz) * off / most
+        if tpos > ty then region('scroll:pgup', bx - 2, ty, bw + 3, tpos - ty) end
+        if tpos + tsz < ty + th then region('scroll:pgdn', bx - 2, tpos + tsz, bw + 3, ty + th - tpos - tsz) end
+        rect(bx + 2, tpos, bw - 4, tsz, ui.hover and ui.hover:find('^scroll:') and C.YELLOW or C.LINE2, 952)
+        return off, fit
     end
 
     -- ============================================================ Presets tab
@@ -805,20 +881,23 @@ local function draw(width, height)
         label('Your loadouts', IX, y)
         text(#PP.user .. ' SAVED', IX + IW, y, 11, #PP.user > 0 and C.YELLOW or C.DIM, nil, 'right')
         y = y + 18
-        for _, e in ipairs(list) do
-            if e.kind == 'user' then
-                local key = 'pre:user:' .. e.i
-                local chosen = ui.psel and ui.psel.kind == 'user' and ui.psel.i == e.i
-                if ui.naming and ui.naming.i == e.i then
-                    list_row(key, y, ui.naming.text .. '_', chosen, ui.naming.fresh and C.MUTED or C.YELLOW)
-                else
-                    list_row(key, y, e.name, chosen)
-                end
-                y = y + RH
+        local mine = {}
+        for _, e in ipairs(list) do if e.kind == 'user' then mine[#mine + 1] = e end end
+        local first, fit = scroller('user', y, BOT - 54, #mine)
+        for k = first + 1, math.min(#mine, first + fit) do
+            local e = mine[k]
+            local key = 'pre:user:' .. e.i
+            local chosen = ui.psel and ui.psel.kind == 'user' and ui.psel.i == e.i
+            if ui.naming and ui.naming.i == e.i then
+                list_row(key, y, ui.naming.text .. '_', chosen, ui.naming.fresh and C.MUTED or C.YELLOW)
+            else
+                list_row(key, y, e.name, chosen)
             end
+            y = y + RH
         end
+        bar.w = 0
         if #PP.user == 0 then text('None yet. Save the current stack.', IX + 4, y + 4, 13, C.DIM, IW - 8); y = y + 26 end
-        button('psave', '+ Save current stack', IX, y + 10, IW, 32, true, true)
+        button('psave', '+ Save current stack', IX, math.min(y + 10, BOT - 44), IW, 32, true, true)
 
         local entry = nil
         for _, e in ipairs(list) do if ui.psel and e.kind == ui.psel.kind and e.i == ui.psel.i then entry = e end end
@@ -871,12 +950,15 @@ local function draw(width, height)
         local used = {}
         for _, prof in ipairs(LOADOUT.profiles) do used[prof.perk] = true end
         local y = TOP + 64
-        for _, c in ipairs(CAT_LIST) do
-            if not used[c.id] and y + RH < BOT - 50 then
-                list_row('addpick:' .. c.id, y, up(c.name), ui.hover == 'addpick:' .. c.id)
-                y = y + RH
-            end
+        local free = {}
+        for _, c in ipairs(CAT_LIST) do if not used[c.id] then free[#free + 1] = c end end
+        local first, fit = scroller('add', y, BOT - 54, #free)
+        for k = first + 1, math.min(#free, first + fit) do
+            local c = free[k]
+            list_row('addpick:' .. c.id, y, up(c.name), ui.hover == 'addpick:' .. c.id)
+            y = y + RH
         end
+        bar.w = 0
         button('addcancel', 'Cancel', IX, BOT - 44, nil, 32, true)
         head(RX, TOP + 14, 'New stack', 'A second stack', RIW)
         text('Each armor passive can carry its own stack. Pick one on the left,', RX, TOP + 70, 14, C.MUTED, RIW)
@@ -910,21 +992,25 @@ local function draw(width, height)
         text(up(CAT[p.perk].name), IX + bw + 12, y + 5, 14, C.TEXT, IW - bw - 16)
         region(base_key, LX + 1, y, LW - 2, RH)
         y = y + RH + 4
-        for _, c in ipairs(CAT_LIST) do
-            if c.id ~= p.perk then
-                local on = p.enabled[c.id] == true
-                local key = 'sel:' .. c.id
-                if ui.sel == c.id then rect(LX + 1, y, LW - 2, RH - 1, C.ROW_HI, 951); rect(LX + 1, y, 3, RH - 1, C.YELLOW, 952)
-                elseif ui.hover == key then rect(LX + 1, y, LW - 2, RH - 1, C.ROW, 951) end
-                region(key, IX + 26, y, LW - 2 - (IX + 26 - LX), RH - 1)
-                checkbox('tick:' .. c.id, IX + 2, y + 3, on)
-                local tweaked = false
-                for tk in pairs(p.tweaks) do if tk:match('^' .. c.id .. '%.') then tweaked = true break end end
-                text(up(c.name), IX + 28, y + 5, 13, on and C.YELLOW or C.MUTED, IW - 44)
-                if tweaked and on then rect(IX + IW - 6, y + 9, 6, 6, C.TEXT, 952) end
-                y = y + RH
-            end
+        local rest = {}
+        for _, c in ipairs(CAT_LIST) do if c.id ~= p.perk then rest[#rest + 1] = c end end
+        local first, fit = scroller('stack', y, BOT - 6, #rest)
+        local rw = LW - 2 - bar.w
+        for k = first + 1, math.min(#rest, first + fit) do
+            local c = rest[k]
+            local on = p.enabled[c.id] == true
+            local key = 'sel:' .. c.id
+            if ui.sel == c.id then rect(LX + 1, y, rw, RH - 1, C.ROW_HI, 951); rect(LX + 1, y, 3, RH - 1, C.YELLOW, 952)
+            elseif ui.hover == key then rect(LX + 1, y, rw, RH - 1, C.ROW, 951) end
+            region(key, IX + 26, y, rw - (IX + 26 - LX), RH - 1)
+            checkbox('tick:' .. c.id, IX + 2, y + 3, on)
+            local tweaked = false
+            for tk in pairs(p.tweaks) do if tk:match('^' .. c.id .. '%.') then tweaked = true break end end
+            text(up(c.name), IX + 28, y + 5, 13, on and C.YELLOW or C.MUTED, IW - 44 - bar.w)
+            if tweaked and on then rect(IX + IW - 6 - bar.w, y + 9, 6, 6, C.TEXT, 952) end
+            y = y + RH
         end
+        bar.w = 0
 
         if not ui.sel then ui.sel = p.perk end
         local sel = CAT[ui.sel]
@@ -1093,6 +1179,10 @@ local function click(key)
     elseif kind == 'clear' and p then
         if confirm('clear') then p.enabled, p.tweaks = {}, {}; changed(p.perk, 'Turned everything off on this armor') end
     elseif kind == 'zoom' then PP.zoom(arg == '+' and 1 or -1)
+    elseif kind == 'scroll' then
+        local page = ui.scrolling and ui.scrolling.page or 1
+        PP.scroll((arg == 'up' and -1) or (arg == 'down' and 1) or (arg == 'pgup' and -page) or page)
+    elseif kind == 'drag' then return             -- a click on the handle without moving
     elseif kind == 'undo' then PP.undo()
     elseif kind == 'copy' then PP.copy_code()
     elseif kind == 'paste' then PP.paste_code()
@@ -1200,6 +1290,10 @@ local function keyboard(now)
         return
     end
     if input.key_down(VK.Ctrl) and pressed('Z', 0x5A, now) then PP.undo() end
+    if ui.scrolling then
+        if pressed('PgUp', VK.PageUp, now) then PP.scroll(-ui.scrolling.page) end
+        if pressed('PgDn', VK.PageDown, now) then PP.scroll(ui.scrolling.page) end
+    end
     if input.key_down(VK.Ctrl) then
         -- Ctrl + / Ctrl - / Ctrl 0: panel size (main keyboard or numpad)
         if pressed('ZP', 0xBB, now) or pressed('ZA', 0x6B, now) then PP.zoom(1) end
@@ -1208,14 +1302,67 @@ local function keyboard(now)
     end
 end
 
+-- mouse wheel movement this frame (+ = away from you), 0 if the engine won't say
+local function wheel()
+    local M = sr.Mouse
+    local id = nil
+    for _, name in ipairs({ 'axis_id', 'axis_index' }) do
+        local f = rawget(M, name)
+        if type(f) == 'function' then
+            local ok, v = pcall(f, 'wheel')
+            if ok and v ~= nil then id = v break end
+        end
+    end
+    if id == nil or type(rawget(M, 'axis')) ~= 'function' then return 0 end
+    local ok, v = pcall(M.axis, id)
+    if not ok or v == nil then return 0 end
+    local got, dy = pcall(sr.Vector3.y, v)
+    if not got or type(dy) ~= 'number' then dy = type(v) == 'table' and v[2] or 0 end
+    return tonumber(dy) or 0
+end
+
 local function mouse()
     local x, y, cw, ch = input.cursor()
-    if not x or cw <= 0 or ch <= 0 or x < 0 or y < 0 or x >= cw or y >= ch then return end
+    if not x or cw <= 0 or ch <= 0 then return end
     local width, height = sr.Gui.resolution()
-    ui.hover = hit(x * width / cw, (ch - y) * height / ch, true)
+    local sx, sy = x * width / cw, y * height / ch          -- screen pixels from the top left
     local value = sr.Mouse.button(sr.Mouse.button_id('left'))
     local down = value == true or (type(value) == 'number' and value > 0)
+    -- dragging the panel by its top strip: follows the cursor until the button is let go
+    local d = ui.drag
+    if d then
+        ui.hover = 'drag'
+        if down then
+            local fx = math.max(0, d.x + sx - d.cx) / width
+            local fy = math.max(0, d.y + sy - d.cy) / height
+            if not ui.pos or math.abs(fx - ui.pos.fx) > 1e-6 or math.abs(fy - ui.pos.fy) > 1e-6 then
+                ui.pos = { fx = fx, fy = fy }
+                ui.version = ui.version + 1
+            end
+        else
+            ui.drag, armed = nil, nil
+            if ui.pos and ui.origin then       -- keep where it was drawn (on screen)
+                ui.pos = { fx = ui.origin.x / width, fy = ui.origin.y / height }
+            end
+            PP.save_pos()
+            ui.version = ui.version + 1
+        end
+        mouse_was_down = down
+        return
+    end
+    if x < 0 or y < 0 or x >= cw or y >= ch then return end
+    ui.hover = hit(sx, height - sy, true)
+    local sc = ui.scrolling
+    if sc and sx >= sc.x and sx < sc.x + sc.w and height - sy >= sc.y and height - sy < sc.y + sc.h then
+        local dy = wheel()
+        if dy ~= 0 then PP.scroll(dy > 0 and -3 or 3) end
+    end
     if mouse_was_down ~= nil then
+        if down and not mouse_was_down and ui.hover == 'drag' and ui.origin then
+            ui.drag = { cx = sx, cy = sy, x = ui.origin.x, y = ui.origin.y }
+            mouse_was_down = down
+            return
+        end
         if down and not mouse_was_down then armed = ui.hover end
         if not down and mouse_was_down then
             if armed and armed == ui.hover then click(armed) end
@@ -1320,7 +1467,7 @@ local function panel_frame(now)
             log('panel: mouse input off for this session: ' .. tostring(why))
         end
     end
-    if not ui.hover then mouse_was_down, armed = nil, nil end
+    if not ui.hover and not ui.drag then mouse_was_down, armed = nil, nil end
     if input.focused() then keyboard(now) end
 
     local width, height = sr.Gui.resolution()
@@ -1406,6 +1553,7 @@ local function open_panel(open)
         clear_toast(); toast.text = nil
         if not ui.last_text and LOADOUT then ui.last_text = snapshot() end
         PP.load_user()
+        pcall(PP.load_pos)
         log('panel opened')
         local ok, why = pcall(take_cursor)
         if not ok then log('cursor: could not free it: ' .. tostring(why)) end
@@ -1416,6 +1564,7 @@ local function open_panel(open)
         clear_gui()
         ui.worlds = nil
         held, mouse_was_down, armed = {}, nil, nil
+        if ui.drag then ui.drag = nil; pcall(PP.save_pos) end
         ui.confirm, ui.adding = nil, false
         if save_at then pcall(save_now) end
     end

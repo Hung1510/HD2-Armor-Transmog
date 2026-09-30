@@ -9,6 +9,7 @@
 <a href="https://www.nexusmods.com/helldivers2/mods/16763"><img src="https://img.shields.io/badge/Nexus%20Mods-16763-ffe710?labelColor=0b0c0d" alt="Nexus Mods"></a>
 <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases"><img src="https://img.shields.io/github/downloads/Hung1510/Super-Earth-Armory-Forge/total?label=GitHub%20downloads&color=ffe710&labelColor=0b0c0d&cacheSeconds=3600" alt="GitHub downloads"></a>
 <a href="TESTING.md"><img src="https://img.shields.io/badge/armor%20passives-31%2F31-ffe710?labelColor=0b0c0d" alt="passives"></a>
+<a href="https://ko-fi.com/phamtrangiahung"><img src="https://img.shields.io/badge/Ko--fi-support%20the%20mod-ffe710?logo=ko-fi&logoColor=ffe710&labelColor=0b0c0d" alt="Support on Ko-fi"></a>
 </p>
 
 **Install it, then press <kbd>F7</kbd> in game.** Tick passives, type values like `75%` or `+50 armor`, save loadouts and swap them with <kbd>F9</kbd>. Everything applies at once. Prefer to plan ahead? Use the **[web builder](https://hung1510.github.io/Super-Earth-Armory-Forge/)**.
@@ -26,6 +27,7 @@ Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
 - Download: [Nexus Mods](https://www.nexusmods.com/helldivers2/mods/16763) · [AyakaMods](https://ayakamods.com/mods/super-earth-armory-forge.4359/) · [GitHub Releases](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest)
+- **Support:** the mod is free and always will be. If it's worth a coffee to you, **[tip on Ko-fi](https://ko-fi.com/phamtrangiahung)**. I'd really appreciate it, and it helps me keep updating the mod.
 
 ## Ways to use it
 
@@ -52,6 +54,8 @@ Then:
 - **Quick-swap (F9):** cycles your presets in game without opening the panel (built-ins if you have none saved). Set `swap_hotkey = F9` or `OFF` in `[settings]`.
 - **Undo / Ctrl+Z** takes back the last change (up to 30).
 - **Panel size:** `[-] 100% [+]` at the top, or **Ctrl +** / **Ctrl -** (Ctrl 0 resets), 80 to 150%. Also `panel_scale = 1.2` in `[settings]`.
+- **Move it:** drag the top strip anywhere on the screen; the spot is remembered. **Ctrl 0** puts it back.
+- **Long lists scroll:** mouse wheel over the list, the bar on its right, or PageUp / PageDown.
 - **Copy code / Paste code:** your build as one line of text for Discord etc. Web-builder share links paste too.
 - The key is set with `hotkey = F7` in `[settings]` (the web builder has a dropdown). SHODAN Stat Editor uses F8, and its panel sits on the right while this one sits on the left.
 - If a change doesn't show, re-equip the armor or start a mission.
@@ -130,6 +134,7 @@ tests/test_panel_features.py  presets, quick-swap, undo, share codes, plain valu
 tests/test_release.py      release zip, blank install, saves from before the rename
 tests/test_panel_layout.py no overlapping or clipped text in any panel view, 720p to 4K
 tests/test_panel_scale.py  panel size setting, Ctrl +/-, whole-pixel drawing
+tests/test_panel_scroll_drag.py  scrolling long lists, dragging the panel
 tests/test_web_parity.js   web builder output must be byte-identical to Python
 tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, hourly, retries on bot checks)
 tools/update_badges_local.ps1  same, through the installed Edge on a Windows PC (passes Cloudflare)

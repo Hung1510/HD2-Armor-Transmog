@@ -25,13 +25,13 @@ TYPE_PASSIVE = 0x63CE0FEB
 GAME_BASE = 0x10000000
 
 MOCK = r"""
-DRAW, WORLDS, KEYS, CURSOR, MOUSE_DOWN = {}, { {}, {} }, {}, { 0, 0 }, false
+DRAW, WORLDS, KEYS, CURSOR, MOUSE_DOWN, WHEEL = {}, { {}, {} }, {}, { 0, 0 }, false, 0
 RES_W, RES_H = 1920, 1080
 local function callable(fields, make)
     return setmetatable(fields, { __call = function(_, ...) return make(...) end })
 end
 stingray = {
-    Vector3 = callable({ x = function(v) return v[1] end }, function(x, y, z) return { x, y, z } end),
+    Vector3 = callable({ x = function(v) return v[1] end, y = function(v) return v[2] end }, function(x, y, z) return { x, y, z } end),
     Vector2 = callable({ x = function(v) return v[1] end }, function(x, y) return { x, y } end),
     Color = function(a, r, g, b) return { a, r, g, b } end,
     Gui = {
@@ -46,7 +46,8 @@ stingray = {
     Application = { worlds = function() return WORLDS end, main_world = function() return WORLDS[1] end,
                     can_get = function() return true end },
     IdString64 = { from_hex = function(s) return s end },
-    Mouse = { button = function() return MOUSE_DOWN and 1 or 0 end, button_id = function() return 0 end },
+    Mouse = { button = function() return MOUSE_DOWN and 1 or 0 end, button_id = function() return 0 end,
+              axis_id = function(name) return name end, axis = function(id) return { 0, WHEEL, 0 } end },
 }
 PP_TEST_INPUT = {
     focused = function() return true end,
@@ -266,6 +267,35 @@ class FakeGame:
         g[b"MOUSE_DOWN"] = True
         self.tick(1)
         g[b"MOUSE_DOWN"] = False
+        self.tick(2)
+
+    def move_to(self, x, y, frames=2):
+        """Cursor to screen pixel (x, y) from the top left."""
+        cur = self.L.globals()[b"CURSOR"]
+        cur[1], cur[2] = x, y
+        self.tick(frames)
+
+    def drag(self, key, dx, dy, steps=6):
+        """Press on a region, move the mouse by (dx, dy) screen pixels, let go."""
+        x, y, w, h, _ = self.regions()[key]
+        g = self.L.globals()
+        x0, y0 = x + w / 2, self.res()[1] - (y + h / 2)
+        self.move_to(x0, y0)
+        g[b"MOUSE_DOWN"] = True
+        self.tick(1)
+        for i in range(1, steps + 1):
+            self.move_to(x0 + dx * i / steps, y0 + dy * i / steps, 1)
+        g[b"MOUSE_DOWN"] = False
+        self.tick(2)
+
+    def scroll_wheel(self, key, notches):
+        """Mouse wheel over a region: + = away from you (up the list)."""
+        x, y, w, h, _ = self.regions()[key]
+        g = self.L.globals()
+        self.move_to(x + w / 2, self.res()[1] - (y + h / 2))
+        g[b"WHEEL"] = notches
+        self.tick(1)
+        g[b"WHEEL"] = 0
         self.tick(2)
 
     def type_text(self, text):

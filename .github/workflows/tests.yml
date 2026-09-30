@@ -38,6 +38,9 @@ jobs:
       - name: Panel size and whole-pixel drawing
         run: python tests/test_panel_scale.py
 
+      - name: Scrolling lists and dragging the panel
+        run: python tests/test_panel_scroll_drag.py
+
       - name: Release zip, blank install, old saves
         run: python tests/test_release.py
 
