@@ -15,14 +15,20 @@ import re
 import sys
 import urllib.request
 
-PAGE = "https://ayakamods.com/mods/super-earth-armory-forge.4359/"
+# tried in order: the page moved when the mod was renamed; the id alone also redirects
+PAGES = ["https://ayakamods.com/mods/super-earth-armory-forge.4359/",
+         "https://ayakamods.com/mods/passive-picker-v4.4359/",
+         "https://ayakamods.com/mods/4359/"]
+PAGE = PAGES[0]
 COLOR = "ffe710"
 
 
 def fetch(url):
     req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (badge updater; +https://github.com/Hung1510/Super-Earth-Armory-Forge)",
-        "Accept": "text/html"})
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/126.0 Safari/537.36 (badge updater; +https://github.com/Hung1510/Super-Earth-Armory-Forge)",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en"})
     with urllib.request.urlopen(req, timeout=30) as r:
         return r.read().decode("utf-8", "replace")
 
@@ -107,13 +113,22 @@ def badge(label, message):
 
 def main():
     out_dir = sys.argv[1] if len(sys.argv) > 1 else "."
-    url = sys.argv[2] if len(sys.argv) > 2 else PAGE
-    page = open(url[7:], encoding="utf-8").read() if url.startswith("file://") else fetch(url)
-    s = stats(page)
-    print(json.dumps(s))
+    urls = [sys.argv[2]] if len(sys.argv) > 2 else PAGES
+    s = {}
+    for url in urls:
+        try:
+            page = open(url[7:], encoding="utf-8").read() if url.startswith("file://") else fetch(url)
+        except Exception as e:                      # blocked, moved, down: try the next address
+            print("%s: %s" % (url, e), file=sys.stderr)
+            continue
+        s = stats(page)
+        print("%s: %s" % (url, json.dumps(s)))
+        if s:
+            break
     if not s:
-        print("nothing found on the page; keeping the old badges", file=sys.stderr)
-        return 1
+        # not an error worth an email: the badges just keep their last numbers
+        print("::warning::could not read the AyakaMods page; keeping the old badges")
+        return 0
     os.makedirs(out_dir, exist_ok=True)
     made = {"downloads": ("AyakaMods downloads", lambda v: short(v)),
             "views": ("AyakaMods views", lambda v: short(v)),

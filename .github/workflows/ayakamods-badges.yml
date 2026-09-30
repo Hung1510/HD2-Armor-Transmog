@@ -26,6 +26,7 @@ jobs:
         run: python tools/ayakamods_stats.py out
       - name: Publish to the badges branch
         run: |
+          if [ ! -f out/ayakamods.json ]; then echo "nothing new; badges unchanged"; exit 0; fi
           cd out
           git init -q -b badges
           git config user.name "Hung1510"
