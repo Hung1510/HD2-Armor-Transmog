@@ -66,7 +66,14 @@ def browser_stats(urls, channel):
                     print("%s: %s" % (url, e), file=sys.stderr)
                     continue
                 for _ in range(45):                 # challenge usually clears in 5-15 s
-                    s = stats(page.content())
+                    try:
+                        s = stats(page.content())
+                    except Exception:               # mid-redirect after the challenge clears
+                        s = {}
+                        try:
+                            page.wait_for_load_state("domcontentloaded", timeout=15000)
+                        except Exception:
+                            pass
                     if s:
                         print("%s (%s): %s" % (url, channel, json.dumps(s)))
                         return s
