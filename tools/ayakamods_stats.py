@@ -21,9 +21,10 @@ import sys
 import time
 import urllib.request
 
-# tried in order: the page moved when the mod was renamed; the id alone also redirects
-PAGES = ["https://ayakamods.com/mods/super-earth-armory-forge.4359/",
-         "https://ayakamods.com/mods/passive-picker-v4.4359/",
+# tried in order. The mod was renamed; the old slug is the one AyakaMods serves directly
+# (the new slug stalls on the Cloudflare check through a browser), the id alone redirects.
+PAGES = ["https://ayakamods.com/mods/passive-picker-v4.4359/",
+         "https://ayakamods.com/mods/super-earth-armory-forge.4359/",
          "https://ayakamods.com/mods/4359/"]
 PAGE = PAGES[0]
 # AyakaMods sometimes answers CI runners with a 403 / bot-check page. If no
