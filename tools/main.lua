@@ -47,8 +47,10 @@ local function tick()
     end
 
     if save_at and now >= save_at then pcall(save_now) end
-    local ok, why = pcall(panel_tick, now)
-    if not ok then log('panel: ' .. tostring(why)) end
+    if not MOD.no_panel then
+        local ok, why = pcall(panel_tick, now)
+        if not ok then log('panel: ' .. tostring(why)) end
+    end
 end
 
 -- ---------------------------------------------------------------- startup
@@ -64,7 +66,11 @@ local ok, failure = pcall(function()
     LOADOUT, state.loadout_source = load_loadout()
     self_addresses = { api.address_of(NEEDLE) }
     skip_low = (self_addresses[1] or LUA_HEAP_LIMIT) < LUA_HEAP_LIMIT
-    setup_panel()
+    if MOD.no_panel then
+        log('panel: off in this build (panel = off); edit the loadout in the web builder')
+    else
+        setup_panel()
+    end
 end)
 
 if not ok then

@@ -153,7 +153,7 @@
   // ------------------------------------------------------------------ config -> profiles
   function loadConfigText(cat, text) {
     const sections = parseIni(text);
-    const settings = { retire: true, name: null, hotkey: null, swap_hotkey: null, panel_scale: null };
+    const settings = { retire: true, name: null, hotkey: null, swap_hotkey: null, panel_scale: null, panel: true };
     const profiles = [];
     for (const sec of sections) {
       if (sec.name === "settings") {
@@ -175,6 +175,11 @@
               throw new ConfigError(`[settings]: panel_scale must be a number from 0.8 to 1.5, got '${t}'`);
             if (sc < 0.8 - 1e-9 || sc > 1.5 + 1e-9) throw new ConfigError(`[settings]: panel_scale must be from 0.8 to 1.5, got '${t}'`);
             settings.panel_scale = Math.round(sc * 10) / 10;
+          } else if (k === "panel") {
+            const pv = v.trim().toLowerCase();
+            if (!TRUE.has(pv) && !["off", "no", "false", "0", "n"].includes(pv))
+              throw new ConfigError(`[settings]: panel must be on or off, got '${v.trim()}'`);
+            settings.panel = TRUE.has(pv); // off: no panel, no hotkeys, no controller polling
           } else if (k === "base") { /* written by the in-game panel; only the game reads it */ }
           else throw new ConfigError(`[settings]: unknown key '${k}'`);
         }
@@ -387,6 +392,7 @@
     L.push(`    hotkey = '${settings.hotkey || data.default_hotkey}',`);
     L.push(`    swap_hotkey = '${settings.swap_hotkey || data.default_swap_hotkey}',`);
     L.push(`    panel_scale = ${(settings.panel_scale || data.default_panel_scale || 1).toFixed(1)},`);
+    if (settings.panel === false) L.push("    no_panel = true,   -- panel = off: no panel, no hotkeys, no controller polling");
     L.push("    type_passive = 0x63CE0FEB,   -- HelldiverCustomizationPassiveBonusSettings");
     L.push("    type_kit     = 0xD9A55AA0,   -- HelldiverCustomizationKit");
     L.push("    -- the loadout this build starts with; the in-game panel starts from it");
@@ -500,6 +506,12 @@
     return profiles.map((p) => `${p.name} armour: ${p.enabled.join(", ") || "base perk tweaks only"}`).join("; ");
   }
 
+  // the mod manager description's first sentence (tools/picker.py how_to_edit)
+  function howToEdit(data, settings) {
+    if (settings.panel === false) return "Panel off in this build: edit the loadout in the web builder";
+    return `Press ${settings.hotkey || data.default_hotkey} in game to edit`;
+  }
+
   function manifestFor(data, display, description, withIcon) {
     const m = {
       Version: 1, Guid: data.guid, Name: display, Description: description,
@@ -522,6 +534,7 @@
     L.push(`hotkey = ${state.hotkey || "F7"}`);
     L.push(`swap_hotkey = ${state.swap_hotkey || "F9"}`);
     L.push(`panel_scale = ${(state.panel_scale || 1).toFixed(1)}`);
+    if (state.panel === false) L.push("panel  = off");
     for (const p of state.profiles) {
       const tname = cat.byId.get(p.perk).name;
       L.push("");
@@ -543,13 +556,34 @@
     return L.join("\n") + "\n";
   }
 
+  // share links: the loadout in as few bytes as every loadout reader accepts (the in-game
+  // panel's PP.compact writes the same shape): passives by number, only the ones that are
+  // on, only changed values, no keys or panel settings (those stay the reader's own)
+  function compactIni(cat, state) {
+    const L = ["[settings]", `name=${(state.name || "My Armory Build").replace(/[;#\r\n=]/g, " ")}`];
+    for (const p of state.profiles) {
+      L.push(`[profile: ${p.perk}]`);
+      if (p.conflicts === "strongest") L.push("conflicts=strongest");
+      for (const pid of [...p.enabled].filter((x) => x !== p.perk).sort((a, b) => a - b)) L.push(`${pid}=on`);
+      const keys = Object.keys(p.tweaks || {}).filter((k) => {
+        const pid = parseInt(k.split(".")[0], 10);
+        const eff = cat.byId.has(pid) && effectsOf(cat, pid).find((e) => e.key === k.split(".")[1]);
+        return eff && p.tweaks[k] !== eff.def && (pid === p.perk || p.enabled.includes(pid));
+      }).sort();
+      for (const k of keys) L.push(`${k}=${pyRepr(p.tweaks[k])}`);
+      if (p.raw) L.push(`raw=${p.raw.trim().replace(/\s*\n\s*/g, ", ")}`);
+      if (p.raw_stats) L.push(`raw_stats=${p.raw_stats.trim().replace(/\s*\n\s*/g, ", ")}`);
+    }
+    return L.join("\n") + "\n";
+  }
+
   // profiles (from loadConfigText) -> GUI state, keeping only tweaks that differ from defaults
   function stateFromText(cat, text) {
     const sections = parseIni(text);
     const parsed = loadConfigText(cat, text); // validates
     const state = { name: parsed.settings.name || "My Armory Build", retire: parsed.settings.retire,
       hotkey: parsed.settings.hotkey || "F7", swap_hotkey: parsed.settings.swap_hotkey || "F9",
-      panel_scale: parsed.settings.panel_scale || 1, profiles: [] };
+      panel_scale: parsed.settings.panel_scale || 1, panel: parsed.settings.panel !== false, profiles: [] };
     for (const sec of sections) {
       const m = sec.name.match(/^\s*profile\s*:\s*(.+?)\s*$/i);
       if (!m) continue;
@@ -579,6 +613,6 @@
   return {
     ConfigError, TYPE_NAMES, ARCHIVE_NAME, makeCatalog, effectsOf, findPerk, parseIni,
     loadConfigText, generateLua, archiveFor, resourceHash, describeProfiles, manifestFor,
-    serializeIni, stateFromText, pyRepr, fmtG, luaNum,
+    serializeIni, stateFromText, pyRepr, fmtG, luaNum, howToEdit, compactIni,
   };
 });

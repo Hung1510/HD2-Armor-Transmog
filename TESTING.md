@@ -36,6 +36,8 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Ctrl+F search in the panel | ❔ | v5.4; offline test passes |
 | Controller: Back + Start opens the panel, D-pad / A / B work | ❔ | v5.5; XInput, offline test with a fake pad |
 | Stack summary numbers match what you feel in game | ❔ | v5.5; an estimate by design |
+| Copy problem report reaches the clipboard; STATUS file has the panel section | ❔ | v5.6; offline test passes |
+| A `panel = off` build applies its loadout with no panel | ❔ | v5.6; offline test passes |
 | Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Armory Forge leaves that passive alone |
 
 ## Effects

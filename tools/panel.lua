@@ -377,8 +377,37 @@ function PP.unb64(s)
     return table.concat(out)
 end
 
+-- The loadout in as few bytes as the loadout reader accepts: passives by number, only
+-- the ones that are on, only changed values, no keys or panel settings (those stay the
+-- reader's own). Every reader since 5.2 (panel, web builder, picker.py) loads it as is.
+-- tests/test_share_codes.py keeps it in step with core.js compactIni / picker.compact_ini.
+function PP.compact(l)
+    local L = { '[settings]', 'name=' .. (tostring(l.name or MOD.title):gsub('[;#\r\n=]', ' ')) }
+    for _, p in ipairs(l.profiles) do
+        L[#L + 1] = '[profile: ' .. p.perk .. ']'
+        if p.conflicts == 'strongest' then L[#L + 1] = 'conflicts=strongest' end
+        for _, pid in ipairs(sorted_enabled(p)) do L[#L + 1] = pid .. '=on' end
+        local keys = {}
+        for k, v in pairs(p.tweaks) do
+            local pid, key = k:match('^(%d+)%.(.+)$')
+            pid = tonumber(pid)
+            local e = pid and CAT[pid] and CAT[pid].by_key[key]
+            if e and v ~= e.def and (pid == p.perk or p.enabled[pid]) then keys[#keys + 1] = k end
+        end
+        table.sort(keys)
+        for _, k in ipairs(keys) do L[#L + 1] = k .. '=' .. fmt_num(p.tweaks[k]) end
+        local raw = {}
+        for _, r in ipairs(p.raw or {}) do raw[#raw + 1] = string.format('0x%08X %d %s', r[1], r[2], fmt_num(r[3])) end
+        if #raw > 0 then L[#L + 1] = 'raw=' .. table.concat(raw, ', ') end
+        raw = {}
+        for _, r in ipairs(p.raw_stats or {}) do raw[#raw + 1] = string.format('%d %s %s', r[1], fmt_num(r[2]), fmt_num(r[3])) end
+        if #raw > 0 then L[#L + 1] = 'raw_stats=' .. table.concat(raw, ', ') end
+    end
+    return table.concat(L, '\n') .. '\n'
+end
+
 function PP.copy_code()
-    local code = PP.SITE .. PP.b64(snapshot())
+    local code = PP.SITE .. PP.b64(PP.compact(LOADOUT))
     local ok = input.set_clipboard and input.set_clipboard(code)
     say(ok and 'Share code copied: paste it in the web builder, or a friend\'s panel' or 'Could not use the clipboard', 4)
     return code
@@ -644,6 +673,72 @@ function PP.clean_name(s)
     return s ~= '' and s:sub(1, 28) or nil
 end
 
+-- ---------------------------------------------------------------- problem report
+-- What the panel saw, for "the key does nothing" and crash reports. It goes into the
+-- STATUS file (Logs\ArmoryForge-STATUS.txt, rewritten at most every 5 s when something
+-- changes) and "Copy problem report" on the Keys tab puts it on the clipboard.
+PP.diag = { presses = 0, unfocused = 0, opened = 0, drawn = 0, no_world = 0, resettle = 0, refused = 0 }
+
+function PP.note(what, err)
+    local d = PP.diag
+    d[what] = (d[what] or 0) + 1
+    if err then d.last_error = tostring(err):sub(1, 200) end
+    -- counters that tick every frame only mark the report once
+    if (what ~= 'no_world' and what ~= 'drawn') or d[what] == 1 then PP.diag_dirty = true end
+end
+
+function PP.names_of(t, limit)
+    local list = {}
+    if type(t) ~= 'table' then return '-' end
+    for k in pairs(t) do if type(k) == 'string' then list[#list + 1] = k end end
+    table.sort(list)
+    local more = #list - limit
+    while #list > limit do list[#list] = nil end
+    if #list == 0 then return '-' end
+    return table.concat(list, ', ') .. (more > 0 and (' +' .. more .. ' more') or '')
+end
+
+function PP.report()
+    local d = PP.diag
+    local w, h = 0, 0
+    if sr then pcall(function() w, h = sr.Gui.resolution() end) end
+    local focused = input and input.focused and select(2, pcall(input.focused))
+    local added = {}
+    for k in pairs(_G) do if type(k) == 'string' and PP.globals0 and not PP.globals0[k] then added[k] = true end end
+    local loader = rawget(_G, 'CowboyBingusModLoader')
+    local bus = rawget(_G, 'OCLAW_UPDATE_BUS')
+    return {
+        '--- panel ---',
+        'edition=' .. (MOD.swap_only and 'Passive Swap' or 'full') .. (MOD.blank and ' (release)' or ' (web builder build)') ..
+            ' panel key=' .. hotkey() .. ' quick-swap=' .. swap_key(),
+        'panel key presses seen=' .. d.presses .. ' (while the game was not the active window: ' .. d.unfocused .. ')',
+        'panel opened=' .. d.opened .. ' drawn=' .. d.drawn .. ' no UI world=' .. d.no_world ..
+            ' world changes=' .. d.resettle .. ' gui refused=' .. d.refused,
+        'game window active=' .. tostring(focused) .. ' screen=' .. tostring(w) .. 'x' .. tostring(h) ..
+            ' panel size=' .. math.floor(ui_scale() * 100 + 0.5) .. '%',
+        'font=' .. tostring(ui.font_said or '(not drawn yet)'),
+        'controller=' .. (PP.has_pad and 'connected' or 'not seen') .. ' mouse=' .. (ui.mouse_broken and 'off after an error' or 'ok'),
+        'last panel error=' .. tostring(d.last_error or '-'),
+        '--- other mods ---',
+        'loader api=' .. tostring(type(loader) == 'table' and loader.api) .. ' fields: ' .. PP.names_of(loader, 12),
+        'update bus jobs: ' .. PP.names_of(type(bus) == 'table' and bus.jobs, 20),
+        'globals added after Armory Forge started: ' .. PP.names_of(added, 30),
+    }
+end
+
+function PP.copy_report()
+    local lines = { MOD.title .. ' v' .. MOD.version .. ' problem report',
+                    'status: ' .. tostring(state.phase) .. ' - ' .. tostring(state.status),
+                    'armor passives found=' .. perks_found .. ' of ' .. #CAT_LIST }
+    for _, l in ipairs(PP.report()) do lines[#lines + 1] = l end
+    lines[#lines + 1] = '--- log (last 20) ---'
+    for i = math.max(1, #log_lines - 19), #log_lines do lines[#lines + 1] = log_lines[i] end
+    local ok = input.set_clipboard and input.set_clipboard(table.concat(lines, '\r\n') .. '\r\n')
+    say(ok and 'Problem report copied: paste it in your bug report' or 'Could not use the clipboard', 4)
+    pcall(write_status)
+    return ok
+end
+
 -- ---------------------------------------------------------------- font (from SHODAN v1.4.1)
 local GAME_STAMP, FONT_RVA, ATLAS_RVA, MATERIAL_RVA = 0x6AB3B43F, 0x3772268, 0x3772EE8, 0x37C5478
 local DEBUG_FONT = 'core/performance_hud/debug'
@@ -904,7 +999,7 @@ local function draw(width, height)
     local tw = text('ARMORY', 86, 50, 34, C.TEXT)
     text('FORGE', 86 + tw + 12, 50, 34, C.YELLOW)
     text(MOD.swap_only and 'Passive Swap: give any armor another passive, at the game\'s values.'
-         or 'Tick passives, change values: it all applies at once.', 88, 84, 12, C.MUTED, 420)
+         or 'Tick passives to stack them. Click a name to edit its values.', 88, 84, 12, C.MUTED, 420)
 
     local by0 = H - 40                           -- key-prompt bar
     local function prompts()
@@ -1180,6 +1275,10 @@ local function draw(width, height)
         ry = ry + 10
         text('SHODAN Stat Editor uses F8 by default: pick another key here if you run both.', RX, ry, 12, C.DIM, RIW)
         text('Keys are saved with your loadout (hotkey / swap_hotkey in loadout.ini).', RX, ry + 18, 12, C.DIM, RIW)
+        rect(RX, BOT - 100, RIW, 1, C.LINE, 951)
+        label('Something wrong?', RX, BOT - 88, nil, RIW)
+        text('Copy a report and paste it in your bug report on the mod page.', RX, BOT - 68, 12, C.DIM, RIW)
+        button('report', 'Copy problem report', RX, BOT - 44, nil, 32, true)
 
     -- ============================================================ + Armor
     elseif ui.adding then
@@ -1594,6 +1693,7 @@ local function click(key)
         PP.scroll((arg == 'up' and -1) or (arg == 'down' and 1) or (arg == 'pgup' and -page) or page)
     elseif kind == 'drag' then return             -- a click on the handle without moving
     elseif kind == 'undo' then PP.undo()
+    elseif kind == 'report' then PP.copy_report()
     elseif kind == 'copy' and not MOD.swap_only then PP.copy_code()
     elseif kind == 'paste' and not MOD.swap_only then PP.paste_code()
     -- presets
@@ -2033,13 +2133,14 @@ local function panel_frame(now)
     local main = sr.Application.main_world()
     local worlds = sr.Application.worlds() or {}
     if not same_worlds(worlds, ui.worlds) or main ~= ui.main then
+        if ui.worlds then PP.note('resettle') end
         clear_gui()
         ui.worlds, ui.main, ui.settled_at = worlds, main, now + SETTLE_SECONDS
         return
     end
     if now < ui.settled_at then return end
     local world = overlay_world()
-    if not world then clear_gui(); return end
+    if not world then PP.note('no_world'); clear_gui(); return end
     if ui.world ~= world then
         clear_gui()
         ui.world = world
@@ -2074,6 +2175,7 @@ local function panel_frame(now)
         if ui.gui then pcall(sr.World.destroy_gui, ui.world, ui.gui) end
         ui.gui = sr.World.create_screen_gui(ui.world, 'scale', 1, 1)
         if not ui.gui then
+            PP.note('refused')
             log('panel: the overlay world refused a gui')
             clear_gui()
             return
@@ -2087,6 +2189,7 @@ local function panel_frame(now)
         end
         ui.signature = signature
         ui.regions = draw(width, height)
+        PP.note('drawn')
         if ui.nav_retry then                  -- a list scrolled under the focus: move again
             local d = ui.nav_retry
             ui.nav_retry = nil
@@ -2152,6 +2255,7 @@ local function open_panel(open)
         if not ui.last_text and LOADOUT then ui.last_text = snapshot() end
         PP.load_user()
         pcall(PP.load_pos)
+        PP.note('opened')
         log('panel opened')
         local ok, why = pcall(take_cursor)
         if not ok then log('cursor: could not free it: ' .. tostring(why)) end
@@ -2178,7 +2282,9 @@ local function hotkey_pressed(name)
     local down = input.key_down(vk)
     local was = keys_was[name]
     keys_was[name] = down
-    return down and not was and input.focused()
+    local focused = input.focused()
+    if down and not was and name == hotkey() then PP.note(focused and 'presses' or 'unfocused') end
+    return down and not was and focused
 end
 
 panel_tick = function(now)
@@ -2211,6 +2317,7 @@ panel_tick = function(now)
             ui.errors = 0
         else
             ui.errors = ui.errors + 1
+            PP.note('errors', why)
             log('panel error: ' .. tostring(why))
             pcall(clear_gui)
             if ui.errors >= 5 then
@@ -2222,6 +2329,10 @@ panel_tick = function(now)
         local ok, why = pcall(toast_frame, now)
         if not ok then log('toast: ' .. tostring(why)); pcall(clear_toast); toast.text = nil end
     end
+    if PP.diag_dirty and now >= (PP.diag_at or 0) then
+        PP.diag_dirty, PP.diag_at = false, now + 5
+        pcall(write_status)
+    end
 end
 
 setup_panel = function()
@@ -2232,6 +2343,9 @@ setup_panel = function()
     input = built
     state.ui = ui
     state.pp = PP
+    state.report = PP.report
+    PP.globals0 = {}
+    for k in pairs(_G) do PP.globals0[k] = true end
     log('panel ready: press ' .. hotkey() .. ' in game' ..
         (swap_key() ~= 'OFF' and ('; ' .. swap_key() .. ' swaps presets') or ''))
 end

@@ -40,13 +40,13 @@
   }
 
   function blankProfile(perk) { return { perk, conflicts: "stack", enabled: [], tweaks: {} }; }
-  function blankState() { return { name: "My Armory Build", retire: true, hotkey: "F7", swap_hotkey: "F9", panel_scale: 1, profiles: [blankProfile(7)] }; }
+  function blankState() { return { name: "My Armory Build", retire: true, hotkey: "F7", swap_hotkey: "F9", panel_scale: 1, panel: true, profiles: [blankProfile(7)] }; }
 
   // tweaks on passives that are off are kept in state (so toggling back restores them)
   // but left out of the ini so they don't produce "ignored" notes
   function effectiveState() {
     return {
-      name: state.name, retire: state.retire, hotkey: state.hotkey, swap_hotkey: state.swap_hotkey, panel_scale: state.panel_scale,
+      name: state.name, retire: state.retire, hotkey: state.hotkey, swap_hotkey: state.swap_hotkey, panel_scale: state.panel_scale, panel: state.panel,
       profiles: state.profiles.map((p) => {
         const tw = {};
         for (const [k, v] of Object.entries(p.tweaks)) {
@@ -213,6 +213,8 @@
     $("hotkeySel").value = state.hotkey || "F7";
     $("swapSel").value = state.swap_hotkey || "F9";
     $("scaleSel").value = (state.panel_scale || 1).toFixed(1);
+    $("panelSel").value = state.panel === false ? "off" : "on";
+    for (const id of ["hotkeySel", "swapSel", "scaleSel"]) $(id).disabled = state.panel === false;
     renderTabs();
     renderProfile();
     compile();
@@ -224,6 +226,7 @@
     $("hotkeySel").addEventListener("change", (e) => { state.hotkey = e.target.value; compile(); });
     $("swapSel").addEventListener("change", (e) => { state.swap_hotkey = e.target.value; compile(); });
     $("scaleSel").addEventListener("change", (e) => { state.panel_scale = parseFloat(e.target.value); compile(); });
+    $("panelSel").addEventListener("change", (e) => { state.panel = e.target.value !== "off"; render(); });
 
     $("presetSel").addEventListener("change", (e) => {
       const p = data.presets.find((x) => x.file === e.target.value);
@@ -312,7 +315,7 @@
     $("dlZip").addEventListener("click", downloadZip);
     $("dlIni").addEventListener("click", () => saveBlob(new Blob([lastIni], { type: "text/plain" }), "loadout.ini"));
     $("shareBtn").addEventListener("click", async () => {
-      const url = location.origin + location.pathname + "#ini=" + b64url(lastIni);
+      const url = location.origin + location.pathname + "#ini=" + b64url(core.compactIni(cat, effectiveState()));
       history.replaceState(null, "", url);
       try { await navigator.clipboard.writeText(url); toast("Share link copied"); }
       catch (e) { toast("Link is in the address bar. Copy it from there"); }
@@ -431,7 +434,7 @@
     const lua = core.generateLua(data, settings, profiles);
     const archive = core.archiveFor(data, lua);
     const display = settings.name || data.title;
-    const desc = `v${data.version}. Press ${settings.hotkey || data.default_hotkey} in game to edit. ` +
+    const desc = `v${data.version}. ${core.howToEdit(data, settings)}. ` +
       core.describeProfiles(profiles) + ". " + data.credit;
     let icon = null;
     try { const r = await fetch("icon.png"); if (r.ok) icon = new Uint8Array(await r.arrayBuffer()); } catch (e) { /* optional */ }

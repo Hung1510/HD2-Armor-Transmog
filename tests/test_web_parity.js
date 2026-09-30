@@ -28,6 +28,23 @@ full = picker.compile_loadout(s, p)
 sys.stdout.write(json.dumps({"lua": full, "archive": picker.archive_for(full).hex()}))
 `;
 
+// what a loadout does, whatever text it came from (tweaks equal to the game value drop out)
+const pyNorm = `
+import sys, json
+sys.path.insert(0, ${JSON.stringify(path.join(root, "tools"))})
+import picker
+def norm(text):
+    out = []
+    for p in picker.load_config_text(text)[1]:
+        st = p["state"]
+        d = {(pid, e[0]): e[3] for pid in [p["perk"]] + list(st["enabled"]) for e in picker.effects_of(pid)}
+        tw = sorted([pid, k, v] for pid, k, v in st["tweaks"] if v != d.get((pid, k)) and (pid == p["perk"] or pid in st["enabled"]))
+        out.append([p["perk"], p["policy"], sorted(st["enabled"]), tw, [list(r) for r in st["raw"]], [list(r) for r in st["raw_stats"]]])
+    return out
+a, b = json.loads(sys.stdin.read())
+sys.stdout.write(json.dumps(norm(a) == norm(b)))
+`;
+
 function pyBuild(text) {
   return JSON.parse(execFileSync(py, ["-c", pyDump], { input: text, maxBuffer: 1 << 26 }).toString());
 }
@@ -61,9 +78,25 @@ raw_stats = 13 0.0 1.75
 Democracy Protects.death_save = 0.000015
 Scout = yes
 `,
+  "edge: panel off": `
+[settings]
+name = Quiet
+panel = off
+[profile: Med-Kit]
+Fortified = on
+`,
 };
 
 let failed = 0;
+// the panel setting reaches the web builder's GUI state and back
+{
+  const st = core.stateFromText(cat, extra["edge: panel off"]);
+  const back = core.loadConfigText(cat, core.serializeIni(cat, st)).settings.panel;
+  if (st.panel !== false || back !== false) { failed++; console.log("FAIL panel = off does not survive the GUI round trip"); }
+  else console.log("ok    panel = off survives the GUI round trip");
+  if (core.howToEdit(data, { panel: false }).indexOf("Panel off") !== 0) { failed++; console.log("FAIL howToEdit"); }
+}
+
 function check(label, text) {
   const a = pyBuild(text), b = jsBuild(text);
   const luaOk = a.lua === b.lua, arcOk = a.archive === b.archive;
@@ -71,7 +104,11 @@ function check(label, text) {
   const state = core.stateFromText(cat, text);
   const again = jsBuild(core.serializeIni(cat, state));
   const rtOk = again.archive === b.archive;
-  const ok = luaOk && arcOk && rtOk;
+  // the short share code loads to the same loadout in picker.py
+  const code = core.compactIni(cat, state);
+  const codeOk = code.length * 3 < text.length + 400 &&
+    JSON.parse(execFileSync(py, ["-c", pyNorm], { input: JSON.stringify([text, code]) }).toString());
+  const ok = luaOk && arcOk && rtOk && codeOk;
   if (!ok) {
     failed++;
     if (!luaOk) {
@@ -80,7 +117,7 @@ function check(label, text) {
       console.log(`  first Lua diff at line ${i + 1}:\n    py: ${al[i]}\n    js: ${bl[i]}`);
     }
   }
-  console.log(`${ok ? "ok  " : "FAIL"} ${label}  (lua ${luaOk ? "=" : "!="}, patch_0 ${arcOk ? "=" : "!="}, gui round-trip ${rtOk ? "=" : "!="})`);
+  console.log(`${ok ? "ok  " : "FAIL"} ${label}  (lua ${luaOk ? "=" : "!="}, patch_0 ${arcOk ? "=" : "!="}, gui round-trip ${rtOk ? "=" : "!="}, share code ${codeOk ? "=" : "!="})`);
 }
 
 for (const f of files) check(f, fs.readFileSync(path.join(root, f), "utf8"));

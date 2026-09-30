@@ -29,6 +29,7 @@ SUITES = [
     ("test_panel_keys_search.py", "Keys tab, bad-key fallback, search"),
     ("test_controller.py", "controller: open, navigate, tabs, back"),
     ("test_passive_info.py", "passive info, stack summary, Remove armor"),
+    ("test_report_share.py", "panel off, short share codes, problem report"),
     ("test_swap_edition.py", "Passive Swap edition (Nexus build)"),
     ("test_release.py", "release zips, blank install, old saves"),
     ("test_web_parity.js", "web builder output is byte-identical to Python"),

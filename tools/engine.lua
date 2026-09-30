@@ -1061,7 +1061,17 @@ write_status = function()
         'Bingus Shared Loader: see BingusSharedLoader.log first line for loader-vN; API N',
         'Log: ' .. tostring(ensure_log_path() or '(log path unavailable)'),
         'Saved loadout: ' .. tostring(save_path() or '(unavailable)'),
+        '',
     }
+    if MOD.no_panel then
+        lines[#lines + 1] = 'panel: off in this build (panel = off); no hotkeys or controller are read'
+    elseif state.report then
+        local ok, extra = pcall(state.report)
+        if ok then for _, l in ipairs(extra) do lines[#lines + 1] = l end
+        else lines[#lines + 1] = 'panel report failed: ' .. tostring(extra) end
+    else
+        lines[#lines + 1] = 'panel: not started (see the log)'
+    end
     return write_file(path, table.concat(lines, '\r\n') .. '\r\n')
 end
 

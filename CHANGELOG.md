@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.6 (2026-10-01)
+Both editions (full and Passive Swap):
+- **Copy problem report** (Keys tab): puts a short report on the clipboard to paste in a bug report. It includes the version, edition, screen size, panel key, how many times the key was pressed (and how many of those presses came while the game wasn't the active window), whether the panel opened and drew, the last panel error, other mods sharing the update loop, and the end of the log. The same report is also written to `Logs\ArmoryForge-STATUS.txt`, so it's there even when the panel never opens.
+
+Full edition:
+- **Short share codes:** *Copy code* and the web builder's *Copy share link* now hold only what you changed: the passives that are on (by number), changed values, and no keys or panel settings. A kitchen-sink build went from about 2,200 characters to about 260, so it fits in a Discord message. Old long codes and links still paste, and new codes also load in 5.2 to 5.5.
+- **Panel off** (web builder, *In-game panel: Off*, or `panel = off` in `[settings]`): the build applies its loadout and nothing else. No panel, hotkeys or controller are read. It's for anyone who only uses the web builder, or who wants to rule the panel out while chasing a crash or a key clash. Thanks lemuro.
+- **Values are editable, and now it says so:** the header reads *Tick passives to stack them. Click a name to edit its values.* Thanks BONHakyla.
+
+Under the hood: `tests/test_report_share.py` covers panel off (it checks that no key or controller is read), code length, and that a code copied in game loads to the same loadout in picker.py. The web parity suite checks that every preset's share link loads to the same loadout in Python. 480+ checks.
+
 ## 5.5 (2026-09-30)
 Both editions (full and Passive Swap):
 - **Controller support.** **Back + Start** opens and closes the panel. The D-pad or left stick moves a yellow focus box to the nearest button, and long lists scroll under it. **A** presses, **B** goes back (and closes), **LB / RB** switch tabs, **X** undoes, **Y** ticks the chosen passive, and the right stick scrolls. The prompt bar shows the controller buttons while you use it; moving the mouse hands control back.
