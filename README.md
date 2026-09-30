@@ -46,9 +46,11 @@ Then:
 
 ## The armory terminal (F7)
 
-- **Left:** every armor passive with a tick box. Ticked = stacked onto your armor. Click a name to see its values.
+- **Left:** every armor passive with a tick box. Ticked = stacked onto your armor. Click a name to see what it does (*+2 stims; stims last 2 s longer*) and its values. **Stack summary** at the top shows everything on the armor added together.
 - **Right:** the chosen passive's values, in plain terms (`75%` resist, `+30%`, `+50` armor). `--` `-` `+` `++` change them, `R` resets, or click a value and type one, e.g. `75` for 75% (Enter to set, Esc to cancel). The armor's own passive (e.g. Med-Kit) is listed first; its values **replace** the originals.
-- **Tabs:** one per armor passive you stack onto. **+ Armor** adds another (e.g. a separate Siege-Ready stack), **Remove this armor** puts the game's own values back.
+- **Tabs:** one per armor passive you stack onto. **+ Armor** adds another (e.g. a separate Siege-Ready stack), and pointing at a passive there lists the armors that carry it. **Remove armor** (click twice) puts the game's own values back.
+- **Which armor do I wear?** Your armor's passive shows *Wear any of: …*, e.g. Med-Kit: CM-09 Bonesnapper, CM-14 Physician, …
+- **Confirmed or not:** each value says *UNTESTED* or *CONFIRMED IN GAME* (from [TESTING.md](TESTING.md)).
 - **When two passives change the same thing:** *Stack all* or *Strongest only*.
 - Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a web-builder build starts fresh from that build; the release zip always keeps what you made.
 - **Presets tab:** load a standard preset or one of yours. **+ Save current stack** saves what you have; rename, overwrite or delete your own. Saved in `ArmoryForge\my-presets.txt`.
@@ -58,6 +60,7 @@ Then:
 - **Move it:** drag the top strip anywhere on the screen; the spot is remembered. **Ctrl 0** puts it back.
 - **Long lists scroll:** mouse wheel over the list, the bar on its right, or PageUp / PageDown.
 - **Copy code / Paste code:** your build as one line of text for Discord etc. Web-builder share links paste too.
+- **Controller:** **Back + Start** opens the panel. D-pad / left stick moves, **A** selects, **B** goes back, **LB / RB** switch tabs, **X** undoes, **Y** ticks, right stick scrolls.
 - **Search:** **Ctrl+F** (or click the field above a list) and type part of a passive's name or effect, e.g. `reload`. Esc clears it.
 - **Keys tab:** pick the panel key (F1–F12) and the quick-swap key (F1–F12 or off). Also `hotkey = F7` / `swap_hotkey = F9` in `[settings]`. A bad key there falls back to F7 / F9, so the panel always opens. SHODAN Stat Editor uses F8, and its panel sits on the right while this one sits on the left.
 - If a change doesn't show, re-equip the armor or start a mission.
@@ -68,9 +71,9 @@ Then:
 A mod that edits a live game's data while you play, built and tested like a production system. The full write-up, with diagrams, is in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
 - **Memory patching done safely.** Finds the game's armor-passive table in memory in a per-frame time budget. It never overwrites the game's rows: it builds a new modifier array and switches the record to it with one atomic 16-byte pointer+count store, double-buffered and verified by read-back, with automatic rollback. Every original byte can be restored, and records another mod already changed are left alone.
-- **An in-game UI from scratch.** An immediate-mode panel on the engine's raw GUI calls: whole-pixel layout that stays sharp from 720p to 4K, drag, scroll, search, undo, presets, share codes and typed values in plain units, with input through the Windows API over LuaJIT FFI.
+- **An in-game UI from scratch.** An immediate-mode panel on the engine's raw GUI calls: whole-pixel layout that stays sharp from 720p to 4K, drag, scroll, search, undo, presets, share codes and typed values in plain units. Mouse and keyboard come through the Windows API and controllers through XInput, both over LuaJIT FFI, with spatial focus navigation for the controller.
 - **One format, three implementations, identical output.** The same `.ini` is parsed and compiled by Python (CLI), JavaScript (the web builder) and Lua (in game). A parity test requires Python and JS to produce **byte-identical** mod archives.
-- **Tested without the game.** A fake game runs the real mod code under LuaJIT, with memory laid out like the game's, a GUI, a mouse and a keyboard. 360+ checks drive it like a player and verify both the screen and the game's memory. Layout checks use real font metrics at every resolution and size.
+- **Tested without the game.** A fake game runs the real mod code under LuaJIT, with memory laid out like the game's, a GUI, a mouse, a keyboard and an Xbox controller. 450+ checks drive it like a player and verify both the screen and the game's memory. Layout checks use real font metrics at every resolution and size.
 - **Two editions from one codebase.** The Nexus build limits itself to one game passive per armor at the game's own values. The engine enforces it, and a test attacks it with a hostile save file.
 - **CI/CD.** Lint, all suites on every push, and tag-to-release: both editions built, release notes from the changelog, zips checked so no script or executable slips in.
 
@@ -150,6 +153,9 @@ tests/test_panel_scale.py  panel size setting, Ctrl +/-, whole-pixel drawing
 tests/test_panel_scroll_drag.py  scrolling long lists, dragging the panel
 tests/test_panel_keys_search.py  Keys tab, bad-key fallback, passive search
 tests/test_swap_edition.py the Passive Swap (Nexus) edition, incl. a hostile save file
+tests/test_controller.py   the whole panel driven with a fake Xbox controller
+tests/test_passive_info.py passive descriptions, armor lists, stack summary, Remove armor
+tools/passives.json        plain description + armors per passive (wiki data; corrections welcome)
 tests/run_all.py           runs every suite and prints one summary
 tools/release_notes.py     release notes for a tag, from CHANGELOG.md (release workflow)
 docs/ARCHITECTURE.md       how it all works: engine, safety rules, panel, editions, tests

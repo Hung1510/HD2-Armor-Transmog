@@ -77,6 +77,30 @@ local function build_input()
         return point[0], point[1], rect[2] - rect[0], rect[3] - rect[1]
     end
     function self.show_cursor(show) return user.ShowCursor(show and 1 or 0) end
+    -- Xbox-style controller (XInput). Declared with void* so another mod's own XInput
+    -- declaration can't clash; the state is read from a raw 16-byte buffer.
+    pcall(ffi.cdef, 'uint32_t XInputGetState(uint32_t index, void *state);')
+    local xinput = nil
+    for _, name in ipairs({ 'xinput1_4', 'xinput1_3', 'xinput9_1_0' }) do
+        local ok, lib = pcall(ffi.load, name)
+        if ok and lib then xinput = lib break end
+    end
+    local pad_buf, pad_slot, pad_probe, pad_frames = ffi.new('uint8_t[16]'), nil, 0, 0
+    -- buttons, left stick x/y, right stick x/y of the first connected controller, or nil.
+    -- Asking an empty slot is slow, so without a controller one slot is tried every 60 frames.
+    function self.pad()
+        if not xinput then return nil end
+        if not pad_slot then
+            pad_frames = pad_frames + 1
+            if pad_frames % 60 ~= 1 then return nil end
+            local ok, r = pcall(xinput.XInputGetState, pad_probe, ffi.cast('void *', pad_buf))
+            if ok and r == 0 then pad_slot = pad_probe else pad_probe = (pad_probe + 1) % 4; return nil end
+        end
+        local ok, r = pcall(xinput.XInputGetState, pad_slot, ffi.cast('void *', pad_buf))
+        if not ok or r ~= 0 then pad_slot = nil; return nil end
+        local s16 = ffi.cast('int16_t *', pad_buf + 8)
+        return ffi.cast('uint16_t *', pad_buf + 4)[0], s16[0], s16[1], s16[2], s16[3]
+    end
     function self.get_clip()
         local r = ffi.new('int32_t[4]')
         if user.GetClipCursor(ffi.cast('void *', r)) == 0 then return nil end
@@ -122,7 +146,8 @@ local ui = { open = false, tab = 1, sel = nil, hover = nil, gui = nil, world = n
              regions = {}, version = 0, errors = 0, value = nil, adding = false, message = nil,
              confirm = nil, presets = false, psel = nil, naming = nil, history = {}, last_text = nil,
              swap_at = 0, scroll = {}, scrolling = nil, pos = nil, drag = nil,
-             settings = false, search = '', search_on = false }
+             settings = false, search = '', search_on = false,
+             pad_mode = false, focus = nil, nav_retry = nil }
 local W, H = 1000, 990
 local font = nil
 local held, mouse_was_down, armed = {}, nil, nil
@@ -463,6 +488,66 @@ function PP.match(c)
     end
     return false
 end
+-- passive info (tools/passives.json + TESTING.md, generated into PASSIVE_INFO)
+function PP.info(pid)
+    local c = CAT[pid]
+    return c and PASSIVE_INFO and PASSIVE_INFO.by_name[c.name] or nil
+end
+-- how far an effect is confirmed in game: tag text and its colour name
+function PP.test_tag(e)
+    local t = PASSIVE_INFO and PASSIVE_INFO.tested[e.key]
+    if t == 'ok' then return 'CONFIRMED IN GAME', 'GOOD' end
+    if t == 'odd' then return 'WORKS, NAME UNSURE', 'YELLOW' end
+    if t == 'no' then return 'NO EFFECT SEEN', 'BAD' end
+    return 'UNTESTED', 'DIM'
+end
+-- The stack's combined effect, one line per effect: the armor's own rows (with your
+-- values) plus every stacked passive's. Additive values add up, multipliers multiply.
+-- An estimate: how the game combines stacked rows is not confirmed in game.
+function PP.summary_rows(p)
+    if not PP.by_ident then
+        PP.by_ident = {}
+        for _, c in ipairs(CAT_LIST) do
+            for _, e in ipairs(c.effects) do
+                if e.kind == 'row' and not PP.by_ident[e.a .. '|' .. e.b] then PP.by_ident[e.a .. '|' .. e.b] = e end
+            end
+        end
+    end
+    local rows, seen = {}, {}
+    local base = CAT[p.perk]
+    for _, e in ipairs(base and base.effects or {}) do
+        if e.kind == 'row' then
+            local v = p.tweaks[p.perk .. '.' .. e.key]
+            if v == nil then v = e.def end
+            rows[#rows + 1] = { e.a, e.b, v }
+            seen[e.a .. '|' .. e.b .. '|' .. v] = true
+        end
+    end
+    local ok, res = pcall(resolve_profile, p)
+    for _, r in ipairs(ok and res and res.rows or {}) do
+        if not seen[r[1] .. '|' .. r[2] .. '|' .. r[3]] then rows[#rows + 1] = r end
+    end
+    local groups, order = {}, {}
+    for _, r in ipairs(rows) do
+        local e = PP.by_ident[r[1] .. '|' .. r[2]]
+        if e then
+            local g = groups[e.key]
+            if not g then
+                g = { e = e, n = 0 }
+                groups[e.key] = g
+                order[#order + 1] = g
+            end
+            local v = r[3]
+            if g.n == 0 then g.v = v
+            elseif e.type == 2 then g.v = g.v * v
+            elseif e.type == 1 or e.type == 3 then g.v = g.v + v
+            else g.v = math.max(g.v, v) end
+            g.n = g.n + 1
+        end
+    end
+    table.sort(order, function(a, b) return label_of(a.e) < label_of(b.e) end)
+    return order
+end
 function PP.set_search(text, on)
     if text ~= ui.search then ui.scroll = {} end         -- a new search starts at the top
     ui.search, ui.search_on = text, on
@@ -650,6 +735,7 @@ local function draw(width, height)
     ui.scrolling = nil
     local gui = ui.gui
     local regions = {}
+    ui.tab_order = {}                        -- tab keys left to right (LB / RB)
     local ink_font, ink_material = font.font, font.material
     local up = string.upper
 
@@ -773,6 +859,7 @@ local function draw(width, height)
         if n then text(tostring(n), x + w - 8, 134, 11, C.DIM, nil, 'right') end
         if active then hatch(x + 10, 136, w - (n and 34 or 20), C.TEXT) end
         region(key, x, 108, w, 40)
+        ui.tab_order[#ui.tab_order + 1] = key
         return w
     end
 
@@ -824,8 +911,11 @@ local function draw(width, height)
         rect(0, by0, W, 40, color(6, 7, 8, 250), 951)
         rect(0, by0, W, 1, C.LINE, 952)
         local x = 22
-        for _, p in ipairs({ { hotkey(), 'Close' }, swap_key() ~= 'OFF' and { swap_key(), 'Swap loadout' } or false,
-                             { 'CTRL+Z', 'Undo' } }) do
+        local hints = ui.pad_mode and { { 'A', 'Select' }, { 'B', 'Back' }, { 'LB/RB', 'Tabs' }, { 'X', 'Undo' },
+                                        not ui.adding and not ui.presets and not ui.settings and { 'Y', 'Tick' } or false }
+                      or { { hotkey(), 'Close' }, swap_key() ~= 'OFF' and { swap_key(), 'Swap loadout' } or false,
+                           { 'CTRL+Z', 'Undo' } }
+        for _, p in ipairs(hints) do
             if p then
                 x = x + keycap(p[1], x, by0 + 9) + 8
                 x = x + text(up(p[2]), x, by0 + 13, 12, C.TEXT) + 22
@@ -855,7 +945,7 @@ local function draw(width, height)
     -- armor tabs share what the other tabs and "Remove this stack" leave; long names are cut
     local fixed = 0
     for _, c in ipairs({ '+ Armor', 'Presets', 'Keys' }) do fixed = fixed + math.min(230, measure(up(c), 15) + 30) + 6 end
-    local room = W - 22 - (measure('CLICK AGAIN TO REMOVE', 11) + 20) - 22 - fixed
+    local room = W - 22 - (measure('CLICK AGAIN TO REMOVE', 13) + 28 + 12) - 22 - fixed
     local each_tab = math.max(60, math.min(230, room / math.max(1, #LOADOUT.profiles) - 6))
     for n, prof in ipairs(LOADOUT.profiles) do
         x = x + tab('tab:' .. n, CAT[prof.perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings, nil, n, each_tab) + 6
@@ -865,11 +955,11 @@ local function draw(width, height)
     x = x + tab('presets', 'Presets', x, ui.presets, C.YELLOW) + 6
     tab('settings', 'Keys', x, ui.settings, C.MUTED)
     if p and not ui.adding and not ui.presets and not ui.settings then
+        -- a real button (players missed the old small text): click, then click again to confirm
         local sure = ui.confirm and ui.confirm.kind == 'remove'
-        local cap = sure and 'CLICK AGAIN TO REMOVE' or (MOD.swap_only and 'REMOVE THIS ARMOR' or 'REMOVE THIS STACK')
-        local rw = measure(cap, 11)
-        text(cap, W - 22, 126, 11, (sure or ui.hover == 'remove') and C.BAD or C.DIM, nil, 'right')
-        region('remove', W - 22 - rw - 6, 114, rw + 12, 28)
+        local cap = sure and 'Click again to remove' or 'Remove armor'
+        local rbw = measure(up(cap), 13) + 28
+        button('remove', cap, W - 22 - rbw, 112, rbw, 32, true, false, C.BAD)
     end
 
     -- two panels
@@ -938,6 +1028,26 @@ local function draw(width, height)
             region('search:clear', IX + IW - cw, y, cw, 26)
         end
         return y + 32
+    end
+    -- text over up to `lines` lines of `width`, cut with '..' if it doesn't fit; returns the next y
+    local function wrap(value, x, y, size, c, width, lines)
+        local line, n = '', 0
+        local words = {}
+        for w in value:gmatch('%S+') do words[#words + 1] = w end
+        local i = 1
+        while i <= #words do
+            local try = line == '' and words[i] or (line .. ' ' .. words[i])
+            if line ~= '' and measure(try, size) > width then
+                n = n + 1
+                if n == lines then text(line .. ' ..', x, y, size, c, width); return y + size + 6 end
+                text(line, x, y, size, c, width)
+                y, line = y + size + 6, ''
+            else
+                line, i = try, i + 1
+            end
+        end
+        if line ~= '' then text(line, x, y, size, c, width); y = y + size + 6 end
+        return y
     end
     local function no_match(y, n)
         if n == 0 then text('Nothing matches "' .. ui.search .. '".', IX + 4, y + 4, 13, C.DIM, IW - 8) end
@@ -1088,7 +1198,21 @@ local function draw(width, height)
         end
         bar.w = 0
         button('addcancel', 'Cancel', IX, BOT - 44, nil, 32, true)
-        if MOD.swap_only then
+        local hov = ui.hover and tonumber(ui.hover:match('^addpick:(%d+)$'))
+        local hinf = hov and PP.info(hov)
+        if hinf then
+            head(RX, TOP + 14, MOD.swap_only and 'New swap' or 'New stack', CAT[hov].name, RIW)
+            local hy = wrap(hinf.desc, RX, TOP + 70, 14, C.TEXT, RIW, 3) + 10
+            label('Armors with this passive', RX, hy, nil, RIW)
+            hy = hy + 20
+            for i, a in ipairs(hinf.armors) do
+                if hy > BOT - 90 then text('+' .. (#hinf.armors - i + 1) .. ' more', RX, hy, 12, C.DIM, RIW); break end
+                text(a, RX + 8, hy, 13, C.MUTED, RIW - 8)
+                hy = hy + 20
+            end
+            text(MOD.swap_only and 'Pick it, then choose the passive these armors should have.'
+                 or 'Pick it, then wear any of these armors to get the stack.', RX, BOT - 60, 12, C.DIM, RIW)
+        elseif MOD.swap_only then
             head(RX, TOP + 14, 'New swap', 'Pick your armor', RIW)
             text('Pick the passive of the armor you wear on the left,', RX, TOP + 70, 14, C.MUTED, RIW)
             text('then choose which passive it should have instead.', RX, TOP + 92, 14, C.MUTED, RIW)
@@ -1098,6 +1222,10 @@ local function draw(width, height)
         text('Each armor passive can carry its own stack. Pick one on the left,', RX, TOP + 70, 14, C.MUTED, RIW)
         text('then wear any armor that has that passive to get the stack.', RX, TOP + 92, 14, C.MUTED, RIW)
         text('Example: Med-Kit armor for a tank build, Siege-Ready armor for a gunner build.', RX, TOP + 122, 13, C.DIM, RIW)
+        end
+        if not hinf then
+            text('Point at a passive to see what it does and which armors have it.', RX, TOP + 160, 13, C.DIM, RIW)
+            text('Picked the wrong one? Open its tab and press REMOVE ARMOR.', RX, TOP + 184, 13, C.DIM, RIW)
         end
 
     elseif not p then
@@ -1144,7 +1272,14 @@ local function draw(width, height)
         head(RX, TOP + 14, cur and 'Swapped in' or 'Original passive', shown.name, RIW)
         text(cur and ('Every ' .. CAT[p.perk].name .. ' armor has ' .. shown.name .. ' instead of its own passive.')
              or 'This armor keeps its own passive. Pick another on the left to swap it.', RX, TOP + 52, 13, C.MUTED, RIW)
-        local y2 = TOP + 82
+        local y2 = TOP + 76
+        local sinf = PP.info(shown.id)
+        if sinf then y2 = wrap(sinf.desc, RX, y2, 13, C.TEXT, RIW, 2) end
+        local binf = PP.info(p.perk)
+        if binf and #binf.armors > 0 then
+            y2 = wrap('APPLIES TO: ' .. table.concat(binf.armors, ', '), RX, y2, 11, C.MUTED, RIW, 2)
+        end
+        y2 = y2 + 6
         for _, e in ipairs(shown.effects) do
             if y2 > BOT - 190 then break end
             rect(RX, y2, RIW, 48, C.ROW, 950)
@@ -1180,6 +1315,16 @@ local function draw(width, height)
         head(IX, TOP + 14, 'Armor stack ' .. ui.tab .. ' / ' .. #LOADOUT.profiles, 'Choose passives', IW - 70)
         text(n_on .. ' ON', IX + IW, TOP + 14, 11, n_on > 0 and C.YELLOW or C.DIM, nil, 'right')
         local y = search_box(TOP + 58)
+        -- the stack's combined effect
+        local sum_key = 'sel:summary'
+        if ui.sel == 'summary' then rect(LX + 1, y, LW - 2, RH, C.ROW_HI, 951); rect(LX + 1, y, 3, RH, C.YELLOW, 952)
+        elseif ui.hover == sum_key then rect(LX + 1, y, LW - 2, RH, C.ROW, 951) end
+        local sw0 = measure('SUM', 10) + 10
+        border(IX + 2, y + 5, sw0, 14, C.YELLOW, 952)
+        text('SUM', IX + 2 + sw0 / 2, y + 7, 10, C.YELLOW, nil, 'center')
+        text('STACK SUMMARY', IX + sw0 + 12, y + 5, 14, ui.sel == 'summary' and C.TEXT or C.MUTED, IW - sw0 - 16)
+        region(sum_key, LX + 1, y, LW - 2, RH)
+        y = y + RH
         local base_key = 'sel:' .. p.perk
         if ui.sel == p.perk then rect(LX + 1, y, LW - 2, RH, C.ROW_HI, 951); rect(LX + 1, y, 3, RH, C.YELLOW, 952)
         elseif ui.hover == base_key then rect(LX + 1, y, LW - 2, RH, C.ROW, 951) end
@@ -1229,7 +1374,13 @@ local function draw(width, height)
             -- value cards: label | value field | -- - + ++ | R
             local fw, bw2, gap, rw = 104, 36, 4, 26
             local controls = fw + 10 + 4 * bw2 + 3 * gap + 6 + rw
-            local y2 = TOP + 82
+            local y2 = TOP + 80
+            local inf = PP.info(sel.id)
+            if inf then y2 = wrap(inf.desc, RX, y2, 13, C.TEXT, RIW, 2) end
+            if is_base and inf and #inf.armors > 0 then
+                y2 = wrap('WEAR ANY OF: ' .. table.concat(inf.armors, ', '), RX, y2, 11, C.MUTED, RIW, 2)
+            end
+            y2 = y2 + 6
             for n, e in ipairs(sel.effects) do
                 local v = value_of(p, sel.id, e)
                 local tweaked = v ~= e.def
@@ -1238,7 +1389,9 @@ local function draw(width, height)
                 rect(RX, y2, 3, 60, tweaked and C.YELLOW or C.LINE2, 951)
                 local lw = RIW - controls - 26
                 text(label_of(e) .. (e.hint:find('%?') and ' ?' or ''), RX + 14, y2 + 10, 15, C.TEXT, lw)
-                text(PP.WHAT[u] .. (e.hint:find('%?') and ' (name is a guess)' or ''), RX + 14, y2 + 32, 12, C.DIM, lw)
+                text(PP.WHAT[u] .. (e.hint:find('%?') and ' (name is a guess)' or ''), RX + 14, y2 + 30, 12, C.DIM, lw)
+                local tag, tcol = PP.test_tag(e)
+                text(tag, RX + 14, y2 + 46, 9, C[tcol], lw)
                 local bx = RX + RIW - 10 - controls
                 local typing = ui.value and ui.value.pid == sel.id and ui.value.n == n
                 local vkey = 'value:' .. n
@@ -1273,6 +1426,36 @@ local function draw(width, height)
             local rpw = math.min(RIW, measure(rcap, 11))
             text(rcap, RX, y2 + 8, 11, ui.hover == rp and C.YELLOW or C.DIM, RIW)
             region(rp, RX - 4, y2 + 2, rpw + 8, 22)
+        elseif ui.sel == 'summary' then
+            local list = PP.summary_rows(p)
+            head(RX, TOP + 14, 'Stack summary', CAT[p.perk].name .. ' armor', RIW)
+            local y2 = wrap('Everything on this armor together: its own passive plus ' .. n_on .. ' stacked. An estimate: how the game combines stacked values is not confirmed yet.',
+                            RX, TOP + 54, 12, C.MUTED, RIW, 2)
+            local inf = PP.info(p.perk)
+            if inf and #inf.armors > 0 then
+                y2 = wrap('WEAR ANY OF: ' .. table.concat(inf.armors, ', '), RX, y2, 11, C.MUTED, RIW, 2)
+            end
+            y2 = y2 + 8
+            local colw, lh = (RIW - 16) / 2, 24
+            local rows_fit = math.max(1, math.floor((BOT - 190 - y2) / lh))
+            local shown = math.min(#list, rows_fit * 2)
+            if #list > shown then shown = shown - 1 end
+            for k = 1, shown do
+                local g = list[k]
+                local col, row = (k - 1) % 2, math.floor((k - 1) / 2)
+                local cx, cy = RX + col * (colw + 16), y2 + row * lh
+                rect(cx, cy, colw, lh - 3, C.ROW, 950)
+                local vt = PP.text(g.e, g.v)
+                local vw = measure(vt, 13)
+                text(vt, cx + colw - 8, cy + 5, 13, C.YELLOW, 90, 'right')
+                text(label_of(g.e) .. (g.n > 1 and ('  x' .. g.n) or ''), cx + 8, cy + 5, 12, C.TEXT, colw - math.min(90, vw) - 24)
+            end
+            if #list > shown then
+                local k = shown + 1
+                local col, row = (k - 1) % 2, math.floor((k - 1) / 2)
+                text('+' .. (#list - shown) .. ' MORE', RX + col * (colw + 16) + 8, y2 + row * lh + 6, 11, C.DIM, colw - 16)
+            end
+            if #list == 0 then text('Nothing stacked yet: tick passives on the left.', RX, y2, 13, C.DIM, RIW) end
         end
 
         -- overlap rule, status, actions
@@ -1310,6 +1493,19 @@ local function draw(width, height)
     end
 
     prompts()
+    -- controller focus: a yellow box around the focused button
+    if ui.pad_mode and ui.focus then
+        for _, r in ipairs(regions) do
+            if r.key == ui.focus then
+                local t = math.max(2, px(2 * s))
+                for _, e in ipairs({ { r.x - t, r.y - t, r.w + 2 * t, t }, { r.x - t, r.y + r.h, r.w + 2 * t, t },
+                                     { r.x - t, r.y, t, r.h }, { r.x + r.w, r.y, t, r.h } }) do
+                    Gui.rect(gui, Vector3(e[1], e[2], 957), Vector2(e[3], e[4]), C.YELLOW)
+                end
+                break
+            end
+        end
+    end
     return regions
 end
 
@@ -1378,6 +1574,7 @@ local function click(key)
             ui.tab, ui.sel = math.max(1, ui.tab - 1), nil
             changed(p.perk, 'Removed the ' .. CAT[p.perk].name .. ' stack (the game\'s own values are back)')
         end
+    elseif kind == 'sel' and arg == 'summary' then ui.sel = 'summary'; ui.value = nil
     elseif kind == 'sel' and n then ui.sel = n; ui.value = nil
     elseif kind == 'tick' and n and p then toggle(p, n)
     elseif kind == 'policy' and p then p.conflicts = arg; changed(p.perk)
@@ -1558,6 +1755,11 @@ local function mouse()
     if not x or cw <= 0 or ch <= 0 then return end
     local width, height = sr.Gui.resolution()
     local sx, sy = x * width / cw, y * height / ch          -- screen pixels from the top left
+    if PP.last_cur and (math.abs(PP.last_cur[1] - x) > 2 or math.abs(PP.last_cur[2] - y) > 2) and ui.pad_mode then
+        ui.pad_mode = false                                  -- the mouse moved: it's in charge again
+        ui.version = ui.version + 1
+    end
+    PP.last_cur = { x, y }
     local value = sr.Mouse.button(sr.Mouse.button_id('left'))
     local down = value == true or (type(value) == 'number' and value > 0)
     -- dragging the panel by its top strip: follows the cursor until the button is let go
@@ -1602,6 +1804,158 @@ local function mouse()
         end
     end
     mouse_was_down = down
+end
+
+-- ---------------------------------------------------------------- controller
+-- Back + Start opens and closes the panel. In the panel: D-pad or left stick moves a focus
+-- box to the nearest button in that direction (lists scroll when you go past the end),
+-- A presses it, B goes back, LB / RB switch tabs, X undoes, Y ticks the chosen passive,
+-- the right stick scrolls. Using the mouse again hides the focus box.
+PP.PAD = { UP = 0x0001, DOWN = 0x0002, LEFT = 0x0004, RIGHT = 0x0008, START = 0x0010, BACK = 0x0020,
+           LB = 0x0100, RB = 0x0200, A = 0x1000, B = 0x2000, X = 0x4000, Y = 0x8000,
+           R_UP = 0x10000, R_DOWN = 0x20000 }                -- right stick, as virtual buttons
+PP.pad_now, PP.pad_was, PP.pad_held = 0, 0, {}
+PP.bit = rawget(_G, 'bit')
+if not PP.bit then
+    local ok, b = pcall(require, 'bit')
+    PP.bit = ok and b or nil
+end
+PP.LIST_ROW = { sel = true, tick = true, addpick = true, swap = true, pre = true }
+
+-- read the controller once per frame; sticks become D-pad / virtual buttons
+function PP.pad_read()
+    PP.pad_was = PP.pad_now
+    local b, lx, ly, ry = nil, 0, 0, 0
+    if input.pad then
+        local rx
+        b, lx, ly, rx, ry = input.pad()
+    end
+    if not b or not PP.bit then PP.pad_now = 0; return false end
+    local bit, dead, P = PP.bit, 16000, PP.PAD
+    if ly > dead then b = bit.bor(b, P.UP) elseif ly < -dead then b = bit.bor(b, P.DOWN) end
+    if lx > dead then b = bit.bor(b, P.RIGHT) elseif lx < -dead then b = bit.bor(b, P.LEFT) end
+    if ry > dead then b = bit.bor(b, P.R_UP) elseif ry < -dead then b = bit.bor(b, P.R_DOWN) end
+    PP.pad_now = b
+    return true
+end
+function PP.pad_down(mask) return PP.bit ~= nil and PP.bit.band(PP.pad_now, mask) == mask end
+-- pressed this frame (not held from the last one)
+function PP.pad_edge(mask) return PP.pad_down(mask) and PP.bit.band(PP.pad_was, mask) ~= mask end
+-- pressed, then repeating while held (after 0.35 s, every 0.09 s)
+function PP.pad_repeat(mask, now)
+    if not PP.pad_down(mask) then PP.pad_held[mask] = nil; return false end
+    local h = PP.pad_held[mask]
+    if not h then PP.pad_held[mask] = now + 0.35; return true end
+    if now >= h then PP.pad_held[mask] = now + 0.09; return true end
+    return false
+end
+
+function PP.focusable(r)
+    local kind = r.key:match('^([%w_]+)')
+    return r.enabled and kind ~= 'panel' and kind ~= 'drag' and kind ~= 'scroll' and kind ~= 'search'
+end
+function PP.find_region(key)
+    for _, r in ipairs(ui.regions) do if r.key == key then return r end end
+    return nil
+end
+-- a sensible first focus for the view on screen
+function PP.focus_default()
+    local want = { ui.sel and ('sel:' .. tostring(ui.sel)) or false }
+    for _, r in ipairs(ui.regions) do
+        local kind = r.key:match('^([%w_]+)')
+        if PP.focusable(r) and PP.LIST_ROW[kind] and kind ~= 'tick' then want[#want + 1] = r.key break end
+    end
+    want[#want + 1] = 'tab:1'
+    want[#want + 1] = 'add'
+    for _, k in ipairs(want) do
+        local r = k and PP.find_region(k)
+        if r and PP.focusable(r) then ui.focus = k; ui.version = ui.version + 1; return end
+    end
+end
+-- move the focus to the nearest button in a direction (screen y grows upwards here)
+function PP.nav(dir)
+    local cur = ui.focus and PP.find_region(ui.focus)
+    if not cur then PP.focus_default(); return end
+    local cx, cy = cur.x + cur.w / 2, cur.y + cur.h / 2
+    local best, bestd = nil, nil
+    for _, r in ipairs(ui.regions) do
+        if r ~= cur and r.key ~= cur.key and PP.focusable(r) then
+            local dx, dy = r.x + r.w / 2 - cx, r.y + r.h / 2 - cy
+            local main, side
+            if dir == 'up' then main, side = dy, dx
+            elseif dir == 'down' then main, side = -dy, dx
+            elseif dir == 'right' then main, side = dx, dy
+            else main, side = -dx, dy end
+            if main > 2 then
+                local d = main + 2 * math.abs(side)
+                if not bestd or d < bestd then best, bestd = r, d end
+            end
+        end
+    end
+    -- at the end of a long list: scroll it instead of jumping out of the list
+    local sc = ui.scrolling
+    local function inside(r)                  -- in the scrolling list's box?
+        local x, y = r.x + r.w / 2, r.y + r.h / 2
+        return sc and x >= sc.x and x < sc.x + sc.w and y >= sc.y and y < sc.y + sc.h
+    end
+    local in_list = PP.LIST_ROW[cur.key:match('^([%w_]+)')] and inside(cur)
+    local best_in_list = best and PP.LIST_ROW[best.key:match('^([%w_]+)')] and inside(best)
+    if in_list and sc and (dir == 'up' or dir == 'down') and not best_in_list then
+        local off = ui.scroll[sc.id] or 0
+        if (dir == 'down' and off < sc.max) or (dir == 'up' and off > 0) then
+            PP.scroll(dir == 'down' and 1 or -1)
+            ui.nav_retry = dir
+            return
+        end
+    end
+    if best then ui.focus = best.key; ui.version = ui.version + 1 end
+end
+-- LB / RB: the tabs in order (armor tabs, + Armor, Presets, Keys)
+function PP.tab_step(step)
+    local tabs = ui.tab_order or {}
+    if #tabs == 0 then return end
+    local active = ui.settings and 'settings' or ui.presets and 'presets' or ui.adding and 'add' or ('tab:' .. ui.tab)
+    local at = 1
+    for i, k in ipairs(tabs) do if k == active then at = i end end
+    local k = tabs[(at - 1 + step) % #tabs + 1]
+    if k ~= active then click(k) end
+    ui.focus = nil
+end
+
+-- per frame while the panel is open
+local function pad_panel(now)
+    if not PP.has_pad then return end
+    local P = PP.PAD
+    if PP.pad_now ~= 0 and PP.pad_now ~= PP.pad_was and not ui.pad_mode then
+        ui.pad_mode = true
+        ui.version = ui.version + 1
+    end
+    if not ui.pad_mode or PP.pad_down(P.BACK) then return end   -- Back + Start is the open / close combo
+    if ui.focus and not PP.find_region(ui.focus) then ui.focus = nil end
+    for _, d in ipairs({ { P.UP, 'up' }, { P.DOWN, 'down' }, { P.LEFT, 'left' }, { P.RIGHT, 'right' } }) do
+        if PP.pad_repeat(d[1], now) then PP.nav(d[2]) end
+    end
+    if PP.pad_repeat(P.R_UP, now) then PP.scroll(-1) end
+    if PP.pad_repeat(P.R_DOWN, now) then PP.scroll(1) end
+    if PP.pad_edge(P.A) then
+        if not ui.focus then PP.focus_default() end
+        local r = ui.focus and PP.find_region(ui.focus)
+        if r and r.enabled then click(r.key) end
+    elseif PP.pad_edge(P.B) then
+        if ui.search_on or (ui.search or '') ~= '' then PP.set_search('', false)
+        elseif ui.value then finish_value(false)
+        elseif ui.naming then finish_naming(false)
+        elseif ui.adding or ui.presets or ui.settings then
+            ui.adding, ui.presets, ui.settings, ui.focus = false, false, false, nil
+            ui.version = ui.version + 1
+        else PP.open_panel(false) end
+    elseif PP.pad_edge(P.LB) then PP.tab_step(-1)
+    elseif PP.pad_edge(P.RB) then PP.tab_step(1)
+    elseif PP.pad_edge(P.X) then PP.undo()
+    elseif PP.pad_edge(P.Y) then
+        local r = type(ui.sel) == 'number' and PP.find_region('tick:' .. ui.sel)
+        if r and r.enabled then click(r.key) end
+    end
 end
 
 -- ---------------------------------------------------------------- cursor (from SHODAN v1.4.1)
@@ -1701,6 +2055,12 @@ local function panel_frame(now)
     end
     if not ui.hover and not ui.drag then mouse_was_down, armed = nil, nil end
     if input.focused() then keyboard(now) end
+    if input.focused() then
+        local ok, why = pcall(pad_panel, now)
+        if not ok then log('panel: controller: ' .. tostring(why)) end
+        if not ui.open then return end         -- B closed the panel: draw nothing more this frame
+    end
+    if ui.pad_mode then ui.hover = ui.focus end
 
     local width, height = sr.Gui.resolution()
     if ui.message and now >= ui.message.till then ui.message = nil end
@@ -1727,6 +2087,11 @@ local function panel_frame(now)
         end
         ui.signature = signature
         ui.regions = draw(width, height)
+        if ui.nav_retry then                  -- a list scrolled under the focus: move again
+            local d = ui.nav_retry
+            ui.nav_retry = nil
+            PP.nav(d)
+        end
     end
 end
 
@@ -1780,6 +2145,7 @@ end
 
 local function open_panel(open)
     ui.open = open
+    PP.last_cur = nil                         -- a cursor moved while closed is not "the mouse took over"
     if open then
         ui.worlds = nil
         clear_toast(); toast.text = nil
@@ -1803,6 +2169,8 @@ local function open_panel(open)
     end
 end
 
+PP.open_panel = open_panel
+
 -- true once per press of a hotkey (window focused)
 local function hotkey_pressed(name)
     local vk = VK[name]
@@ -1816,6 +2184,12 @@ end
 panel_tick = function(now)
     if not input or not sr then return end
     if hotkey_pressed(hotkey()) then open_panel(not ui.open) end
+    local okp, has = pcall(PP.pad_read)
+    PP.has_pad = okp and has
+    if PP.has_pad and input.focused() and PP.pad_edge(PP.PAD.BACK + PP.PAD.START) then
+        open_panel(not ui.open)
+        if ui.open then ui.pad_mode, ui.focus = true, nil end
+    end
     if not ui.hinted and state.phase == 'ready' then
         -- nothing stacked yet (fresh install): say where the panel is, once
         ui.hinted = true

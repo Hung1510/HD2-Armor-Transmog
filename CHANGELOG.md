@@ -1,5 +1,18 @@
 # Changelog
 
+## 5.5 (2026-09-30)
+Both editions (full and Passive Swap):
+- **Controller support.** **Back + Start** opens and closes the panel. The D-pad or left stick moves a yellow focus box to the nearest button, and long lists scroll under it. **A** presses, **B** goes back (and closes), **LB / RB** switch tabs, **X** undoes, **Y** ticks the chosen passive, and the right stick scrolls. The prompt bar shows the controller buttons while you use it; moving the mouse hands control back.
+- **What each passive does**, in one plain line, e.g. *+2 stims; stims last 2 s longer*. Shown when you pick a passive, in *+ Armor* when you point at one, and in the swap view.
+- **Which armors carry it:** *Wear any of: CM-09 Bonesnapper, CM-14 Physician, …* for your armor's passive, and the full list when you point at a passive in *+ Armor*. 110 armors from the Helldivers wiki; corrections welcome in `tools/passives.json`.
+- **Clearer remove button:** *Remove armor* is now a real button next to the tabs (click it twice). *+ Armor* also explains how to undo a wrong pick. Thanks Shatterdive.
+
+Full edition:
+- **Stack summary:** a new *Stack summary* entry at the top of the list shows everything on the armor together, e.g. *Armor rating +150 · Fire damage taken 87.5% · Stims +4*. Additive values add up and resists multiply. It's marked as an estimate, because how the game combines stacked values isn't confirmed yet.
+- **Confirmed in game or not:** each value card says *UNTESTED*, *CONFIRMED IN GAME* or *NO EFFECT SEEN*, straight from TESTING.md. Report your tests and they show up in the next version.
+
+Under the hood: `tests/test_controller.py` drives the whole panel with a fake controller. `tests/test_passive_info.py` covers the new info, summary and remove flows. The harness scrolls to a row before clicking it, like a player. 450+ checks.
+
 ## 5.4 (2026-09-30)
 Both editions (full and Passive Swap):
 - **Keys tab:** pick the panel key (F1–F12) and the quick-swap key (F1–F12 or off) in the panel, no file editing needed. The two can't clash, and choosing the quick-swap key as the panel key turns quick-swap off. Saved with your loadout; not an undo step. The tab also lists the fixed shortcuts and has size/position controls.

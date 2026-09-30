@@ -159,8 +159,17 @@ The panel is an **immediate-mode UI** drawn with the engine's GUI (`Gui.rect`, `
   text position and font size is rounded to a whole pixel, and text that would overflow shrinks
   one whole pixel at a time. Text width is measured by the engine when possible, else estimated
   per character on the wide side.
-- **Input** comes through the Windows API (`GetAsyncKeyState`, `GetCursorPos`, clipboard) over
-  LuaJIT FFI, with key repeat, focus checks, and freeing and restoring the game's cursor.
+- **Input** comes through the Windows API (`GetAsyncKeyState`, `GetCursorPos`, clipboard) and
+  XInput (controllers) over LuaJIT FFI, with key repeat, focus checks, and freeing and restoring
+  the game's cursor. Empty controller slots are slow to query, so the panel probes one slot every
+  60 frames until a controller shows up.
+- **Controller navigation is spatial.** The same click regions the mouse uses are the focus
+  targets: the D-pad moves to the nearest region in that direction (distance along the direction
+  plus twice the sideways offset). When the focus is at the edge of a long list, the list scrolls
+  one row and the move is retried after the redraw. A and the mouse go through the same `click()`.
+- **Passive info is data, not code.** `tools/passives.json` (plain descriptions and the armors
+  that carry each passive) and the confirmed-in-game marks in `TESTING.md` are generated into the
+  mod at build time, so updating TESTING.md updates the panel.
 - Features: presets and quick-swap (F9), undo (30 steps), share codes, typed values in plain units
   (`75%` resist, `+50` armor), scrolling lists, drag to move, size 80–150 %, a Keys tab, search.
 
@@ -214,6 +223,8 @@ python tests/run_all.py
 | `test_panel_scale.py` | panel size setting and keys, fits the screen |
 | `test_panel_scroll_drag.py` | every passive reachable by scrolling; dragging, clamping, saved position |
 | `test_panel_keys_search.py` | Keys tab, fallback for bad keys, search by name and effect |
+| `test_controller.py` | the whole panel with a fake Xbox controller: open, navigate, scroll, tabs, back, 4K |
+| `test_passive_info.py` | descriptions and armor lists cover every passive; stack summary math; Remove armor |
 | `test_swap_edition.py` | swap copies the game's record exactly; can't be pushed past vanilla |
 | `test_release.py` | both zips: contents, manifests, no scripts, old saves still load |
 | `test_web_parity.js` | Python and JavaScript produce identical Lua and archives |

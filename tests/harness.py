@@ -57,9 +57,11 @@ PP_TEST_INPUT = {
     get_clip = function() return nil end,
     set_clip = function() end,
     get_clipboard = function() return CLIP end,
+    pad = function() if PAD_ON then return PAD_B, PAD_LX, PAD_LY, PAD_RX, PAD_RY end return nil end,
     set_clipboard = function(text) CLIP = text; return true end,
 }
 CLIP = nil
+PAD_ON, PAD_B, PAD_LX, PAD_LY, PAD_RX, PAD_RY = false, 0, 0, 0, 0, 0
 CowboyBingusModLoader = { api = 1 }
 FAKE_T, FAKE_NOW = 1000, 0
 os.time = function() return FAKE_T end
@@ -256,7 +258,22 @@ class FakeGame:
             out[r[b"key"].decode()] = (r[b"x"], r[b"y"], r[b"w"], r[b"h"], r[b"enabled"])
         return out
 
+    def reveal(self, key):
+        """Scroll the long list (if any) until `key` is on screen, like a player would."""
+        regs = self.regions()
+        if key in regs or "scroll:up" not in regs:
+            return
+        for _ in range(60):                       # to the top first
+            if "scroll:up" not in self.regions() or key in self.regions():
+                break
+            self.click("scroll:up")
+        for _ in range(60):
+            if key in self.regions() or "scroll:down" not in self.regions():
+                break
+            self.click("scroll:down")
+
     def click(self, key):
+        self.reveal(key)
         regs = self.regions()
         assert key in regs, "no region %r (have %s)" % (key, sorted(regs)[:40])
         x, y, w, h, _ = regs[key]
@@ -296,6 +313,39 @@ class FakeGame:
         g[b"WHEEL"] = notches
         self.tick(1)
         g[b"WHEEL"] = 0
+        self.tick(2)
+
+    # an Xbox-style controller (XInput button bits)
+    PAD = {"UP": 0x0001, "DOWN": 0x0002, "LEFT": 0x0004, "RIGHT": 0x0008, "START": 0x0010, "BACK": 0x0020,
+           "LB": 0x0100, "RB": 0x0200, "A": 0x1000, "B": 0x2000, "X": 0x4000, "Y": 0x8000}
+
+    def pad_connect(self, on=True):
+        self.L.globals()[b"PAD_ON"] = on
+        self.tick(2)
+
+    def pad(self, *buttons, frames=2):
+        """Press buttons together (e.g. pad("BACK", "START")), then let go."""
+        g = self.L.globals()
+        mask = 0
+        for b in buttons:
+            mask |= self.PAD[b]
+        g[b"PAD_B"] = mask
+        self.tick(frames)
+        g[b"PAD_B"] = 0
+        self.tick(2)
+
+    def pad_hold(self, button, seconds):
+        g = self.L.globals()
+        g[b"PAD_B"] = self.PAD[button]
+        self.tick(int(seconds * 60))
+        g[b"PAD_B"] = 0
+        self.tick(2)
+
+    def stick(self, lx=0, ly=0, rx=0, ry=0, frames=2):
+        g = self.L.globals()
+        g[b"PAD_LX"], g[b"PAD_LY"], g[b"PAD_RX"], g[b"PAD_RY"] = lx, ly, rx, ry
+        self.tick(frames)
+        g[b"PAD_LX"] = g[b"PAD_LY"] = g[b"PAD_RX"] = g[b"PAD_RY"] = 0
         self.tick(2)
 
     def type_text(self, text):

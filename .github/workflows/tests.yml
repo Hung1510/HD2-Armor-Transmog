@@ -60,6 +60,12 @@ jobs:
       - name: Keys tab, bad-key fallback, passive search
         run: python tests/test_panel_keys_search.py
 
+      - name: Passive info, stack summary, Remove armor
+        run: python tests/test_passive_info.py
+
+      - name: Controller (fake XInput pad)
+        run: python tests/test_controller.py
+
       - name: Passive Swap edition (Nexus build)
         run: python tests/test_swap_edition.py
 

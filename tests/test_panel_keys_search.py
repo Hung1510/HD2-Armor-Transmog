@@ -147,7 +147,7 @@ check(g4.state[b"ui"][b"search"] == b"reload", "typing while the field isn't foc
 g4.click("search")
 g4.type_text("zz")
 base = "sel:%d" % pid_of("Med-Kit")
-check(any("Nothing matches" in t for t in g4.texts()) and not any(k.startswith("sel:") and k != base for k in g4.regions()),
+check(any("Nothing matches" in t for t in g4.texts()) and not any(k.startswith("sel:") and k not in (base, "sel:summary") for k in g4.regions()),
       "no match: an empty list and a message")
 g4.key(ESC)
 check({k for k in g4.regions() if k.startswith("tick:")} == all_ticks, "Esc clears the search, the full list is back")

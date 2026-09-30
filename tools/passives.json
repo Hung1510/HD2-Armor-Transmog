@@ -1,0 +1,271 @@
+{
+ "source": "Descriptions: the game's own passive text, shortened. Armors: helldivers.wiki.gg (the Armor page and each armor passive's page), read 2026-09-30.",
+ "note": "Plain description and the body armors that carry each armor passive. Community data: corrections welcome. After editing, run: python tools/picker.py export-web",
+ "passives": {
+  "Acclimated": {
+   "desc": "50% fire, gas, acid and arc resist.",
+   "armors": [
+    "AC-1 Dutiful",
+    "AC-2 Obedient"
+   ]
+  },
+  "Adreno-Defibrillator": {
+   "desc": "One short revive after a death (body intact); stims last 2 s longer; 50% arc resist.",
+   "armors": [
+    "AD-11 Livewire",
+    "AD-26 Bleeding Edge",
+    "AD-49 Apollonian"
+   ]
+  },
+  "Advanced Filtration": {
+   "desc": "80% gas resist.",
+   "armors": [
+    "AF-02 Haz-Master",
+    "AF-50 Noxious Ranger",
+    "AF-52 Lockdown",
+    "AF-91 Field Chemist"
+   ]
+  },
+  "Ballistic Padding": {
+   "desc": "25% chest and 25% explosive resist; no chest bleeding.",
+   "armors": [
+    "BP-20 Correct Officer",
+    "BP-32 Jackboot",
+    "BP-77 Grand Juror"
+   ]
+  },
+  "Blunt-Force Mitigation": {
+   "desc": "Harder to knock down; 30% impact resist; higher armor rating.",
+   "armors": [
+    "BFM-16 Tanker",
+    "BFM-220 Ironclad",
+    "BFM-77 Reformer"
+   ]
+  },
+  "Concussive Padding, Grenadier": {
+   "desc": "50% explosive resist; +2 grenades.",
+   "armors": [
+    "CPG-48 Sapper"
+   ]
+  },
+  "Concussive Padding, Hazmat": {
+   "desc": "50% explosive resist; 25% gas resist; 30% less sidearm recoil.",
+   "armors": [
+    "CPH-26 Commandant"
+   ]
+  },
+  "Concussive Padding, Reinforced": {
+   "desc": "50% explosive resist; higher armor rating.",
+   "armors": [
+    "CPR-80 Bulwark"
+   ]
+  },
+  "Democracy Protects": {
+   "desc": "50% chance to survive a lethal hit; no chest bleeding.",
+   "armors": [
+    "B-22 Model Citizen",
+    "DP-00 Tactical",
+    "DP-11 Champion of the People",
+    "DP-40 Hero of the Federation",
+    "DP-53 Savior of the Free",
+    "TR-9 Cavalier of Democracy"
+   ]
+  },
+  "Desert Stormer": {
+   "desc": "40% fire, gas, acid and arc resist; +20% throw range.",
+   "armors": [
+    "DS-10 Big Game Hunter",
+    "DS-191 Scorpion",
+    "DS-42 Federation's Blade"
+   ]
+  },
+  "Electrical Conduit": {
+   "desc": "95% arc resist.",
+   "armors": [
+    "EX-00 Prototype X",
+    "EX-03 Prototype 3",
+    "EX-16 Prototype 16"
+   ]
+  },
+  "Engineering Kit": {
+   "desc": "30% less recoil crouched or prone; +2 grenades.",
+   "armors": [
+    "CE-07 Demolition Specialist",
+    "CE-101 Guerilla Gorilla",
+    "CE-27 Ground Breaker",
+    "CE-35 Trench Engineer",
+    "CE-64 Grenadier",
+    "CE-67 Titan",
+    "CE-74 Breaker",
+    "CE-81 Juggernaut",
+    "FS-37 Ravager",
+    "SC-15 Drone Master"
+   ]
+  },
+  "Extra Padding": {
+   "desc": "Higher armor rating.",
+   "armors": [
+    "B-01 Tactical",
+    "B-08 Light Gunner",
+    "B-27 Fortified Commando",
+    "CW-9 White Wolf",
+    "TR-40 Gold Eagle",
+    "TR-7 Ambassador of the Brand"
+   ]
+  },
+  "Feet First": {
+   "desc": "50% quieter movement; +30% point-of-interest range; no leg injuries.",
+   "armors": [
+    "A-35 Recon",
+    "A-9 Helljumper"
+   ]
+  },
+  "Fortified": {
+   "desc": "30% less recoil crouched or prone; 50% explosive resist.",
+   "armors": [
+    "B-24 Enforcer",
+    "CW-22 Kodiak",
+    "FS-05 Marksman",
+    "FS-11 Executioner",
+    "FS-23 Battle Master",
+    "FS-34 Exterminator",
+    "FS-38 Eradicator",
+    "FS-55 Devastator"
+   ]
+  },
+  "Gunslinger": {
+   "desc": "Sidearms: +40% reload speed, +50% draw speed, 70% less recoil.",
+   "armors": [
+    "GS-11 Democracy's Deputy",
+    "GS-17 Frontier Marshal",
+    "GS-66 Lawmaker"
+   ]
+  },
+  "Inflammable": {
+   "desc": "75% fire resist.",
+   "armors": [
+    "I-09 Heatseeker",
+    "I-102 Draconaught",
+    "I-44 Salamander",
+    "I-92 Fire Fighter"
+   ]
+  },
+  "Integrated Explosives": {
+   "desc": "Armor explodes 1.5 s after you die; +2 grenades.",
+   "armors": [
+    "IE-12 Righteous",
+    "IE-3 Martyr",
+    "IE-57 Hell-Bent"
+   ]
+  },
+  "Kinetic Displacement Mitigation": {
+   "desc": "50% fire resist; 50% chance to avoid limb injury; 30% impact resist.",
+   "armors": [
+    "KDM-500 Outrider"
+   ]
+  },
+  "Med-Kit": {
+   "desc": "+2 stims; stims last 2 s longer.",
+   "armors": [
+    "CM-09 Bonesnapper",
+    "CM-10 Clinician",
+    "CM-14 Physician",
+    "CM-17 Butcher",
+    "CM-21 Trench Paramedic",
+    "TR-117 Alpha Commander"
+   ]
+  },
+  "Oxygenator": {
+   "desc": "Faster walking and running; faster, longer slides.",
+   "armors": [
+    "O-2 Heavy Operator",
+    "O-3 Free Spirit",
+    "O-44 Bonded Pilot"
+   ]
+  },
+  "Peak Physique": {
+   "desc": "+40% melee damage; better weapon handling.",
+   "armors": [
+    "PH-202 Twigsnapper",
+    "PH-56 Jaguar",
+    "PH-9 Predator"
+   ]
+  },
+  "Reduced Signature": {
+   "desc": "50% quieter movement; enemies spot you from 40% closer.",
+   "armors": [
+    "RS-100 Sanctioner",
+    "RS-67 Null Cipher",
+    "RS-89 Shadow Paragon"
+   ]
+  },
+  "Reinforced Epaulettes": {
+   "desc": "+30% primary reload; 50% chance to avoid limb injury; +20% melee damage.",
+   "armors": [
+    "RE-1861 Parade Commander",
+    "RE-2310 Honorary Guard",
+    "RE-824 Bearer of the Standard"
+   ]
+  },
+  "Rock-Solid": {
+   "desc": "+40% melee damage; harder to knock down.",
+   "armors": [
+    "RS-20 Constrictor",
+    "RS-40 Beast of Prey",
+    "RS-6 Fiend Destroyer"
+   ]
+  },
+  "Scout": {
+   "desc": "Map markers scan for enemies every 2 s; enemies spot you from 30% closer.",
+   "armors": [
+    "CW-4 Arctic Ranger",
+    "SA-04 Combat Technician",
+    "SC-30 Trailblazer Scout",
+    "SC-34 Infiltrator"
+   ]
+  },
+  "Servo-Assisted": {
+   "desc": "+30% throw range; +50% limb health.",
+   "armors": [
+    "CW-36 Winter Warrior",
+    "FS-61 Dreadnought",
+    "SA-12 Servo Assisted",
+    "SA-25 Steel Trooper",
+    "SA-32 Dynamo",
+    "SC-37 Legionnaire",
+    "TR-62 Knight"
+   ]
+  },
+  "Siege-Ready": {
+   "desc": "+30% primary reload; +20% ammo for all weapons (not backpacks).",
+   "armors": [
+    "DP-8 Mountain-Scaled",
+    "SR-18 Roadblock",
+    "SR-24 Street Scout",
+    "SR-64 Cinderblock"
+   ]
+  },
+  "Supplemental Adrenaline": {
+   "desc": "Taking damage restores stamina; higher armor rating.",
+   "armors": [
+    "SA-7 Headfirst",
+    "SA-8 Ram"
+   ]
+  },
+  "True Grit": {
+   "desc": "+30% support weapon reload; better weapon handling.",
+   "armors": [
+    "TG-122 Demo-Trooper",
+    "TG-8 Sharpshooter"
+   ]
+  },
+  "Unflinching": {
+   "desc": "Less flinch when hit; higher armor rating; map markers scan every 2 s.",
+   "armors": [
+    "UF-16 Inspector",
+    "UF-50 Bloodhound",
+    "UF-84 Doubt Killer"
+   ]
+  }
+ }
+}
