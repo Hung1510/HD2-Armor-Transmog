@@ -35,7 +35,12 @@ ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "panel.lua", "main
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "ArmoryForge"
 TITLE = "Super Earth Armory Forge"
-VERSION = "5.3"
+VERSION = "5.3.1"
+# The only tool files that go in the player zip: plain-text sources of the mod and the
+# builder. Dev scripts (badge updaters, PowerShell) stay out; mod sites quarantine
+# archives that carry scripts or executables.
+RELEASE_TOOLS = ["picker.py", "engine.lua", "panel.lua", "main.lua"]
+RELEASE_ALLOWED_EXT = (".json", ".png", ".patch_0", ".stream", ".gpu_resources", ".md", ".txt", ".ini", ".py", ".lua")
 AUTHOR = "mostlycloudy (original v3), Hung1510 (v4 edit)"
 DEFAULT_HOTKEY = "F7"
 DEFAULT_PANEL_SCALE = 1.0      # F7 panel size, 0.8 .. 1.5
@@ -731,7 +736,8 @@ def cmd_release(args):
     if os.path.exists(icon):
         manifest["IconPath"] = "icon.png"
     extras = ["README.md", "CREDITS.txt", "CHANGELOG.md", "TESTING.md", "loadout.ini"]
-    trees = ["tools", "examples", "presets"]
+    extras += ["tools/" + f for f in RELEASE_TOOLS]
+    trees = ["examples", "presets"]
     archive = archive_for(full)
     os.makedirs(os.path.dirname(os.path.abspath(args.zip)), exist_ok=True)
     with zipfile.ZipFile(args.zip, "w", compression=zipfile.ZIP_DEFLATED) as z:

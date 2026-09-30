@@ -1,5 +1,8 @@
 # Changelog
 
+## 5.3.1 (2026-09-30)
+- Same mod as 5.3. The release zip no longer includes developer scripts (a PowerShell badge updater had slipped into `tools/`), which made Nexus quarantine the 5.3 file. The zip now holds only the mod, its readme files, presets and the plain-text sources of the mod and builder, and a test checks that.
+
 ## 5.3 (2026-09-30)
 - **Every passive can be picked again:** the *+ Armor* list stopped at Kinetic Displacement Mitigation on smaller screens, so Blunt-Force Mitigation and True Grit could not be chosen as a base armor. Long lists (+ Armor, a stack's passives, your presets) now scroll: mouse wheel over the list, the bar on its right (arrows, click the track to page), or PageUp / PageDown. The bar only appears when a list doesn't fit.
 - **Drag the panel:** grab the top strip (it says *Drag to move*) and put the panel anywhere, so it doesn't cover what you want to see when it's zoomed in. It always stays on screen, the spot is remembered (`ArmoryForge\panel-position.txt`, as a share of the screen so it survives a resolution change), and **Ctrl 0** puts it back.

@@ -49,6 +49,10 @@ check(picker.ARCHIVE_NAME in names and not any(n.startswith(("Builds/", "Addon/"
       "the patch sits at the zip root")
 check(all(f in names for f in ("README.md", "CREDITS.txt", "tools/picker.py", "presets/02-tank.ini")),
       "sources and presets included")
+bad = [n for n in names if not n.endswith("/") and not n.lower().endswith(picker.RELEASE_ALLOWED_EXT)]
+check(not bad, "no scripts, executables or nested archives in the zip (mod sites quarantine them) %s" % bad)
+check(not any(n.startswith("tools/") and n[6:] not in picker.RELEASE_TOOLS for n in names),
+      "only the mod's own tool sources are packed, no dev scripts")
 lua_path = tempfile.mktemp(suffix=".lua")
 arc = z.read(picker.ARCHIVE_NAME)
 settings, _ = picker.load_config_text("[settings]\nname = %s\n[profile: Med-Kit]\n" % picker.TITLE)
