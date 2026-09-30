@@ -35,9 +35,10 @@ ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "panel.lua", "main
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "ArmoryForge"
 TITLE = "Super Earth Armory Forge"
-VERSION = "5.1"
+VERSION = "5.2"
 AUTHOR = "mostlycloudy (original v3), Hung1510 (v4 edit)"
 DEFAULT_HOTKEY = "F7"
+DEFAULT_PANEL_SCALE = 1.0      # F7 panel size, 0.8 .. 1.5
 DEFAULT_SWAP_HOTKEY = "F9"     # F6 = Refresh Operations, F8 = SHODAN Stat Editor
 
 # --------------------------------------------------------------------------- catalog
@@ -217,7 +218,7 @@ def load_config_text(text, source="<loadout>"):
     cp.optionxform = str
     cp.read_string(text, source)
 
-    settings = {"retire": True, "name": None, "hotkey": None, "swap_hotkey": None}
+    settings = {"retire": True, "name": None, "hotkey": None, "swap_hotkey": None, "panel_scale": None}
     if cp.has_section("settings"):
         s = cp["settings"]
         for k, v in s.items():
@@ -235,6 +236,14 @@ def load_config_text(text, source="<loadout>"):
                 if not re.match(r"^(F([1-9]|1[0-2])|OFF)$", hk):
                     raise ConfigError("[settings]: swap_hotkey must be F1..F12 or off, got '%s'" % v.strip())
                 settings["swap_hotkey"] = hk
+            elif k == "panel_scale":
+                try:
+                    sc = float(v.strip().rstrip("%")) / (100.0 if v.strip().endswith("%") else 1.0)
+                except ValueError:
+                    raise ConfigError("[settings]: panel_scale must be a number from 0.8 to 1.5, got '%s'" % v.strip())
+                if not (0.8 - 1e-9 <= sc <= 1.5 + 1e-9):
+                    raise ConfigError("[settings]: panel_scale must be from 0.8 to 1.5, got '%s'" % v.strip())
+                settings["panel_scale"] = math.floor(sc * 10 + 0.5) / 10.0     # half up, like the web builder and the game
             elif k == "base":
                 pass            # written by the in-game panel; only the game reads it
             else:
@@ -470,6 +479,7 @@ def generate_lua(settings, profiles, blank=False):
     L.append("    retire = %s," % ("true" if settings["retire"] else "false"))
     L.append("    hotkey = '%s'," % (settings.get("hotkey") or DEFAULT_HOTKEY))
     L.append("    swap_hotkey = '%s'," % (settings.get("swap_hotkey") or DEFAULT_SWAP_HOTKEY))
+    L.append("    panel_scale = %.1f," % (settings.get("panel_scale") or DEFAULT_PANEL_SCALE))
     if blank:
         L.append("    blank = true,   -- the release: nothing built in; keeps what you make in the panel")
     L.append("    type_passive = 0x63CE0FEB,   -- HelldiverCustomizationPassiveBonusSettings")
@@ -752,6 +762,7 @@ def cmd_export_web(args):
     data = {
         "mod_id": MOD_ID, "global": GLOBAL, "title": TITLE, "version": VERSION,
         "default_hotkey": DEFAULT_HOTKEY, "default_swap_hotkey": DEFAULT_SWAP_HOTKEY,
+        "default_panel_scale": DEFAULT_PANEL_SCALE,
         "author": AUTHOR, "credit": CREDIT, "guid": str(uuid.uuid5(GUID_NS, MOD_ID)),
         "catalog": [{"id": pid, "name": n, "rows": [list(r) for r in rows],
                      "stats": [list(s) for s in stats]}
@@ -942,6 +953,7 @@ def cmd_init(args):
     L.append("retire = true               ; true: patch once. false: re-check every 5s")
     L.append("hotkey = F7                 ; opens the in-game panel (F1..F12)")
     L.append("swap_hotkey = F9            ; cycles your presets in game (F1..F12 or off)")
+    L.append("panel_scale = 1.0           ; F7 panel size, 0.8 .. 1.5 (Ctrl +/- in game)")
     L.append("")
     L.append("; One [profile: <passive>] per armour passive you want to boost.")
     L.append("; Wear armour that HAS that passive and it gets everything set 'on'.")

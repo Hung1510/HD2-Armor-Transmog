@@ -37,9 +37,19 @@ def check(cond, what):
 
 def layout_problems(g):
     texts = g.text_boxes()
-    regs = {k: (x, 1080 - (y + h), x + w, 1080 - y) for k, (x, y, w, h, _) in g.regions().items()}
+    H = g.res()[1]
+    regs = {k: (x, H - (y + h), x + w, H - y) for k, (x, y, w, h, _) in g.regions().items()}
     probs = []
     px0, py0, px1, py1 = regs["panel"]
+    sw, sh = g.res()
+    if px0 < 0 or py0 < 0 or px1 > sw or py1 > sh:
+        probs.append("panel does not fit the %dx%d screen" % (sw, sh))
+    # sharp text: every rectangle edge, text position and font size on a whole pixel
+    for c in g.draw_calls():
+        nums = tuple(c[1:3]) + ((c[4], c[5]) if c[0] == b"rect" else (c[4],))
+        if any(abs(v - round(v)) > 1e-6 for v in nums):
+            probs.append("not on whole pixels: %s %r" % (c[0].decode(), c[5] if c[0] == b"text" else nums))
+            break
     for t, x0, x1, y0, y1 in texts:
         if x0 < px0 - 1 or x1 > px1 + 1 or y0 < py0 - 1 or y1 > py1 + 1:
             probs.append("outside the panel: %r" % t)
@@ -77,11 +87,20 @@ def build(text):
 
 
 sink = open(os.path.join(ROOT, "presets", "01-kitchen-sink.ini"), encoding="utf-8").read()
-path = build(sink)
 
-for mode in ("measured", "estimated"):
+# (text measurement, screen, panel_scale): 1080p both ways, 1440p, 4K, smallest and
+# largest panel (1.5 on 1080p is capped so the panel still fits the screen)
+CONFIGS = [("measured", (1920, 1080), 1.0), ("estimated", (1920, 1080), 1.0),
+           ("measured", (2560, 1440), 1.0), ("estimated", (2560, 1440), 1.2),
+           ("measured", (3840, 2160), 1.5), ("measured", (1920, 1080), 0.8),
+           ("measured", (1920, 1080), 1.5), ("measured", (1280, 720), 1.0)]
+
+for measure_mode, (rw, rh), scale in CONFIGS:
+    mode = "%s %dx%d %d%%" % (measure_mode, rw, rh, scale * 100)
+    path = build(sink.replace("[settings]", "[settings]\npanel_scale = %.1f" % scale, 1))
     g = FakeGame(path, appdata=tempfile.mkdtemp())
-    if mode == "estimated":
+    g.set_resolution(rw, rh)
+    if measure_mode == "estimated":
         g.L.execute(b"stingray.Gui.text_extents = nil")
     g.tick(420)
     g.key(F7)

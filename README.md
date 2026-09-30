@@ -50,6 +50,7 @@ Then:
 - **Presets tab:** load a standard preset or one of yours. **+ Save current stack** saves what you have; rename, overwrite or delete your own. Saved in `ArmoryForge\my-presets.txt`.
 - **Quick-swap (F9):** cycles your presets in game without opening the panel (built-ins if you have none saved). Set `swap_hotkey = F9` or `OFF` in `[settings]`.
 - **Undo / Ctrl+Z** takes back the last change (up to 30).
+- **Panel size:** `[-] 100% [+]` at the top, or **Ctrl +** / **Ctrl -** (Ctrl 0 resets), 80 to 150%. Also `panel_scale = 1.2` in `[settings]`.
 - **Copy code / Paste code:** your build as one line of text for Discord etc. Web-builder share links paste too.
 - The key is set with `hotkey = F7` in `[settings]` (the web builder has a dropdown). SHODAN Stat Editor uses F8, and its panel sits on the right while this one sits on the left.
 - If a change doesn't show, re-equip the armor or start a mission.
@@ -126,7 +127,8 @@ tests/harness.py           fake game for LuaJIT: memory, engine GUI, keyboard, m
 tests/test_ingame.py       real mod vs fake game: rows match picker.py, panel flows, save/restore
 tests/test_panel_features.py  presets, quick-swap, undo, share codes, plain values
 tests/test_release.py      release zip, blank install, saves from before the rename
-tests/test_panel_layout.py no overlapping or clipped text in any panel view
+tests/test_panel_layout.py no overlapping or clipped text in any panel view, 720p to 4K
+tests/test_panel_scale.py  panel size setting, Ctrl +/-, whole-pixel drawing
 tests/test_web_parity.js   web builder output must be byte-identical to Python
 tools/ayakamods_stats.py   AyakaMods download/view badges (workflow, every 6 h)
 TESTING.md                 in-game verification status per effect
@@ -162,6 +164,7 @@ On patch day:
   python tests/test_panel_features.py
   python tests/test_release.py
   python tests/test_panel_layout.py
+  python tests/test_panel_scale.py
   node tests/test_web_parity.js
   ```
   Preview the site locally with `cd docs && python -m http.server`.

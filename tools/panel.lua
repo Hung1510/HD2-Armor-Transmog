@@ -132,6 +132,11 @@ local PP = { user = nil }
 
 local function hotkey() return (LOADOUT and LOADOUT.hotkey) or MOD.hotkey or 'F7' end
 local function swap_key() return (LOADOUT and LOADOUT.swap_hotkey) or MOD.swap_hotkey or 'F9' end
+-- panel size the player chose (0.8 .. 1.5), Ctrl +/- in the panel
+local function ui_scale()
+    local v = tonumber((LOADOUT and LOADOUT.panel_scale) or MOD.panel_scale) or 1
+    return math.max(0.8, math.min(1.5, v))
+end
 local function now_s() return api.now() end
 
 local function say(text, seconds)
@@ -245,10 +250,12 @@ end
 function PP.replace(l, text, exact)
     if not exact and LOADOUT then
         l.hotkey, l.swap_hotkey, l.retire = LOADOUT.hotkey, LOADOUT.swap_hotkey, LOADOUT.retire
+        l.panel_scale = LOADOUT.panel_scale
     end
     l.name = l.name or (LOADOUT and LOADOUT.name) or MOD.title
     l.hotkey, l.swap_hotkey = l.hotkey or MOD.hotkey or 'F7', l.swap_hotkey or MOD.swap_hotkey or 'F9'
     if l.retire == nil then l.retire = MOD.retire end
+    l.panel_scale = l.panel_scale or MOD.panel_scale or 1
     LOADOUT = l
     ui.tab, ui.sel, ui.value, ui.adding = 1, nil, nil, false
     changed(nil, text)
@@ -432,6 +439,18 @@ function PP.cycle_list()
     return list
 end
 
+-- panel size: +1 / -1 steps of 10 %, 0 resets. Saved with the loadout, not undoable.
+function PP.zoom(step)
+    if not LOADOUT then return end
+    local v = step == 0 and 1 or math.floor((ui_scale() + step * 0.1) * 10 + 0.5) / 10
+    v = math.max(0.8, math.min(1.5, v))
+    if v == LOADOUT.panel_scale then return end
+    LOADOUT.panel_scale = v
+    ui.last_text = snapshot()          -- a size change is not an undo step
+    loadout_changed({})
+    say(string.format('Panel size %d%%', v * 100 + 0.5), 1.5)
+end
+
 function PP.swap()
     local list = PP.cycle_list()
     if #list == 0 then return end
@@ -538,8 +557,12 @@ end
 -- the game's font may not have other glyphs.
 local function draw(width, height)
     local Gui, Vector3, Vector2, Color = sr.Gui, sr.Vector3, sr.Vector2, sr.Color
-    local s = height / 1080 * 0.8
-    local ox, oy = 30 * s, (height - H * s) / 2     -- left edge: SHODAN Stat Editor uses the right
+    -- panel units -> screen pixels at the screen's own resolution, never bigger than
+    -- the screen; every edge and font size is rounded to a whole pixel so text and
+    -- lines stay sharp at 1440p / 4K (fractional positions are what made them soft)
+    local s = math.min(height / 1080 * 0.8 * ui_scale(), height * 0.96 / H, (width - 60) / W)
+    local function px(v) return math.floor(v + 0.5) end
+    local ox, oy = px(30 * s), px((height - H * s) / 2)     -- left edge: SHODAN Stat Editor uses the right
     local gui = ui.gui
     local regions = {}
     local ink_font, ink_material = font.font, font.material
@@ -563,32 +586,45 @@ local function draw(width, height)
     }
 
     local function rect(x, y, w, h, c, z)
-        Gui.rect(gui, Vector3(ox + x * s, height - oy - (y + h) * s, z or 951), Vector2(w * s, h * s), c)
+        local x0, x1 = px(ox + x * s), px(ox + (x + w) * s)
+        local y0, y1 = px(oy + y * s), px(oy + (y + h) * s)
+        if x1 <= x0 then x1 = x0 + 1 end
+        if y1 <= y0 then y1 = y0 + 1 end
+        Gui.rect(gui, Vector3(x0, height - y1, z or 951), Vector2(x1 - x0, y1 - y0), c)
     end
-    -- width of a text in panel units: measured when the engine can, else a safe estimate
-    local function measure(value, size)
-        local ok, lo, hi = pcall(Gui.text_extents, gui, value, ink_font, size * s)
+    local function font_px(size) return math.max(7, px(size * s)) end
+    -- width in screen pixels of a text at a whole-pixel font size: measured when the
+    -- engine can, else a safe per-character estimate (on the wide side)
+    local function measure_px(value, sz)
+        local ok, lo, hi = pcall(Gui.text_extents, gui, value, ink_font, sz)
         if ok and lo and hi then
             local a, b = vx(lo), vx(hi)
-            if a and b and b > a then return (b - a) / s end
+            if a and b and b > a then return b - a end
         end
-        -- estimate per character, on the wide side (a wide font like DejaVu Sans)
         local w = 0
         for ch in value:gmatch('.') do
             w = w + (ch:find('[%%@MWmw]') and 0.98 or ch:find('[%u+=<>#&]') and 0.8 or ch:find('%d') and 0.66
                      or ch:find('[%s%.,:;!|il\'%-%(%)%[%]]') and 0.36 or 0.62)
         end
-        return w * size
+        return w * sz
     end
-    -- limit: shrink to fit that width; align: 'right' or 'center' around x
+    -- width in panel units
+    local function measure(value, size) return measure_px(value, font_px(size)) / s end
+    -- limit: shrink (in whole pixels) to fit that width; align: 'right' or 'center' around x
     local function text(value, x, y, size, c, limit, align)
         if value == nil or value == '' or not ink_font then return 0 end
-        local w = measure(value, size)
-        if limit and w > limit then size = size * limit / w; w = limit end
-        local px = x
-        if align == 'right' then px = x - w elseif align == 'center' then px = x - w / 2 end
-        local sz = size * s
-        Gui.text(gui, value, ink_font, sz, ink_material, Vector3(ox + px * s, height - oy - y * s - sz * 0.8, 954), c or C.TEXT)
+        local sz = font_px(size)
+        local w = measure_px(value, sz) / s
+        while limit and w > limit and sz > 6 do
+            sz = math.max(6, math.min(sz - 1, math.floor(sz * limit / w)))
+            w = measure_px(value, sz) / s
+        end
+        local tx = x
+        if align == 'right' then tx = x - w elseif align == 'center' then tx = x - w / 2 end
+        -- keep the text's cap-height box where a size-`size` text would sit
+        local top = y + (size - sz / s) * 0.5
+        Gui.text(gui, value, ink_font, sz, ink_material,
+                 Vector3(px(ox + tx * s), px(height - oy - top * s - sz * 0.8), 954), c or C.TEXT)
         return w
     end
     local function border(x, y, w, h, c, z)
@@ -596,7 +632,7 @@ local function draw(width, height)
         rect(x, y, 1, h, c, z or 952); rect(x + w - 1, y, 1, h, c, z or 952)
     end
     local function region(key, x, y, w, h, enabled)
-        regions[#regions + 1] = { key = key, x = ox + x * s, y = height - oy - (y + h) * s, w = w * s, h = h * s,
+        regions[#regions + 1] = { key = key, x = px(ox + x * s), y = px(height - oy - (y + h) * s), w = px(w * s), h = px(h * s),
                                   enabled = enabled ~= false }
     end
     local function label(value, x, y, c, limit) return text(up(value), x, y, 11, c or C.YELLOW, limit) end
@@ -657,7 +693,23 @@ local function draw(width, height)
     region('panel', 0, 0, W, H, false)
     local mx = text('MINISTRY OF DEFENSE', 22, 12, 11, C.MUTED)
     text('SUPER EARTH ARMORY FORGE', 22 + mx + 12, 12, 11, C.TEXT)
-    text('V' .. tostring(MOD.version), W - 22, 12, 11, C.DIM, nil, 'right')
+    -- size control: [-] 100% [+]   (Ctrl +/- does the same)
+    local vw = text('V' .. tostring(MOD.version), W - 22, 12, 11, C.DIM, nil, 'right')
+    local zx = W - 22 - vw - 26
+    local pct = string.format('%d%%', ui_scale() * 100 + 0.5)
+    for _, z in ipairs({ { 'zoom:+', '+' }, { 'zoom:-', '-' } }) do
+        local on = ui.hover == z[1]
+        zx = zx - 20
+        border(zx, 7, 20, 18, on and C.YELLOW or C.LINE2, 952)
+        text(z[2], zx + 10, 10, 12, on and C.YELLOW or C.MUTED, nil, 'center')
+        region(z[1], zx, 7, 20, 18)
+        if z[2] == '+' then
+            zx = zx - 6 - measure(pct, 11)
+            text(pct, zx, 12, 11, C.MUTED)
+            zx = zx - 6
+        end
+    end
+    text('SIZE', zx - 8, 12, 11, C.DIM, nil, 'right')
     rect(0, 32, W, 1, C.LINE, 951)
     -- emblem box: the shield from the mod icon
     border(22, 44, 50, 50, C.TEXT, 952)
@@ -1040,6 +1092,7 @@ local function click(key)
     elseif kind == 'policy' and p then p.conflicts = arg; changed(p.perk)
     elseif kind == 'clear' and p then
         if confirm('clear') then p.enabled, p.tweaks = {}, {}; changed(p.perk, 'Turned everything off on this armor') end
+    elseif kind == 'zoom' then PP.zoom(arg == '+' and 1 or -1)
     elseif kind == 'undo' then PP.undo()
     elseif kind == 'copy' then PP.copy_code()
     elseif kind == 'paste' then PP.paste_code()
@@ -1147,6 +1200,12 @@ local function keyboard(now)
         return
     end
     if input.key_down(VK.Ctrl) and pressed('Z', 0x5A, now) then PP.undo() end
+    if input.key_down(VK.Ctrl) then
+        -- Ctrl + / Ctrl - / Ctrl 0: panel size (main keyboard or numpad)
+        if pressed('ZP', 0xBB, now) or pressed('ZA', 0x6B, now) then PP.zoom(1) end
+        if pressed('ZM', 0xBD, now) or pressed('ZS', 0x6D, now) then PP.zoom(-1) end
+        if pressed('Z0', 0x30, now) or pressed('Z0n', 0x60, now) then PP.zoom(0) end
+    end
 end
 
 local function mouse()
@@ -1282,9 +1341,10 @@ local function panel_frame(now)
         end
         local ok, chosen = pcall(choose_font, ui.gui)
         font = ok and chosen or { text = 'no text: ' .. tostring(chosen) }
-        if font.text ~= ui.font_said then
-            ui.font_said = font.text
-            log('panel font: ' .. font.text)
+        local said = font.text .. ' @ ' .. width .. 'x' .. height .. ', panel size ' .. math.floor(ui_scale() * 100 + 0.5) .. '%'
+        if said ~= ui.font_said then
+            ui.font_said = said
+            log('panel font: ' .. said)
         end
         ui.signature = signature
         ui.regions = draw(width, height)
@@ -1316,19 +1376,23 @@ local function toast_frame(now)
     f = ok and f or {}
     local Gui, Vector3, Vector2, Color = sr.Gui, sr.Vector3, sr.Vector2, sr.Color
     local width, height = sr.Gui.resolution()
-    local s = height / 1080
-    local w, h = 480 * s, 72 * s
-    local x, y = (width - w) / 2, height - 140 * s - h
+    local s = height / 1080 * ui_scale()
+    local function px(v) return math.floor(v + 0.5) end
+    local w, h = px(480 * s), px(72 * s)
+    local x, y = px((width - w) / 2), px(height - 140 * s - h)
     local yellow = Color(255, 255, 231, 16)
-    local function r(px, py, pw, ph, c, z)      -- panel units from the card's top left
-        Gui.rect(gui, Vector3(x + px * s, y + h - (py + ph) * s, z or 961), Vector2(pw * s, ph * s), c)
+    local function r(tx, py, pw, ph, c, z)      -- panel units from the card's top left
+        local x0, x1 = px(x + tx * s), px(x + (tx + pw) * s)
+        local y0, y1 = px(y + h - (py + ph) * s), px(y + h - py * s)
+        Gui.rect(gui, Vector3(x0, y0, z or 961), Vector2(math.max(1, x1 - x0), math.max(1, y1 - y0)), c)
     end
     r(0, 0, 480, 72, Color(246, 11, 12, 13), 960)
     r(0, 0, 4, 72, yellow)
     r(4, 0, 476, 1, Color(255, 62, 65, 70)); r(4, 71, 476, 1, Color(255, 62, 65, 70)); r(479, 0, 1, 72, Color(255, 62, 65, 70))
     if f.font then
-        local function t(value, px, py, size, c)
-            Gui.text(gui, value, f.font, size * s, f.material, Vector3(x + px * s, y + h - py * s - size * s * 0.8, 962), c)
+        local function t(value, tx, py, size, c)
+            local sz = math.max(9, px(size * s))
+            Gui.text(gui, value, f.font, sz, f.material, Vector3(px(x + tx * s), px(y + h - py * s - sz * 0.8), 962), c)
         end
         t('ARMORY FORGE  -  ' .. string.upper(tostring(toast.sub or '')), 20, 13, 11, yellow)
         t(tostring(toast.text), 20, 34, 22, Color(255, 233, 230, 220))

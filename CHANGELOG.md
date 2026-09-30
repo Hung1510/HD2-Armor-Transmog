@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.2 (2026-09-30)
+- **Sharper text on 1440p / 4K:** the F7 panel is drawn at your screen's own resolution with every edge, text position and font size on a whole pixel. Fractional positions were what made text soft on bigger screens.
+- **Panel size:** `[-] 100% [+]` at the top of the panel, or **Ctrl +** / **Ctrl -** (**Ctrl 0** resets), from 80% to 150%. It is saved, kept when you load a preset, and not an undo step. Also `panel_scale = 0.8 .. 1.5` in `[settings]` and a *Panel size* dropdown in the web builder. The panel always fits the screen.
+- Shrink-to-fit text now works in whole pixels, so small sizes (720p, 80%) don't overlap either.
+- The log records the panel's font, resolution and size (`panel font: ...`) to help with display reports.
+- New `tests/test_panel_scale.py`. The layout check now runs at 720p, 1080p, 1440p and 4K and at 80 to 150%, and also checks whole pixels and that the panel fits the screen.
+
 ## 5.1 (2026-09-30)
 - **The F7 panel matches the web builder:** the Helldivers 2 armory look, with near-black panels, yellow for what is on, boxed tabs with a hatched stripe under the active one, uppercase passive names and a key-prompt bar (F7 close, F9 swap, Ctrl+Z undo).
 - **Fixed overlapping text:** values like `+30%` could run into the `--` button, `++` was wider than its button, and long *Reset ...* labels ran past their click area. Buttons are now sized from their label's measured width. When the game can't measure text, the panel estimates widths per character on the wide side.

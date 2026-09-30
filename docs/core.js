@@ -153,7 +153,7 @@
   // ------------------------------------------------------------------ config -> profiles
   function loadConfigText(cat, text) {
     const sections = parseIni(text);
-    const settings = { retire: true, name: null, hotkey: null, swap_hotkey: null };
+    const settings = { retire: true, name: null, hotkey: null, swap_hotkey: null, panel_scale: null };
     const profiles = [];
     for (const sec of sections) {
       if (sec.name === "settings") {
@@ -168,6 +168,13 @@
             const hk = v.trim().toUpperCase();
             if (!/^(F([1-9]|1[0-2])|OFF)$/.test(hk)) throw new ConfigError(`[settings]: swap_hotkey must be F1..F12 or off, got '${v.trim()}'`);
             settings.swap_hotkey = hk;
+          } else if (k === "panel_scale") {
+            const t = v.trim(), pct = t.endsWith("%");
+            const sc = parseFloat(pct ? t.slice(0, -1) : t) / (pct ? 100 : 1);
+            if (!/^\s*[0-9.]+%?\s*$/.test(t) || !isFinite(sc))
+              throw new ConfigError(`[settings]: panel_scale must be a number from 0.8 to 1.5, got '${t}'`);
+            if (sc < 0.8 - 1e-9 || sc > 1.5 + 1e-9) throw new ConfigError(`[settings]: panel_scale must be from 0.8 to 1.5, got '${t}'`);
+            settings.panel_scale = Math.round(sc * 10) / 10;
           } else if (k === "base") { /* written by the in-game panel; only the game reads it */ }
           else throw new ConfigError(`[settings]: unknown key '${k}'`);
         }
@@ -379,6 +386,7 @@
     L.push(`    retire = ${settings.retire ? "true" : "false"},`);
     L.push(`    hotkey = '${settings.hotkey || data.default_hotkey}',`);
     L.push(`    swap_hotkey = '${settings.swap_hotkey || data.default_swap_hotkey}',`);
+    L.push(`    panel_scale = ${(settings.panel_scale || data.default_panel_scale || 1).toFixed(1)},`);
     L.push("    type_passive = 0x63CE0FEB,   -- HelldiverCustomizationPassiveBonusSettings");
     L.push("    type_kit     = 0xD9A55AA0,   -- HelldiverCustomizationKit");
     L.push("    -- the loadout this build starts with; the in-game panel starts from it");
@@ -513,6 +521,7 @@
     L.push(`retire = ${state.retire ? "true" : "false"}`);
     L.push(`hotkey = ${state.hotkey || "F7"}`);
     L.push(`swap_hotkey = ${state.swap_hotkey || "F9"}`);
+    L.push(`panel_scale = ${(state.panel_scale || 1).toFixed(1)}`);
     for (const p of state.profiles) {
       const tname = cat.byId.get(p.perk).name;
       L.push("");
@@ -539,7 +548,8 @@
     const sections = parseIni(text);
     const parsed = loadConfigText(cat, text); // validates
     const state = { name: parsed.settings.name || "My Armory Build", retire: parsed.settings.retire,
-      hotkey: parsed.settings.hotkey || "F7", swap_hotkey: parsed.settings.swap_hotkey || "F9", profiles: [] };
+      hotkey: parsed.settings.hotkey || "F7", swap_hotkey: parsed.settings.swap_hotkey || "F9",
+      panel_scale: parsed.settings.panel_scale || 1, profiles: [] };
     for (const sec of sections) {
       const m = sec.name.match(/^\s*profile\s*:\s*(.+?)\s*$/i);
       if (!m) continue;

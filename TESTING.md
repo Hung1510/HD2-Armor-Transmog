@@ -28,6 +28,8 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Undo and Ctrl+Z | ❔ | v4.4; offline test passes |
 | Copy code / Paste code use the Windows clipboard | ❔ | v4.4; clipboard mocked offline |
 | `%` and `+` signs show in the panel font | ❔ | v4.4 |
+| Panel text is sharp on 1440p / 4K | ❔ | v5.2; whole-pixel drawing checked offline |
+| Ctrl + / Ctrl - resize the panel in game | ❔ | v5.2; offline test passes |
 | Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Armory Forge leaves that passive alone |
 
 ## Effects

@@ -40,13 +40,13 @@
   }
 
   function blankProfile(perk) { return { perk, conflicts: "stack", enabled: [], tweaks: {} }; }
-  function blankState() { return { name: "My Armory Build", retire: true, hotkey: "F7", swap_hotkey: "F9", profiles: [blankProfile(7)] }; }
+  function blankState() { return { name: "My Armory Build", retire: true, hotkey: "F7", swap_hotkey: "F9", panel_scale: 1, profiles: [blankProfile(7)] }; }
 
   // tweaks on passives that are off are kept in state (so toggling back restores them)
   // but left out of the ini so they don't produce "ignored" notes
   function effectiveState() {
     return {
-      name: state.name, retire: state.retire, hotkey: state.hotkey, swap_hotkey: state.swap_hotkey,
+      name: state.name, retire: state.retire, hotkey: state.hotkey, swap_hotkey: state.swap_hotkey, panel_scale: state.panel_scale,
       profiles: state.profiles.map((p) => {
         const tw = {};
         for (const [k, v] of Object.entries(p.tweaks)) {
@@ -212,6 +212,7 @@
     $("modName").value = state.name;
     $("hotkeySel").value = state.hotkey || "F7";
     $("swapSel").value = state.swap_hotkey || "F9";
+    $("scaleSel").value = (state.panel_scale || 1).toFixed(1);
     renderTabs();
     renderProfile();
     compile();
@@ -222,6 +223,7 @@
     $("modName").addEventListener("input", (e) => { state.name = e.target.value; compile(); });
     $("hotkeySel").addEventListener("change", (e) => { state.hotkey = e.target.value; compile(); });
     $("swapSel").addEventListener("change", (e) => { state.swap_hotkey = e.target.value; compile(); });
+    $("scaleSel").addEventListener("change", (e) => { state.panel_scale = parseFloat(e.target.value); compile(); });
 
     $("presetSel").addEventListener("change", (e) => {
       const p = data.presets.find((x) => x.file === e.target.value);

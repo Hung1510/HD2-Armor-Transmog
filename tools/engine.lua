@@ -432,7 +432,7 @@ end
 -- MOD.default (generated) -> loadout
 local function default_loadout()
     local l = { name = MOD.name or MOD.title, retire = MOD.retire, hotkey = MOD.hotkey or 'F7',
-                swap_hotkey = MOD.swap_hotkey or 'F9', profiles = {} }
+                swap_hotkey = MOD.swap_hotkey or 'F9', panel_scale = MOD.panel_scale or 1, profiles = {} }
     for _, d in ipairs(MOD.default or {}) do
         local p = { perk = d.perk, conflicts = d.conflicts, enabled = {}, tweaks = {},
                     raw = d.raw, raw_stats = d.raw_stats }
@@ -558,6 +558,7 @@ local function serialize(l, base_key)
         'retire = ' .. (l.retire and 'true' or 'false'),
         'hotkey = ' .. (l.hotkey or 'F7'),
         'swap_hotkey = ' .. (l.swap_hotkey or 'F9'),
+        'panel_scale = ' .. string.format('%.1f', l.panel_scale or 1),
     }
     if base_key then L[#L + 1] = 'base   = ' .. base_key end
     for _, p in ipairs(l.profiles) do
@@ -621,6 +622,10 @@ local function parse_loadout(text)
                     elseif k == 'retire' then l.retire = TRUE_WORDS[val:lower()] or false
                     elseif k == 'hotkey' then l.hotkey = val:upper()
                     elseif k == 'swap_hotkey' then l.swap_hotkey = val:upper()
+                    elseif k == 'panel_scale' then
+                        local sc = tonumber((val:gsub('%%$', '')))
+                        if sc and val:find('%%$') then sc = sc / 100 end
+                        if sc then l.panel_scale = math.max(0.8, math.min(1.5, math.floor(sc * 10 + 0.5) / 10)) end
                     elseif k == 'base' then l.base = val end
                 elseif k and prof then
                     local lk = k:lower()
@@ -657,7 +662,7 @@ end
 local function fingerprint(l)
     -- settings lines added in later versions are left out, so updating the mod keeps
     -- the panel's saved edits
-    local text = serialize(l, nil):gsub('swap_hotkey = [^\r\n]*\r\n', '')
+    local text = serialize(l, nil):gsub('swap_hotkey = [^\r\n]*\r\n', ''):gsub('panel_scale = [^\r\n]*\r\n', '')
     -- the comment header is hashed as 4.x wrote it, so renaming the mod or its web
     -- address never resets anyone's saved edits
     text = text:gsub('^;[^\r\n]*\r\n;[^\r\n]*\r\n',
@@ -693,6 +698,7 @@ local function load_loadout()
             if saved.retire == nil then saved.retire = def.retire end
             saved.hotkey = saved.hotkey or def.hotkey
             saved.swap_hotkey = saved.swap_hotkey or def.swap_hotkey
+            saved.panel_scale = saved.panel_scale or def.panel_scale
             log('loadout: using the panel save ' .. path)
             return saved, 'saved'
         elseif ok and saved.base ~= DEFAULT_KEY then

@@ -35,6 +35,9 @@ jobs:
       - name: Panel layout (no overlapping or clipped text)
         run: python tests/test_panel_layout.py
 
+      - name: Panel size and whole-pixel drawing
+        run: python tests/test_panel_scale.py
+
       - name: Release zip, blank install, old saves
         run: python tests/test_release.py
 

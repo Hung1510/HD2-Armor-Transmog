@@ -26,6 +26,7 @@ GAME_BASE = 0x10000000
 
 MOCK = r"""
 DRAW, WORLDS, KEYS, CURSOR, MOUSE_DOWN = {}, { {}, {} }, {}, { 0, 0 }, false
+RES_W, RES_H = 1920, 1080
 local function callable(fields, make)
     return setmetatable(fields, { __call = function(_, ...) return make(...) end })
 end
@@ -34,7 +35,7 @@ stingray = {
     Vector2 = callable({ x = function(v) return v[1] end }, function(x, y) return { x, y } end),
     Color = function(a, r, g, b) return { a, r, g, b } end,
     Gui = {
-        resolution = function() return 1920, 1080 end,
+        resolution = function() return RES_W, RES_H end,
         rect = function(g, p, s, c) DRAW[#DRAW + 1] = { 'rect', p[1], p[2], p[3], s[1], s[2], c[1], c[2], c[3], c[4] } end,
         text = function(g, t, f, size, m, p, c) DRAW[#DRAW + 1] = { 'text', p[1], p[2], p[3], size, t, c[1], c[2], c[3], c[4] } end,
         text_extents = function(g, t, f, size) return { 0, 0 }, { #t * size * 0.52, size } end,
@@ -50,7 +51,7 @@ stingray = {
 PP_TEST_INPUT = {
     focused = function() return true end,
     key_down = function(vk) return KEYS[vk] == true end,
-    cursor = function() return CURSOR[1], CURSOR[2], 1920, 1080 end,
+    cursor = function() return CURSOR[1], CURSOR[2], RES_W, RES_H end,
     show_cursor = function() return 0 end,
     get_clip = function() return nil end,
     set_clip = function() end,
@@ -120,6 +121,15 @@ class FakeGame:
         w = self._font(size).getlength(t)
         return self.L.table_from([0, 0]), self.L.table_from([w, size])
 
+    def res(self):
+        g = self.L.globals()
+        return g[b"RES_W"], g[b"RES_H"]
+
+    def set_resolution(self, w, h):
+        g = self.L.globals()
+        g[b"RES_W"], g[b"RES_H"] = w, h
+        self.tick(3)
+
     def text_boxes(self):
         """[(text, x0, x1, y_top, y_bottom)] in screen pixels from the top, as drawn."""
         out = []
@@ -128,7 +138,7 @@ class FakeGame:
                 continue
             _, x, y, z, size, t, *_ = c
             w = self._font(size).getlength(t.decode("utf-8", "replace"))
-            base = 1080 - y
+            base = self.res()[1] - y
             out.append((t.decode("utf-8", "replace"), x, x + w, base - size * 0.8, base))
         return out
 
@@ -251,7 +261,7 @@ class FakeGame:
         x, y, w, h, _ = regs[key]
         g = self.L.globals()
         cur = g[b"CURSOR"]
-        cur[1], cur[2] = x + w / 2, 1080 - (y + h / 2)
+        cur[1], cur[2] = x + w / 2, self.res()[1] - (y + h / 2)
         self.tick(2)
         g[b"MOUSE_DOWN"] = True
         self.tick(1)
@@ -296,12 +306,13 @@ class FakeGame:
     def texts(self):
         return [c[5].decode("utf-8", "replace") for c in self.draw_calls() if c[0] == b"text"]
 
-    def render(self, path, width=1920, height=1080, crop=True):
+    def render(self, path, width=None, height=None, crop=True):
         """Screenshot of what the mod drew. Optional: skipped when Pillow isn't installed (CI)."""
         try:
             from PIL import Image, ImageDraw, ImageFont
         except ImportError:
             return False
+        width, height = width or self.res()[0], height or self.res()[1]
         img = Image.new("RGB", (width, height), (60, 70, 60))
         dr = ImageDraw.Draw(img, "RGBA")
         calls = sorted(self.draw_calls(), key=lambda c: c[3])
