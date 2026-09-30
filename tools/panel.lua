@@ -291,7 +291,9 @@ function PP.replace(l, text, exact)
     if l.retire == nil then l.retire = MOD.retire end
     l.panel_scale = l.panel_scale or MOD.panel_scale or 1
     LOADOUT = l
-    ui.tab, ui.sel, ui.value, ui.adding = 1, nil, nil, false
+    -- undo (exact) stays where you are when that tab still exists
+    local keep = exact and ui.tab <= #l.profiles
+    ui.tab, ui.sel, ui.value, ui.adding = keep and ui.tab or 1, keep and ui.sel or nil, nil, false
     changed(nil, text)
 end
 
@@ -386,6 +388,7 @@ function PP.compact(l)
     for _, p in ipairs(l.profiles) do
         L[#L + 1] = '[profile: ' .. p.perk .. ']'
         if p.conflicts == 'strongest' then L[#L + 1] = 'conflicts=strongest' end
+        if WEIGHTS[p.weight] then L[#L + 1] = 'weight=' .. WEIGHTS[p.weight] end
         for _, pid in ipairs(sorted_enabled(p)) do L[#L + 1] = pid .. '=on' end
         local keys = {}
         for k, v in pairs(p.tweaks) do
@@ -668,6 +671,9 @@ function PP.summary(l)
     return out
 end
 
+-- the game's numbers per weight class (armory screen), for the weight view
+PP.WEIGHT_STATS = { { 'Light', '50', '550', '125' }, { 'Medium', '100', '500', '100' }, { 'Heavy', '150', '450', '50' } }
+
 function PP.clean_name(s)
     s = (s or ''):gsub('[#\r\n]', ''):gsub('^%s+', ''):gsub('%s+$', '')
     return s ~= '' and s:sub(1, 28) or nil
@@ -830,7 +836,9 @@ local function draw(width, height)
     ui.scrolling = nil
     local gui = ui.gui
     local regions = {}
-    ui.tab_order = {}                        -- tab keys left to right (LB / RB)
+    ui.tab_order = {}                        -- tab keys left to right (LB / RB), drawn or not
+    for n = 1, #(LOADOUT and LOADOUT.profiles or {}) do ui.tab_order[n] = 'tab:' .. n end
+    for _, k in ipairs({ 'add', 'presets', 'settings' }) do ui.tab_order[#ui.tab_order + 1] = k end
     local ink_font, ink_material = font.font, font.material
     local up = string.upper
 
@@ -954,7 +962,6 @@ local function draw(width, height)
         if n then text(tostring(n), x + w - 8, 134, 11, C.DIM, nil, 'right') end
         if active then hatch(x + 10, 136, w - (n and 34 or 20), C.TEXT) end
         region(key, x, 108, w, 40)
-        ui.tab_order[#ui.tab_order + 1] = key
         return w
     end
 
@@ -1041,10 +1048,37 @@ local function draw(width, height)
     local fixed = 0
     for _, c in ipairs({ '+ Armor', 'Presets', 'Keys' }) do fixed = fixed + math.min(230, measure(up(c), 15) + 30) + 6 end
     local room = W - 22 - (measure('CLICK AGAIN TO REMOVE', 13) + 28 + 12) - 22 - fixed
-    local each_tab = math.max(60, math.min(230, room / math.max(1, #LOADOUT.profiles) - 6))
-    for n, prof in ipairs(LOADOUT.profiles) do
-        x = x + tab('tab:' .. n, CAT[prof.perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings, nil, n, each_tab) + 6
-        if x + each_tab > 22 + room then break end       -- 7+ stacks: the rest are reached with F9 / presets
+    local count = #LOADOUT.profiles
+    local each_tab = math.max(60, math.min(230, room / math.max(1, count) - 6))
+    -- more stacks than fit: < > arrows scroll the row (the active tab is always shown)
+    local shown, first = count, 0
+    if count * (each_tab + 6) - 6 > room + 1 then
+        shown = math.max(1, math.floor((room - 2 * 30) / (each_tab + 6)))
+        first = ui.tab_first or 0
+        if ui.tab ~= ui.tab_seen then             -- the tab changed: bring it into view
+            ui.tab_seen = ui.tab
+            if ui.tab <= first then first = ui.tab - 1 elseif ui.tab > first + shown then first = ui.tab - shown end
+        end
+        first = math.max(0, math.min(count - shown, first))
+        ui.tab_first = first
+        local function arrow(key, dir, on)
+            local hv = on and ui.hover == key
+            rect(x, 108, 24, 40, hv and C.ROW_HI or C.BG, 951)
+            border(x, 108, 24, 40, on and (hv and C.TEXT or C.LINE2) or C.LINE, 952)
+            text(dir, x + 12, 118, 16, on and (hv and C.YELLOW or C.TEXT) or C.LINE2, nil, 'center')
+            region(key, x, 108, 24, 40, on)
+            x = x + 30
+        end
+        arrow('tabs:prev', '<', first > 0)
+        for n = first + 1, first + shown do
+            x = x + tab('tab:' .. n, CAT[LOADOUT.profiles[n].perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings, nil, n, each_tab) + 6
+        end
+        arrow('tabs:next', '>', first + shown < count)
+    else
+        ui.tab_first = 0
+        for n, prof in ipairs(LOADOUT.profiles) do
+            x = x + tab('tab:' .. n, CAT[prof.perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings, nil, n, each_tab) + 6
+        end
     end
     x = x + tab('add', '+ Armor', x, ui.adding, C.YELLOW) + 6
     x = x + tab('presets', 'Presets', x, ui.presets, C.YELLOW) + 6
@@ -1424,6 +1458,16 @@ local function draw(width, height)
         text('STACK SUMMARY', IX + sw0 + 12, y + 5, 14, ui.sel == 'summary' and C.TEXT or C.MUTED, IW - sw0 - 16)
         region(sum_key, LX + 1, y, LW - 2, RH)
         y = y + RH
+        -- armor weight (speed, stamina, armor rating)
+        local wkey = 'sel:weight'
+        if ui.sel == 'weight' then rect(LX + 1, y, LW - 2, RH, C.ROW_HI, 951); rect(LX + 1, y, 3, RH, C.YELLOW, 952)
+        elseif ui.hover == wkey then rect(LX + 1, y, LW - 2, RH, C.ROW, 951) end
+        border(IX + 2, y + 5, sw0, 14, p.weight and C.YELLOW or C.MUTED, 952)
+        text('WGT', IX + 2 + sw0 / 2, y + 7, 10, p.weight and C.YELLOW or C.MUTED, nil, 'center')
+        text('ARMOR WEIGHT: ' .. (p.weight and up(WEIGHTS[p.weight]) or 'GAME'), IX + sw0 + 12, y + 5, 14,
+             ui.sel == 'weight' and C.TEXT or p.weight and C.YELLOW or C.MUTED, IW - sw0 - 16)
+        region(wkey, LX + 1, y, LW - 2, RH)
+        y = y + RH
         local base_key = 'sel:' .. p.perk
         if ui.sel == p.perk then rect(LX + 1, y, LW - 2, RH, C.ROW_HI, 951); rect(LX + 1, y, 3, RH, C.YELLOW, 952)
         elseif ui.hover == base_key then rect(LX + 1, y, LW - 2, RH, C.ROW, 951) end
@@ -1525,6 +1569,40 @@ local function draw(width, height)
             local rpw = math.min(RIW, measure(rcap, 11))
             text(rcap, RX, y2 + 8, 11, ui.hover == rp and C.YELLOW or C.DIM, RIW)
             region(rp, RX - 4, y2 + 2, rpw + 8, 22)
+        elseif ui.sel == 'weight' then
+            head(RX, TOP + 14, 'Armor weight', CAT[p.perk].name .. ' armor', RIW)
+            local y2 = wrap('An armor\'s weight class sets its speed, stamina regen and base armor rating. Pick one and the armor keeps its look.',
+                            RX, TOP + 58, 13, C.MUTED, RIW, 2) + 6
+            local each = (RIW - 3 * 8) / 4
+            local bx = RX
+            for _, w in ipairs({ { 'game', 'Game' }, { 'light', 'Light' }, { 'medium', 'Medium' }, { 'heavy', 'Heavy' } }) do
+                local on = (p.weight == WEIGHTS[w[1]]) or (w[1] == 'game' and p.weight == nil)
+                bx = bx + button('weight:' .. w[1], w[2], bx, y2, each, 34, true, on) + 8
+            end
+            y2 = y2 + 50
+            label('What each weight gives (game values)', RX, y2, nil, RIW)
+            y2 = y2 + 20
+            for _, r in ipairs(PP.WEIGHT_STATS) do
+                local on = p.weight == WEIGHTS[r[1]:lower()]
+                rect(RX, y2, RIW, 26, on and C.ROW_HI or C.ROW, 950)
+                text(up(r[1]), RX + 10, y2 + 6, 13, on and C.YELLOW or C.TEXT, 90)
+                text('ARMOR ' .. r[2] .. '    SPEED ' .. r[3] .. '    STAMINA REGEN ' .. r[4], RX + 110, y2 + 6, 13,
+                     on and C.YELLOW or C.MUTED, RIW - 120)
+                y2 = y2 + 30
+            end
+            y2 = y2 + 8
+            local found = KITS.count(p.perk)
+            if found == 0 then
+                y2 = wrap('The armor records for ' .. CAT[p.perk].name .. ' were not found yet, so the weight can\'t apply. Load into your ship or a mission.',
+                          RX, y2, 13, C.BAD, RIW, 2)
+            else
+                y2 = wrap('Applies to all ' .. found .. ' armor(s) with ' .. CAT[p.perk].name .. '. Passives on the armor add to it (e.g. Extra Padding +50 armor).',
+                          RX, y2, 13, C.TEXT, RIW, 2)
+            end
+            local inf = PP.info(p.perk)
+            if inf and #inf.armors > 0 then
+                y2 = wrap('WEAR ANY OF: ' .. table.concat(inf.armors, ', '), RX, y2 + 4, 11, C.MUTED, RIW, 2)
+            end
         elseif ui.sel == 'summary' then
             local list = PP.summary_rows(p)
             head(RX, TOP + 14, 'Stack summary', CAT[p.perk].name .. ' armor', RIW)
@@ -1673,7 +1751,7 @@ local function click(key)
             ui.tab, ui.sel = math.max(1, ui.tab - 1), nil
             changed(p.perk, 'Removed the ' .. CAT[p.perk].name .. ' stack (the game\'s own values are back)')
         end
-    elseif kind == 'sel' and arg == 'summary' then ui.sel = 'summary'; ui.value = nil
+    elseif kind == 'sel' and (arg == 'summary' or arg == 'weight') then ui.sel = arg; ui.value = nil
     elseif kind == 'sel' and n then ui.sel = n; ui.value = nil
     elseif kind == 'tick' and n and p then toggle(p, n)
     elseif kind == 'policy' and p then p.conflicts = arg; changed(p.perk)
@@ -1694,6 +1772,13 @@ local function click(key)
     elseif kind == 'drag' then return             -- a click on the handle without moving
     elseif kind == 'undo' then PP.undo()
     elseif kind == 'report' then PP.copy_report()
+    elseif kind == 'tabs' then ui.tab_first = (ui.tab_first or 0) + (arg == 'prev' and -1 or 1)
+    elseif kind == 'weight' and p and not MOD.swap_only then
+        local w = WEIGHTS[arg]
+        if p.weight ~= w then
+            p.weight = w
+            changed(p.perk, CAT[p.perk].name .. ' armors: ' .. (w and (arg .. ' weight') or 'their own weight'))
+        end
     elseif kind == 'copy' and not MOD.swap_only then PP.copy_code()
     elseif kind == 'paste' and not MOD.swap_only then PP.paste_code()
     -- presets

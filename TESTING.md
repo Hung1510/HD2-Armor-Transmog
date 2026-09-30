@@ -38,6 +38,8 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Stack summary numbers match what you feel in game | ❔ | v5.5; an estimate by design |
 | Copy problem report reaches the clipboard; STATUS file has the panel section | ❔ | v5.6; offline test passes |
 | A `panel = off` build applies its loadout with no panel | ❔ | v5.6; offline test passes |
+| Armor weight: a heavy armor set to Light shows 50 / 550 / 125 and runs like light | ✅ | 5.6 research build (SR-64 Cinderblock, BFM-220 Ironclad), confirmed in a mission |
+| Armor weight also changes damage taken (armor rating) in a mission | ❔ | v5.7; the armory card changes, damage not measured yet |
 | Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Armory Forge leaves that passive alone |
 
 ## Effects

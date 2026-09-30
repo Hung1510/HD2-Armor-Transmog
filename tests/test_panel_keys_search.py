@@ -147,7 +147,7 @@ check(g4.state[b"ui"][b"search"] == b"reload", "typing while the field isn't foc
 g4.click("search")
 g4.type_text("zz")
 base = "sel:%d" % pid_of("Med-Kit")
-check(any("Nothing matches" in t for t in g4.texts()) and not any(k.startswith("sel:") and k not in (base, "sel:summary") for k in g4.regions()),
+check(any("Nothing matches" in t for t in g4.texts()) and not any(k.startswith("sel:") and k not in (base, "sel:summary", "sel:weight") for k in g4.regions()),
       "no match: an empty list and a message")
 g4.key(ESC)
 check({k for k in g4.regions() if k.startswith("tick:")} == all_ticks, "Esc clears the search, the full list is back")
@@ -236,6 +236,47 @@ g10.tick(420)
 g10.key(F[7])
 g10.tick(120)
 check(all("tab:%d" % n in g10.regions() for n in range(1, 6)), "5 armor stacks with long names: every tab is reachable")
+
+# 12 stacks (BONHakyla's case, at 150%): the tab row scrolls with < >, nothing is cut off
+names = [v[0] for k, v in sorted(picker.CATALOG.items()) if k != 7][:12]
+twelve = "[settings]\nname = many\npanel_scale = 1.5\n" + "".join("[profile: %s]\nScout = on\n" % n for n in names)
+g11 = FakeGame(build(twelve), appdata=tempfile.mkdtemp())
+g11.set_resolution(1920, 1080)
+g11.tick(420)
+g11.key(F[7])
+g11.tick(120)
+regs = g11.regions()
+shown = [n for n in range(1, 13) if "tab:%d" % n in regs]
+check("tabs:next" in regs and "tabs:prev" in regs and 1 in shown and 12 not in shown,
+      "12 stacks: the tab row gets < > arrows (%d tabs shown)" % len(shown))
+for _ in range(12):
+    if "tab:12" in g11.regions():
+        break
+    g11.click("tabs:next")
+check("tab:12" in g11.regions(), "> scrolls until the last stack's tab shows")
+g11.click("tab:12")
+check(g11.state[b"ui"][b"tab"] == 12 and any(names[11].upper()[:6] in t for t in g11.texts()),
+      "... and it opens: stack 12 can be edited")
+first_before = g11.state[b"ui"][b"tab_first"]
+g11.click("tabs:prev")
+check(g11.state[b"ui"][b"tab_first"] == first_before - 1 and g11.state[b"ui"][b"tab"] == 12,
+      "< scrolls back one tab (and doesn't change the open stack)")
+g11.click("presets")
+g11.pad_connect()
+g11.tick(70)
+g11.pad("BACK", "START")
+g11.tick(120)
+g11.pad("BACK", "START")
+g11.tick(120)
+seen = set()
+for _ in range(16):
+    g11.pad("RB")
+    t = g11.state[b"ui"][b"tab"]
+    if not (g11.state[b"ui"][b"adding"] or g11.state[b"ui"][b"presets"] or g11.state[b"ui"][b"settings"]):
+        seen.add(t)
+        if t in (8, 12):
+            check("tab:%d" % t in g11.regions(), "RB to stack %d brings its tab into view" % t)
+check(seen == set(range(1, 13)), "RB reaches all 12 stacks (%s)" % sorted(seen))
 
 if failed:
     print("\n%d FAILED" % len(failed))

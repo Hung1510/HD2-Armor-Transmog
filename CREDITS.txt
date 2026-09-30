@@ -12,6 +12,9 @@ In-game panel ...... drawing, input and font handling techniques adapted from
                      SHODAN Stat Editor v1.4.1 by SHODAN (public domain / Unlicense)
                      https://github.com/SHODAN-HORAI/SHODAN-Stat-Editor
 Source ............. https://github.com/Hung1510/Super-Earth-Armory-Forge
+Armor weight ....... the armor kit record layout comes from FileDiver by xypwn
+                     (BSD-3-Clause), datalibrary/armor_sets.go
+                     https://github.com/xypwn/filediver
 Web builder ........ uses JSZip (MIT) - docs/vendor/
 Loader ............. Bingus Shared Loader (required)
                      https://ayakamods.com/mods/bingus-shared-loader.3861/

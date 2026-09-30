@@ -158,6 +158,9 @@
       <div class="row" style="margin-bottom:6px">
         <div class="field grow"><label for="trigSel">Stack onto armor with this passive</label>
           <select id="trigSel">${triggerOpts}</select></div>
+        <div class="field"><label for="weightSel">Armor weight</label>
+          <select id="weightSel">${["game", "light", "medium", "heavy"].map((w, i) =>
+            `<option value="${w}"${(prof.weight ?? null) === (i ? i - 1 : null) ? " selected" : ""}>${i ? w[0].toUpperCase() + w.slice(1) : "Game (as the armor is)"}</option>`).join("")}</select></div>
         <div class="field"><label>When passives overlap</label>
           <div class="seg" role="group" aria-label="Conflict policy">
             <button type="button" data-policy="stack" aria-pressed="${prof.conflicts === "stack"}">Stack all</button>
@@ -165,6 +168,7 @@
           </div></div>
       </div>
       <p class="hint" style="margin:0">Wear any armor with ${esc(nameOf(prof.perk))} to get this stack (Armor Transmog changes the look).
+        ${prof.weight !== null && prof.weight !== undefined ? `Every ${esc(nameOf(prof.perk))} armor moves and gets armor like ${core.WEIGHT_NAMES[prof.weight]} armor, and keeps its look.` : ""}
         ${prof.conflicts === "stack" ? "Overlapping effects multiply or add together." : "Overlapping effects keep only the biggest one."}</p>
 
       <div class="base">
@@ -273,6 +277,10 @@
         prof.enabled = prof.enabled.filter((x) => x !== perk);
         for (const k of Object.keys(prof.tweaks)) if (k.startsWith(prof.perk + ".")) delete prof.tweaks[k];
         prof.perk = perk;
+        render();
+      } else if (e.target.id === "weightSel") {
+        const i = ["light", "medium", "heavy"].indexOf(e.target.value);
+        prof.weight = i >= 0 ? i : null;
         render();
       } else if (e.target.dataset.tweak) setTweak(e.target.dataset.tweak, e.target.value, true);
     });

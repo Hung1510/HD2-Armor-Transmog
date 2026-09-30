@@ -205,9 +205,20 @@
     return Math.abs(v);
   }
 
+  // weight = light | medium | heavy | game (tools/picker.py parse_weight)
+  const WEIGHTS = { light: 0, medium: 1, heavy: 2 };
+  const WEIGHT_NAMES = ["light", "medium", "heavy"];
+  function parseWeight(v, where) {
+    const w = v.trim().toLowerCase();
+    if (["game", "default", "off", ""].includes(w)) return null;
+    if (!(w in WEIGHTS)) throw new ConfigError(`${where}: weight must be light, medium, heavy or game, got '${v.trim()}'`);
+    return WEIGHTS[w];
+  }
+
   function buildProfile(cat, triggerText, items, where) {
     const trigger = findPerk(cat, triggerText, where);
     let policy = "stack";
+    let weight = null;
     const enabled = [];
     const tweaks = new Map(); // "pid|key" -> value, insertion ordered
     let rawRows = [], rawStats = [];
@@ -220,7 +231,8 @@
         policy = v.trim().toLowerCase();
         if (policy !== "stack" && policy !== "strongest")
           throw new ConfigError(`${where}: conflicts must be 'stack' or 'strongest'`);
-      } else if (lk === "raw") rawRows = rawRows.concat(parseRaw(v, where + " raw", false));
+      } else if (lk === "weight") weight = parseWeight(v, where);
+      else if (lk === "raw") rawRows = rawRows.concat(parseRaw(v, where + " raw", false));
       else if (lk === "raw_stats") rawStats = rawStats.concat(parseRaw(v, where + " raw_stats", true));
       else if (k.includes(".")) {
         const dot = k.lastIndexOf(".");
@@ -293,7 +305,7 @@
       raw: rawRows, raw_stats: rawStats,
     };
     return {
-      perk: trigger, name: tname, policy, rows, stats, state,
+      perk: trigger, name: tname, policy, weight, rows, stats, state,
       enabled: sortedEnabled.map(nameOf),
       overrides, stat_overrides: statOverrides,
       notes: notes.concat(rr.report, sr.report),
@@ -401,6 +413,7 @@
       const st = p.state;
       L.push("        {");
       L.push(`            perk = ${p.perk}, name = ${luaStr(p.name)}, conflicts = '${p.policy}',`);
+      if (p.weight !== null && p.weight !== undefined) L.push(`            weight = ${p.weight},   -- ${WEIGHT_NAMES[p.weight]}`);
       L.push(`            enabled = { ${st.enabled.join(", ")} },`);
       L.push("            tweaks = {");
       for (const [pid, key, val] of st.tweaks) L.push(`                { ${pid}, '${key}', ${luaNum(val)} },`);
@@ -540,6 +553,7 @@
       L.push("");
       L.push(`[profile: ${tname}]`);
       L.push(`conflicts = ${p.conflicts}`);
+      if (p.weight !== null && p.weight !== undefined) L.push(`weight    = ${WEIGHT_NAMES[p.weight]}`);
       for (const c of cat.list) {
         if (c.id === p.perk) continue;
         L.push(`${c.name.padEnd(34)} = ${p.enabled.includes(c.id) ? "on" : "off"}`);
@@ -564,6 +578,7 @@
     for (const p of state.profiles) {
       L.push(`[profile: ${p.perk}]`);
       if (p.conflicts === "strongest") L.push("conflicts=strongest");
+      if (p.weight !== null && p.weight !== undefined) L.push(`weight=${WEIGHT_NAMES[p.weight]}`);
       for (const pid of [...p.enabled].filter((x) => x !== p.perk).sort((a, b) => a - b)) L.push(`${pid}=on`);
       const keys = Object.keys(p.tweaks || {}).filter((k) => {
         const pid = parseInt(k.split(".")[0], 10);
@@ -592,6 +607,7 @@
       for (const [k, v] of sec.items) {
         const lk = k.trim().toLowerCase();
         if (lk === "conflicts") prof.conflicts = v.trim().toLowerCase();
+        else if (lk === "weight") prof.weight = parseWeight(v, sec.name);
         else if (lk === "raw" || lk === "raw_stats") prof[lk] = v;
         else if (k.includes(".")) {
           const dot = k.lastIndexOf(".");
@@ -611,7 +627,7 @@
   }
 
   return {
-    ConfigError, TYPE_NAMES, ARCHIVE_NAME, makeCatalog, effectsOf, findPerk, parseIni,
+    ConfigError, TYPE_NAMES, WEIGHT_NAMES, ARCHIVE_NAME, makeCatalog, effectsOf, findPerk, parseIni,
     loadConfigText, generateLua, archiveFor, resourceHash, describeProfiles, manifestFor,
     serializeIni, stateFromText, pyRepr, fmtG, luaNum, howToEdit, compactIni,
   };

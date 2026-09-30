@@ -42,7 +42,8 @@ def norm(text):
         out.append([p["perk"], p["policy"], sorted(st["enabled"]), tw, [list(r) for r in st["raw"]], [list(r) for r in st["raw_stats"]]])
     return out
 a, b = json.loads(sys.stdin.read())
-sys.stdout.write(json.dumps(norm(a) == norm(b)))
+pa, pb = picker.load_config_text(a)[1], picker.load_config_text(b)[1]
+sys.stdout.write(json.dumps(norm(a) == norm(b) and [p["weight"] for p in pa] == [p["weight"] for p in pb]))
 `;
 
 function pyBuild(text) {
@@ -77,6 +78,15 @@ raw_stats = 13 0.0 1.75
 [profile: 9]
 Democracy Protects.death_save = 0.000015
 Scout = yes
+`,
+  "edge: armor weight": `
+[settings]
+name = Heavy looks
+[profile: Siege-Ready]
+weight = light
+Fortified = on
+[profile: Scout]
+weight = heavy
 `,
   "edge: panel off": `
 [settings]

@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.7 (2026-10-01)
+Full edition:
+- **Armor weight:** a new *Armor weight* row on every armor tab. Pick *Light*, *Medium*, *Heavy* or *Game*, and every armor with that passive moves like that class: speed, stamina regen and base armor rating. The look doesn't change, so a heavy armor can run like a light one. Also `weight = light` in a `[profile]`, and in the web builder. It's saved with your loadout, carried in share codes, undone by Undo, and put back by *Game* or *Remove armor*. Confirmed in game: a heavy SR-64 Cinderblock set to Light shows 50 / 550 / 125 and runs like light armor. Thanks nomu1116 for asking.
+  - It applies per passive, like the tabs: Siege-Ready → Light changes all four Siege-Ready armors.
+
+Both editions (full and Passive Swap):
+- **Every armor tab is reachable:** with more armors than fit (7+, or fewer at a big panel size), the tab row gets `<` `>` arrows, and the tab you're on always scrolls into view. LB / RB step through every tab, not just the ones on screen. Before, the extra tabs weren't drawn, so those armors couldn't be edited. Thanks BONHakyla.
+- **Undo stays on the tab you're on** instead of jumping back to the first one.
+
+Under the hood: the scan also looks around the armor kit records once, then stops as before (0.4 MB read in the test). `tests/test_weight.py` covers weight end to end, including the Passive Swap edition never touching weights. The fake game now has armor kit records. 530+ checks.
+
 ## 5.6 (2026-10-01)
 Both editions (full and Passive Swap):
 - **Copy problem report** (Keys tab): puts a short report on the clipboard to paste in a bug report. It includes the version, edition, screen size, panel key, how many times the key was pressed (and how many of those presses came while the game wasn't the active window), whether the panel opened and drew, the last panel error, other mods sharing the update loop, and the end of the log. The same report is also written to `Logs\ArmoryForge-STATUS.txt`, so it's there even when the panel never opens.

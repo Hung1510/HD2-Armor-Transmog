@@ -22,6 +22,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "tools"))
 import picker  # noqa: E402
 
 TYPE_PASSIVE = 0x63CE0FEB
+TYPE_KIT = 0xD9A55AA0
 GAME_BASE = 0x10000000
 
 MOCK = r"""
@@ -202,7 +203,34 @@ class FakeGame:
             game[off:off + 24 + len(body)] = hdr + body
             self.records[pid] = rec
             off += (24 + len(body) + 64 + 15) & ~15
+        # armor kit records (HelldiverCustomizationKit), like the game's: one armor per
+        # passive (weight light/medium/heavy by passive id), each with an armor torso, an
+        # armor arm and an undergarment hips piece; plus a helmet kit, which has no weight
+        self.kits = {}
+        off = (off + 0x1000) & ~0xFFF
+        for n, pid in enumerate(list(perks) + [None]):
+            rec = GAME_BASE + off + 24
+            pieces = [(2, 0, pid % 3), (6, 0, pid % 3), (3, 1, 1)] if pid is not None else [(0, 0, 2)]
+            body = bytearray(64)
+            struct.pack_into("<IIIIIIII", body, 0, 0x7000 + n, 0, 0x5E7, 0, 0, 0, 0, pid or 0)
+            struct.pack_into("<QII", body, 32, 0xA0C1100000000000 + n, 0 if pid is not None else 1, 0)
+            struct.pack_into("<qq", body, 48, rec + 64, 1)
+            body += struct.pack("<IIqq", 1, 0, rec + 64 + 24, len(pieces))
+            weights = []
+            for slot, ptype, weight in pieces:
+                p = bytearray(96)
+                struct.pack_into("<QIIII", p, 0, 0x9A7B000000000000 + n * 16 + slot, slot, ptype, weight, 0)
+                weights.append((rec + len(body) + 16, ptype, weight))
+                body += p
+            hdr = b"LDLD" + struct.pack("<III", 1, TYPE_KIT, len(body)) + b"\0" * 8
+            game[off:off + 24 + len(body)] = hdr + body
+            self.kits[pid] = weights
+            off += (24 + len(body) + 64 + 15) & ~15
         self.pristine = bytes(game)
+
+    def kit_weights(self, pid):
+        """[weight of each piece] of the armor kit with this passive (armor pieces, then the undergarment)"""
+        return [struct.unpack("<I", self._read(a, 4))[0] for a, _, _ in self.kits[pid]]
 
     # ------------------------------------------------------------- driving
     def tick(self, n=1, dt=1 / 60):

@@ -34,7 +34,7 @@ ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "panel.lua", "main
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "ArmoryForge"
 TITLE = "Super Earth Armory Forge"
-VERSION = "5.6"
+VERSION = "5.7"
 # The only tool files that go in the player zip: plain-text sources of the mod and the
 # builder. Dev scripts (badge updaters, PowerShell) stay out; mod sites quarantine
 # archives that carry scripts or executables.
@@ -295,9 +295,24 @@ def parse_raw(text, where, stat):
     return out
 
 
+WEIGHTS = {"light": 0, "medium": 1, "heavy": 2}
+WEIGHT_NAMES = {v: k for k, v in WEIGHTS.items()}
+
+
+def parse_weight(v, where):
+    """weight = light | medium | heavy | game (game: the armor's own weight class)"""
+    w = v.strip().lower()
+    if w in ("game", "default", "off", ""):
+        return None
+    if w not in WEIGHTS:
+        raise ConfigError("%s: weight must be light, medium, heavy or game, got '%s'" % (where, v.strip()))
+    return WEIGHTS[w]
+
+
 def build_profile(trigger_text, sec, where):
     trigger = find_perk(trigger_text, where)
     policy = "stack"
+    weight = None
     enabled = []
     tweaks = {}          # (pid, key) -> value
     raw_rows, raw_stats = [], []
@@ -309,6 +324,8 @@ def build_profile(trigger_text, sec, where):
             policy = v.strip().lower()
             if policy not in ("stack", "strongest"):
                 raise ConfigError("%s: conflicts must be 'stack' or 'strongest'" % where)
+        elif lk == "weight":
+            weight = parse_weight(v, where)
         elif lk == "raw":
             raw_rows += parse_raw(v, where + " raw", stat=False)
         elif lk == "raw_stats":
@@ -383,7 +400,7 @@ def build_profile(trigger_text, sec, where):
         enabled=sorted(enabled),
         tweaks=[(pid, key, val) for (pid, key), val in tweaks.items() if pid == trigger or pid in enabled],
         raw=raw_rows, raw_stats=raw_stats)
-    return dict(perk=trigger, name=tname, policy=policy, rows=rows, stats=stats, state=state,
+    return dict(perk=trigger, name=tname, policy=policy, weight=weight, rows=rows, stats=stats, state=state,
                 enabled=[CATALOG[pid][0] for pid in sorted(enabled)],
                 tweaked=sorted("%s.%s" % (CATALOG[pid][0], key) for (pid, key) in tweaks),
                 overrides=overrides, stat_overrides=stat_overrides,
@@ -560,6 +577,8 @@ def generate_lua(settings, profiles, blank=False, swap_only=False):
         st = p["state"]
         L.append("        {")
         L.append("            perk = %d, name = %s, conflicts = '%s'," % (p["perk"], lua_str(p["name"]), p["policy"]))
+        if p.get("weight") is not None:
+            L.append("            weight = %d,   -- %s" % (p["weight"], WEIGHT_NAMES[p["weight"]]))
         L.append("            enabled = { %s }," % ", ".join(str(x) for x in st["enabled"]))
         L.append("            tweaks = {")
         for pid, key, val in st["tweaks"]:

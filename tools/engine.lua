@@ -58,6 +58,7 @@ local HEADER_BYTES = 24
 local MAX_PAYLOAD = 64 * 1024 * 1024
 local BUDGET_MIN, BUDGET_MAX, BUDGET_SHARE = 0.0015, 0.004, 0.2   -- seconds of scanning per frame
 local HOT_WINDOW = 4 * 1024 * 1024    -- after the first armor-passive block, look this far around it
+local KIT_WINDOW = 1024 * 1024        -- and this far around the armor kit records (weight)
 local CHUNK = 262144
 local START_FRAME = 300
 local PROBE_MIN_ALLOC = 64 * 1024
@@ -93,6 +94,8 @@ local state = {
 }
 rawset(_G, MOD.global, state)
 local research = nil         -- set by tools/research.lua in research builds only
+-- armor weight class, both ways: name -> number and number -> name
+local WEIGHTS = { light = 0, medium = 1, heavy = 2, [0] = 'light', [1] = 'medium', [2] = 'heavy' }
 
 -- ---------------------------------------------------------------- byte helpers
 local function u32_bytes(value)
@@ -422,7 +425,7 @@ end
 --              tweaks = { ['pid.key'] = value }, raw = { {id,type,value} }, raw_stats = { {stat,u1,u2} } }
 local function copy_profile(p)
     local out = { perk = p.perk, conflicts = p.conflicts or 'stack', enabled = {}, tweaks = {},
-                  raw = {}, raw_stats = {}, swap = p.swap }
+                  raw = {}, raw_stats = {}, swap = p.swap, weight = p.weight }
     for k, v in pairs(p.enabled or {}) do out.enabled[k] = v end
     for k, v in pairs(p.tweaks or {}) do out.tweaks[k] = v end
     for _, r in ipairs(p.raw or {}) do out.raw[#out.raw + 1] = { r[1], r[2], r[3] } end
@@ -436,7 +439,7 @@ local function default_loadout()
                 swap_hotkey = MOD.swap_hotkey or 'F9', panel_scale = MOD.panel_scale or 1, profiles = {} }
     for _, d in ipairs(MOD.default or {}) do
         local p = { perk = d.perk, conflicts = d.conflicts, enabled = {}, tweaks = {},
-                    raw = d.raw, raw_stats = d.raw_stats }
+                    raw = d.raw, raw_stats = d.raw_stats, weight = d.weight }
         for _, pid in ipairs(d.enabled or {}) do p.enabled[pid] = true end
         for _, t in ipairs(d.tweaks or {}) do p.tweaks[t[1] .. '.' .. t[2]] = t[3] end
         l.profiles[#l.profiles + 1] = copy_profile(p)
@@ -542,6 +545,7 @@ local function resolve_profile(p)
 end
 
 local LOADOUT = nil          -- the live loadout
+local KITS = { list = {}, by_record = {}, found = 0 }    -- armor kit records (weight); below
 local DEFAULT_KEY = nil      -- fingerprint of MOD.default, stored in the save file
 
 local function profile_for(perk)
@@ -579,6 +583,7 @@ local function serialize(l, base_key)
             L[#L + 1] = 'swap = ' .. (CAT[p.swap] and p.swap ~= p.perk and CAT[p.swap].name or 'original')
         else
         L[#L + 1] = 'conflicts = ' .. (p.conflicts or 'stack')
+        if WEIGHTS[p.weight] then L[#L + 1] = 'weight    = ' .. WEIGHTS[p.weight] end
         for _, e in ipairs(CAT_LIST) do
             if e.id ~= p.perk then
                 L[#L + 1] = string.format('%-34s = %s', e.name, p.enabled[e.id] and 'on' or 'off')
@@ -651,6 +656,8 @@ local function parse_loadout(text)
                         prof.swap = (pid and pid ~= prof.perk) and pid or nil
                     elseif lk == 'conflicts' then
                         prof.conflicts = (val:lower() == 'strongest') and 'strongest' or 'stack'
+                    elseif lk == 'weight' then
+                        prof.weight = WEIGHTS[val:lower()]      -- game / anything else: the armor's own
                     elseif lk == 'raw' or lk == 'raw_stats' then
                         for chunk in val:gmatch('[^,]+') do
                             local a, b, c = chunk:match('^%s*(%S+)%s+(%S+)%s+(%S+)%s*$')
@@ -863,6 +870,7 @@ end
 local last_result = {}       -- perk -> { res = resolved, text = status }
 
 local function apply_perk(perk, quiet)
+    if KITS.apply then pcall(KITS.apply, perk) end
     local list = sites_by_perk[perk]
     if not list then return nil end
     local prof = profile_for(perk)
@@ -884,6 +892,7 @@ end
 
 local function apply_all()
     for perk in pairs(sites_by_perk) do apply_perk(perk) end
+    pcall(KITS.apply_all)
 end
 
 local function capture(record, block, blob)
@@ -916,6 +925,117 @@ local function capture(record, block, blob)
             if p.swap == perk and p.perk ~= perk then apply_perk(p.perk) end
         end
     end
+end
+
+-- ---------------------------------------------------------------- armor weight (full edition)
+-- An armor's weight class (light / medium / heavy) sets its speed, stamina regen and base
+-- armor rating; the game reads it from the weight field of each ARMOR piece of the armor's
+-- kit record (HelldiverCustomizationKit, LDLD type 0xD9A55AA0; confirmed in game in the
+-- 5.6 research build). A profile's `weight` sets it on every armor that has that passive;
+-- the look is untouched. The original weights are kept and put back when it's cleared.
+-- Layout (FileDiver datalibrary/armor_sets.go):
+--   kit   +28 Passive  +40 Type (0 = armor)  +48 Bodies (ptr)  +56 BodyCount
+--   body  +8 Pieces (ptr)  +16 PieceCount          (24 bytes)
+--   piece +12 Type (0 = armor piece)  +16 Weight   (96 bytes)
+-- Pointers are offsets from the record in the files and absolute once loaded.
+function KITS.capture(block, blob)
+    local record = block + HEADER_BYTES
+    if KITS.by_record[record] or #blob < 64 then return end
+    if u32(blob, 40) ~= 0 then return end                    -- helmets and capes have no weight
+    local function at(v) if v and v >= 0 and v < #blob then return record + v end return v end
+    local bptr, bcount = at(u64(blob, 48)), u64(blob, 56)
+    if not bptr or not bcount or bcount < 1 or bcount > 8 then return end
+    local bodies = api.read(bptr, bcount * 24)
+    if not bodies then return end
+    local kit = { record = record, block = block, passive = u32(blob, 28), pieces = {} }
+    for b = 0, bcount - 1 do
+        local pptr, pcount = at(u64(bodies, b * 24 + 8)), u64(bodies, b * 24 + 16)
+        if pptr and pcount and pcount <= 64 then
+            local raw = pcount > 0 and api.read(pptr, pcount * 96)
+            for i = 0, (raw and pcount - 1 or -1) do
+                local w = u32(raw, i * 96 + 16)
+                if u32(raw, i * 96 + 12) == 0 and WEIGHTS[w] then
+                    kit.pieces[#kit.pieces + 1] = { at = pptr + i * 96 + 16, orig = w, now = w }
+                end
+            end
+        end
+    end
+    if #kit.pieces == 0 then return end
+    KITS.by_record[record] = kit
+    KITS.list[#KITS.list + 1] = kit
+    KITS.found = KITS.found + 1
+    if not KITS.lo or block < KITS.lo then KITS.lo = block end
+    if not KITS.hi or block > KITS.hi then KITS.hi = block end
+    local prof = profile_for(kit.passive)
+    if prof and prof.weight then KITS.apply(kit.passive) end
+end
+
+function KITS.intact(kit)
+    local header = api.read(kit.block, 12)
+    return header and header:sub(1, 8) == NEEDLE and u32(header, 8) == MOD.type_kit
+end
+
+-- every armor with this passive gets the profile's weight, or its own back
+function KITS.apply(perk)
+    if MOD.swap_only then return end
+    local prof = profile_for(perk)
+    local want = prof and prof.weight
+    local n, bad = 0, 0
+    for _, kit in ipairs(KITS.list) do
+        if kit.passive == perk then
+            for _, pc in ipairs(kit.pieces) do
+                local target = want or pc.orig
+                if pc.now ~= target then
+                    if KITS.intact(kit) and api.write(pc.at, u32_bytes(target)) then
+                        local back = api.read(pc.at, 4)
+                        if back and u32(back, 0) == target then pc.now, n = target, n + 1 else bad = bad + 1 end
+                    else
+                        bad = bad + 1
+                    end
+                end
+            end
+        end
+    end
+    if n > 0 then log('weight: ' .. CAT[perk].name .. ' armors ' .. (want and ('are ' .. WEIGHTS[want]) or 'are back to their own weight') .. ' (' .. n .. ' pieces)') end
+    if bad > 0 then log('weight: ' .. CAT[perk].name .. ': ' .. bad .. ' piece(s) could not be written') end
+end
+
+function KITS.apply_all()
+    local seen = {}
+    for _, kit in ipairs(KITS.list) do
+        if not seen[kit.passive] then seen[kit.passive] = true; KITS.apply(kit.passive) end
+    end
+end
+
+-- every 5 s: kits the game reloaded are dropped (the next scan finds them again),
+-- weights the game put back are set again
+function KITS.enforce()
+    local kept = {}
+    for _, kit in ipairs(KITS.list) do
+        local changed = false
+        for _, pc in ipairs(kit.pieces) do if pc.now ~= pc.orig then changed = true break end end
+        if not changed or KITS.intact(kit) then
+            kept[#kept + 1] = kit
+            if changed then
+                for _, pc in ipairs(kit.pieces) do
+                    local cur = api.read(pc.at, 4)
+                    if cur and u32(cur, 0) ~= pc.now then pc.now = u32(cur, 0) end
+                end
+            end
+        else
+            KITS.by_record[kit.record] = nil
+            KITS.found = KITS.found - 1
+        end
+    end
+    KITS.list = kept
+    KITS.apply_all()
+end
+
+-- how many armors have this passive (for the panel)
+function KITS.count(perk)
+    local n = 0
+    for _, kit in ipairs(KITS.list) do if kit.passive == perk then n = n + 1 end end
+    return n
 end
 
 -- ---------------------------------------------------------------- passive dump
@@ -1102,6 +1222,11 @@ local function handle_block(address)
     local kind, payload = u32(header, 8), u32(header, 12)
     if not payload or payload < REC_HEAD or payload > MAX_PAYLOAD then return end
     if research then pcall(research.block, address, kind, payload) end
+    if kind == MOD.type_kit and not MOD.swap_only then
+        local kblob = api.read(address + HEADER_BYTES, math.min(payload, 65536))
+        if kblob then pcall(KITS.capture, address, kblob) end
+        return
+    end
     if kind ~= MOD.type_passive then return end
     if not found_lo or address < found_lo then found_lo = address end
     if not found_hi or address > found_hi then found_hi = address end
@@ -1185,15 +1310,24 @@ local function frame_budget()
 end
 
 -- the window around the first armor-passive block, clamped to the region holding it
-local function hot_window()
+local function hot_window(first, last, span)
     for _, r in ipairs(scan.regions) do
-        if found_lo >= r.base and found_lo < r.base + r.size then
-            local lo = math.max(r.base, found_lo - HOT_WINDOW)
-            local hi = math.min(r.base + r.size, found_hi + HOT_WINDOW)
+        if first >= r.base and first < r.base + r.size then
+            local lo = math.max(r.base, first - span)
+            local hi = math.min(r.base + r.size, last + span)
             return { base = lo, size = hi - lo, cursor = 0 }
         end
     end
-    return { base = found_lo, size = 0, cursor = 0 }
+    return { base = first, size = 0, cursor = 0 }
+end
+
+-- one window of the scan: true when it's done
+local function scan_window(h)
+    if h.cursor >= h.size then return true end
+    local take = math.min(CHUNK, h.size - h.cursor)
+    pcall(scan_chunk, h.base + h.cursor, take)
+    h.cursor = h.cursor + math.max(take - scan.overlap, 1)
+    return false
 end
 
 local function scan_step()
@@ -1211,17 +1345,17 @@ local function scan_step()
     probe.done = true
     while true do
         if found_lo and not scan.hot_done then
-            scan.hot = scan.hot or hot_window()
-            local h = scan.hot
-            if h.cursor >= h.size then
+            scan.hot = scan.hot or hot_window(found_lo, found_hi, HOT_WINDOW)
+            if scan_window(scan.hot) then
                 scan.hot_done = true
                 state.scanned_window = true
-            else
-                local take = math.min(CHUNK, h.size - h.cursor)
-                pcall(scan_chunk, h.base + h.cursor, take)
-                h.cursor = h.cursor + math.max(take - scan.overlap, 1)
             end
-        elseif complete() and scan.hot_done and not research then
+        elseif KITS.lo and not scan.kits_done then
+            -- the armor kit records (weight) sit together too: check around them once
+            scan.kits = scan.kits or hot_window(KITS.lo, KITS.hi, KIT_WINDOW)
+            if scan_window(scan.kits) then scan.kits_done = true end
+        elseif complete() and scan.hot_done and not research
+               and (MOD.swap_only or scan.kits_done or state.rounds > 1) then
             return true                      -- everything known found, its neighbourhood checked
         elseif scan.index <= #scan.regions then
             local region = scan.regions[scan.index]
@@ -1267,6 +1401,7 @@ local function enforce()
             pcall(flush_log)
         end
     end
+    pcall(KITS.enforce)
     return gone
 end
 

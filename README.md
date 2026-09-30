@@ -50,6 +50,8 @@ Then:
 - **Right:** the chosen passive's values, in plain terms (`75%` resist, `+30%`, `+50` armor). `--` `-` `+` `++` change them, `R` resets, or click a value and type one, e.g. `75` for 75% (Enter to set, Esc to cancel). The armor's own passive (e.g. Med-Kit) is listed first; its values **replace** the originals.
 - **Tabs:** one per armor passive you stack onto. **+ Armor** adds another (e.g. a separate Siege-Ready stack), and pointing at a passive there lists the armors that carry it. **Remove armor** (click twice) puts the game's own values back.
 - **Which armor do I wear?** Your armor's passive shows *Wear any of: …*, e.g. Med-Kit: CM-09 Bonesnapper, CM-14 Physician, …
+- **Armor weight:** the *Armor weight* row sets how every armor with that passive moves: *Light* (armor 50, speed 550, stamina regen 125), *Medium* (100 / 500 / 100), *Heavy* (150 / 450 / 50) or *Game*. The look doesn't change, so a heavy armor can run like a light one. Also `weight = light` in a `[profile]`. Full edition only.
+- **Lots of armors:** when the tabs don't fit, `<` `>` scroll the row; LB / RB reach every tab.
 - **Confirmed or not:** each value says *UNTESTED* or *CONFIRMED IN GAME* (from [TESTING.md](TESTING.md)).
 - **When two passives change the same thing:** *Stack all* or *Strongest only*.
 - Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a web-builder build starts fresh from that build; the release zip always keeps what you made.
@@ -75,7 +77,7 @@ A mod that edits a live game's data while you play, built and tested like a prod
 - **Memory patching done safely.** Finds the game's armor-passive table in memory in a per-frame time budget. It never overwrites the game's rows: it builds a new modifier array and switches the record to it with one atomic 16-byte pointer+count store, double-buffered and verified by read-back, with automatic rollback. Every original byte can be restored, and records another mod already changed are left alone.
 - **An in-game UI from scratch.** An immediate-mode panel on the engine's raw GUI calls: whole-pixel layout that stays sharp from 720p to 4K, drag, scroll, search, undo, presets, share codes and typed values in plain units. Mouse and keyboard come through the Windows API and controllers through XInput, both over LuaJIT FFI, with spatial focus navigation for the controller.
 - **One format, three implementations, identical output.** The same `.ini` is parsed and compiled by Python (CLI), JavaScript (the web builder) and Lua (in game). A parity test requires Python and JS to produce **byte-identical** mod archives.
-- **Tested without the game.** A fake game runs the real mod code under LuaJIT, with memory laid out like the game's, a GUI, a mouse, a keyboard and an Xbox controller. 480+ checks drive it like a player and verify both the screen and the game's memory. Layout checks use real font metrics at every resolution and size.
+- **Tested without the game.** A fake game runs the real mod code under LuaJIT, with memory laid out like the game's, a GUI, a mouse, a keyboard and an Xbox controller. 530+ checks drive it like a player and verify both the screen and the game's memory. Layout checks use real font metrics at every resolution and size.
 - **Two editions from one codebase.** The Nexus build limits itself to one game passive per armor at the game's own values. The engine enforces it, and a test attacks it with a hostile save file.
 - **CI/CD.** Lint, all suites on every push, and tag-to-release: both editions built, release notes from the changelog, zips checked so no script or executable slips in.
 
@@ -160,6 +162,7 @@ tests/test_passive_info.py passive descriptions, armor lists, stack summary, Rem
 tests/test_report_share.py panel off, short share codes, the problem report
 tools/research.lua         research builds only (`picker.py research`): armor kit dump, weight experiment
 tests/test_research.py     the research build, and that no release carries it
+tests/test_weight.py       armor weight: loadout line, panel, undo, save, share codes, Passive Swap untouched
 tools/passives.json        plain description + armors per passive (wiki data; corrections welcome)
 tests/run_all.py           runs every suite and prints one summary
 tools/release_notes.py     release notes for a tag, from CHANGELOG.md (release workflow)
@@ -228,6 +231,7 @@ It only commits when a number changed, never lowers downloads/views, and logs to
 - **mostlycloudy**: Passive Picker v3, where this started: memory-patching engine, archive format, passive data ([AyakaMods](https://ayakamods.com/mods/modular-armor-passives.4350/))
 - **SHODAN**: engine credit, as noted in v3; the panel's drawing, input and font handling are adapted from [SHODAN Stat Editor](https://github.com/SHODAN-HORAI/SHODAN-Stat-Editor) v1.4.1 (public domain)
 - **Bingus Shared Loader**: the loader this runs on
+- **FileDiver** by xypwn (BSD-3-Clause): the armor kit record layout behind *Armor weight* ([GitHub](https://github.com/xypwn/filediver))
 - **JSZip** (MIT): zip writing in the web builder
 - **Hung1510**: Super Earth Armory Forge: armory terminal, loadouts, config layer, web builder
 
