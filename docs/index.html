@@ -88,6 +88,19 @@ button, input, select { font: inherit; color: inherit; }
 .tab .x { position: absolute; right: 8px; top: 6px; font-size: 15px; color: var(--dim); }
 .tab .x:hover { color: var(--bad); }
 .tab.add { min-width: 0; padding: 10px 16px 20px; color: var(--yellow); border-style: dashed; }
+.tab.guide { min-width: 0; padding: 10px 16px 20px; }
+.layout[hidden] { display: none; }
+
+/* ------------------------------------------------ guide */
+.guide .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.guide h3 { margin: 0 0 10px; font: 600 13px/1 var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--yellow); }
+.guide ol { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+.guide ol li::marker { color: var(--yellow); font-weight: 600; }
+.guide dl { margin: 0 0 16px; display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; align-items: center; }
+.guide dt { display: flex; gap: 4px; flex-wrap: wrap; }
+.guide dd { margin: 0; }
+.guide .hint { margin: 14px 0 0; }
+@media (max-width: 900px) { .guide .cols { grid-template-columns: 1fr; } }
 .tabline { display: none; }
 
 /* ------------------------------------------------ panels with a cut corner */
@@ -275,7 +288,53 @@ footer a { color: var(--muted); }
     <span class="key" id="nextTab" title="Next armor stack (E)">E</span>
   </div>
 
-  <div class="layout">
+  <section class="panel guide" id="guidePanel" hidden>
+    <div class="ph"><div><span class="lab">Guide</span><h2>How to use Armory Forge</h2></div></div>
+    <div class="pb cols">
+      <div>
+        <h3>On this page (optional)</h3>
+        <ol>
+          <li>Each tab is an <b>armor passive</b>: everything you tick goes onto every armor with that passive. <b>+ Armor</b> adds another one.</li>
+          <li>Tick passives to stack them; open one to change its values (the line under each says what it means in game).</li>
+          <li><b>Armor weight</b> makes that passive's armors light, medium or heavy; the <b>Armor weight</b> card does it for one armor.</li>
+          <li><b>Download</b> builds a ready-to-install mod with this loadout, or <b>Copy share link</b> / <b>Save .ini</b> to share it.</li>
+        </ol>
+        <p class="hint">You don't need this page: the mod has the same editor in game.</p>
+      </div>
+      <div>
+        <h3>In game</h3>
+        <ol>
+          <li>Install the mod with <a href="https://ayakamods.com/mods/bingus-shared-loader.3861/" target="_blank" rel="noopener">Bingus Shared Loader</a> and start the game.</li>
+          <li>Press <span class="key">F7</span>. The panel opens on the tab of the armor you're wearing; the box at the top shows it, and offers to add its tab if there isn't one.</li>
+          <li>Tick passives on the left, click a name to change its values on the right. It applies at once and saves when you close the panel.</li>
+          <li><b>Presets</b> saves loadouts; <span class="key">F9</span> swaps between them with the panel closed. <b>Copy code</b> / <b>Paste code</b> share them (this page reads them too).</li>
+          <li>The <b>Guide</b> tab in the panel has all of this, and <b>Keys</b> changes F7 / F9.</li>
+        </ol>
+        <p class="hint">The Passive Swap (Lite) edition on Nexus works the same way, with one passive per armor instead of a stack.</p>
+      </div>
+      <div>
+        <h3>Controls in game</h3>
+        <dl>
+          <dt><span class="key">F7</span></dt><dd>Open / close the panel</dd>
+          <dt><span class="key">F9</span></dt><dd>Next preset (panel closed)</dd>
+          <dt><span class="key">Ctrl</span><span class="key">Z</span></dt><dd>Undo</dd>
+          <dt><span class="key">Ctrl</span><span class="key">F</span></dt><dd>Search passives and effects</dd>
+          <dt><span class="key">PgUp</span><span class="key">PgDn</span></dt><dd>Scroll a long list (or the mouse wheel)</dd>
+          <dt><span class="key">Ctrl</span><span class="key">+</span><span class="key">&minus;</span></dt><dd>Panel size; drag the top strip to move it</dd>
+        </dl>
+        <dl>
+          <dt><span class="key">Back</span><span class="key">Start</span></dt><dd>Controller: open / close</dd>
+          <dt><span class="key">D-pad</span><span class="key">A</span></dt><dd>Move, select</dd>
+          <dt><span class="key">B</span></dt><dd>Back / close</dd>
+          <dt><span class="key">LB</span><span class="key">RB</span></dt><dd>Tabs</dd>
+          <dt><span class="key">X</span><span class="key">Y</span></dt><dd>Undo, tick the chosen passive</dd>
+        </dl>
+        <p class="hint">While the panel is open the game ignores your keyboard and mouse (Keys tab: Blocked / Let through). Single-player and private lobbies only.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="layout" id="mainLayout">
     <div>
       <section class="panel" id="profileCard">
         <div class="ph">
@@ -376,6 +435,7 @@ footer a { color: var(--muted); }
     <button class="p" type="button" data-act="share"><span class="key">S</span>Share link</button>
     <button class="p hide-sm" type="button" data-act="import"><span class="key">I</span>Import</button>
     <button class="p hide-sm" type="button" data-act="search"><span class="key">/</span>Search</button>
+    <button class="p" type="button" data-act="guide"><span class="key">G</span>Guide</button>
     <span class="p right hide-sm"><span class="key">F7</span>In game</span>
   </div>
 </div>

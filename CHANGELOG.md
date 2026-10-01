@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.1 (2026-10-01)
+Both editions (full and Passive Swap):
+- **What you're wearing, at the top of the panel:** the armor's name and how its passive's tab stands: how many passives it stacks (or, in Passive Swap, what it's swapped to), "nothing ticked yet", or, when there's no tab for it, "click to add its tab". Click the box to jump to your armor's tab or add it. Most "my stack doesn't work" reports were an armor whose passive had no tab.
+- **Guide tab** in the panel: how to use it step by step, and every key, mouse and controller control. The web builder has a matching **Guide** tab (or press G).
+
 ## 6.0 (2026-10-01)
 Both editions (full and Passive Swap):
 - **The game ignores your keyboard and mouse while the panel is open:** typing a value no longer moves your Helldiver, clicks don't shoot or press the armory behind the panel, and the mouse doesn't turn the camera. The mouse wheel still scrolls the panel's lists. Close the panel and everything works as before. The Keys tab has *Blocked / Let through* if you'd rather keep the game live. Thanks anmayvuong9x for the idea, and SHODAN Stat Editor, whose *Block game input* showed how the game reads its input.

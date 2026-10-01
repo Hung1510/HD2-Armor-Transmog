@@ -763,6 +763,28 @@ function PP.save_pos()
                      (ui.block_input == false and 'block_input = off\n' or ''))
 end
 
+-- what you're wearing, for the header: { kind = 'look' | 'unknown' | 'none' | 'empty' | 'ok',
+-- name, perk, tab, count }. 'none': no tab for its passive (the header offers to add one);
+-- 'empty': a tab, nothing on it yet
+function PP.wearing()
+    if not KITS.worn then return { kind = 'look' } end
+    local kit = KITS.source(KITS.worn)
+    local w = { name = KITS.name(KITS.worn), perk = kit and kit.passive }
+    if not w.perk or not CAT[w.perk] then w.kind = 'unknown'; return w end
+    for i, prof in ipairs(LOADOUT and LOADOUT.profiles or {}) do
+        if prof.perk == w.perk then w.tab, w.prof = i, prof end
+    end
+    if not w.tab then w.kind = 'none'; return w end
+    if MOD.swap_only then
+        w.kind = (w.prof.swap and w.prof.swap ~= w.perk and CAT[w.prof.swap]) and 'ok' or 'empty'
+        return w
+    end
+    w.count = 0
+    for pid in pairs(w.prof.enabled or {}) do if pid ~= w.perk then w.count = w.count + 1 end end
+    w.kind = (w.count > 0 or next(w.prof.tweaks or {}) or w.prof.weight) and 'ok' or 'empty'
+    return w
+end
+
 function PP.swap()
     local list = PP.cycle_list()
     if #list == 0 then return end
@@ -962,7 +984,7 @@ local function draw(width, height)
     local regions = {}
     ui.tab_order = {}                        -- tab keys left to right (LB / RB), drawn or not
     for n = 1, #(LOADOUT and LOADOUT.profiles or {}) do ui.tab_order[n] = 'tab:' .. n end
-    for _, k in ipairs({ 'add', 'presets', 'settings' }) do ui.tab_order[#ui.tab_order + 1] = k end
+    for _, k in ipairs({ 'add', 'presets', 'settings', 'guide' }) do ui.tab_order[#ui.tab_order + 1] = k end
     local ink_font, ink_material = font.font, font.material
     local up = string.upper
 
@@ -1137,6 +1159,41 @@ local function draw(width, height)
     text('FORGE', 86 + tw + 12, 50, 34, C.YELLOW)
     text(MOD.swap_only and 'Passive Swap: give any armor another passive, at the game\'s values.'
          or 'Tick passives to stack them. Click a name to edit its values.', 88, 84, 12, C.MUTED, 420)
+    -- what you're wearing (right of the title): its passive's tab, or a click to add one
+    if state.phase == 'ready' and LOADOUT then
+        local wr = PP.wearing()
+        local hx, hw = 540, W - 22 - 540
+        local warn = wr.kind == 'none' or wr.kind == 'empty'
+        local here = wr.tab and wr.tab == ui.tab and not ui.adding and not ui.presets and not ui.settings
+        local can = (wr.kind == 'none') or (wr.tab and not here)
+        local hov = can and ui.hover == 'wear'
+        rect(hx, 44, hw, 52, hov and C.ROW_HI or C.PANEL, 951)
+        border(hx, 44, hw, 52, warn and C.YELLOW_DK or C.LINE, 952)
+        rect(hx, 44, 3, 52, warn and C.YELLOW or wr.kind == 'ok' and C.GOOD or C.LINE2, 953)
+        label('Wearing', hx + 14, 51, C.MUTED)
+        if wr.kind == 'look' then
+            text('Looking for your armor...', hx + 14, 66, 15, C.DIM, hw - 28)
+            text('Shows a few seconds after loading in.', hx + 14, 84, 11, C.DIM, hw - 28)
+        else
+            local pn = wr.perk and CAT[wr.perk] and CAT[wr.perk].name or '?'
+            text(cut(wr.name, 15, hw - 28), hx + 14, 66, 15, C.TEXT, hw - 28)
+            local line, c
+            if wr.kind == 'unknown' then line, c = 'Passive not known to the mod', C.DIM
+            elseif wr.kind == 'none' then
+                line, c = pn .. ': ' .. (MOD.swap_only and 'no swap yet' or 'nothing stacked') .. '. Click to add its tab', C.YELLOW
+            elseif MOD.swap_only then
+                line = wr.kind == 'ok' and (pn .. ' -> ' .. CAT[wr.prof.swap].name) or (pn .. ': keeps its own passive')
+                c = wr.kind == 'ok' and C.GOOD or C.YELLOW
+                if not here then line = line .. ' (tab ' .. wr.tab .. ')' end
+            else
+                line = wr.kind == 'ok' and (pn .. ': ' .. wr.count .. ' passive(s) stacked') or (pn .. ': tab ' .. wr.tab .. ', nothing ticked yet')
+                c = wr.kind == 'ok' and C.GOOD or C.YELLOW
+                if not here and wr.kind == 'ok' then line = line .. ' (tab ' .. wr.tab .. ')' end
+            end
+            text(line, hx + 14, 84, 11, c, hw - 28)
+        end
+        if can then region('wear', hx, 44, hw, 52) end
+    end
 
     local by0 = H - 40                           -- key-prompt bar
     local function prompts()
@@ -1176,7 +1233,7 @@ local function draw(width, height)
     local x = 22
     -- armor tabs share what the other tabs and "Remove this stack" leave; long names are cut
     local fixed = 0
-    for _, c in ipairs({ '+ Armor', 'Presets', 'Keys' }) do fixed = fixed + math.min(230, measure(up(c), 15) + 30) + 6 end
+    for _, c in ipairs({ '+ Armor', 'Presets', 'Keys', 'Guide' }) do fixed = fixed + math.min(230, measure(up(c), 15) + 30) + 6 end
     local room = W - 22 - (measure('CLICK AGAIN TO REMOVE', 13) + 28 + 12) - 22 - fixed
     local count = #LOADOUT.profiles
     local each_tab = math.max(60, math.min(230, room / math.max(1, count) - 6))
@@ -1212,7 +1269,8 @@ local function draw(width, height)
     end
     x = x + tab('add', '+ Armor', x, ui.adding, C.YELLOW) + 6
     x = x + tab('presets', 'Presets', x, ui.presets, C.YELLOW) + 6
-    tab('settings', 'Keys', x, ui.settings, C.MUTED)
+    x = x + tab('settings', 'Keys', x, ui.settings == 'keys', C.MUTED) + 6
+    tab('guide', 'Guide', x, ui.settings == 'guide', C.MUTED)
     if p and not ui.adding and not ui.presets and not ui.settings then
         -- a real button (players missed the old small text): click, then click again to confirm
         local sure = ui.confirm and ui.confirm.kind == 'remove'
@@ -1394,6 +1452,65 @@ local function draw(width, height)
         end
 
     -- ============================================================ Keys (settings)
+    elseif ui.settings == 'guide' then
+        head(IX, TOP + 14, 'Guide', 'How to use it', IW)
+        local steps = MOD.swap_only and {
+            'Wear the armor you want to change. The panel opens on its passive\'s tab, and the box at the top shows what you\'re wearing.',
+            'No tab for it yet? Click that box, or + Armor and pick the passive of the armor you wear.',
+            'On its tab, choose the passive it should have instead. Original puts the game\'s own back.',
+            'It applies at once. Re-select the armor in the armory if the card still shows the old passive.',
+            'Presets: save loadouts, then ' .. (swap_key() ~= 'OFF' and swap_key() or 'the quick-swap key') .. ' swaps between them without opening the panel.',
+            'Copy code / Paste code share a loadout with a friend.',
+        } or {
+            'Wear the armor you want to boost. The panel opens on its passive\'s tab, and the box at the top shows what you\'re wearing.',
+            'No tab for it yet? Click that box, or + Armor and pick the passive of the armor you wear.',
+            'Tick passives on the left: they stack onto every armor with that tab\'s passive.',
+            'Click a passive\'s name to see its values on the right; -- - + ++ change them, or click a value and type one.',
+            'Armor weight: make that passive\'s armors light, medium or heavy, or only the armor you\'re wearing.',
+            'Presets: save loadouts, then ' .. (swap_key() ~= 'OFF' and swap_key() or 'the quick-swap key') .. ' swaps between them without opening the panel.',
+            'Copy code / Paste code share a loadout (the web builder reads them too).',
+        }
+        local y = TOP + 64
+        for i, s in ipairs(steps) do
+            text(tostring(i), IX + 4, y, 15, C.YELLOW)
+            y = wrap(s, IX + 24, y + 1, 13, C.TEXT, IW - 28, 4) + 8
+        end
+        y = y + 4
+        rect(IX, y, IW, 1, C.LINE, 951)
+        y = wrap('Changes apply at once and are saved when you close the panel. Solo and private lobbies only.', IX, y + 12, 12, C.DIM, IW, 3)
+
+        head(RX, TOP + 14, 'Guide', 'Controls', RIW)
+        local ry = TOP + 64
+        local function rows(title, list)
+            label(title, RX, ry, nil, RIW)
+            ry = ry + 22
+            for _, r in ipairs(list) do
+                local kw = 0
+                for k in r[1]:gmatch('[^|]+') do kw = kw + keycap(k, RX + kw, ry) + 4 end
+                text(r[2], RX + math.max(kw, 150) + 8, ry + 4, 13, C.TEXT, RIW - math.max(kw, 150) - 8)
+                ry = ry + 28
+            end
+            ry = ry + 8
+        end
+        rows('Keyboard', {
+            { hotkey(), 'Open / close the panel' },
+            swap_key() ~= 'OFF' and { swap_key(), 'Swap to the next preset (panel closed)' } or { 'KEYS TAB', 'Quick-swap key: off' },
+            { 'CTRL+Z', 'Undo' }, { 'CTRL+F', 'Search passives and effects' },
+            { 'PGUP|PGDN', 'Scroll a long list' }, { 'ENTER|ESC', 'Set / cancel a typed value' },
+            { 'CTRL +|CTRL -', 'Panel size (CTRL 0 resets size and position)' },
+        })
+        rows('Mouse', {
+            { 'CLICK', 'Tabs, names, ticks and buttons' }, { 'WHEEL', 'Scroll the list under the cursor' },
+            { 'DRAG', 'The top strip moves the panel' },
+        })
+        rows('Controller', {
+            { 'BACK|START', 'Open / close the panel' }, { 'D-PAD', 'Move between controls' }, { 'A', 'Select' },
+            { 'B', 'Back / close' }, { 'LB|RB', 'Tabs' }, { 'X', 'Undo' }, { 'Y', 'Tick the chosen passive' },
+            { 'R-STICK', 'Scroll' },
+        })
+        wrap('While the panel is open the game ignores your keyboard and mouse (Keys tab: Blocked / Let through). Something wrong? Keys tab, Copy problem report.',
+             RX, math.max(ry, BOT - 50), 12, C.DIM, RIW, 3)
+
     elseif ui.settings then
         head(IX, TOP + 14, 'Settings', 'Keys', IW)
         local each, gap = (IW - 3 * 8) / 4, 8
@@ -1466,7 +1583,9 @@ local function draw(width, height)
         for k = first + 1, math.min(#free, first + fit) do
             local c = free[k]
             local worn = KITS.worn and KITS.source(KITS.worn)
-            list_row('addpick:' .. c.id, y, up(c.name) .. ((worn and worn.passive == c.id) and '  -  YOUR ARMOR' or ''),
+            local mine = worn and worn.passive == c.id
+            local tag = '  -  YOUR ARMOR'
+            list_row('addpick:' .. c.id, y, mine and (cut(up(c.name), 14, IW - 16 - bar.w - measure(tag, 14)) .. tag) or up(c.name),
                      ui.hover == 'addpick:' .. c.id, (worn and worn.passive == c.id) and C.YELLOW or nil)
             y = y + RH
         end
@@ -1891,7 +2010,17 @@ local function click(key)
     elseif kind == 'presets' then ui.presets, ui.adding, ui.settings = not ui.presets, false, false; PP.load_user()
     elseif kind == 'search' then
         if arg == 'clear' then PP.set_search('', false) else PP.set_search(ui.search, true) end
-    elseif kind == 'settings' then ui.settings, ui.adding, ui.presets = not ui.settings, false, false
+    elseif kind == 'settings' then ui.settings, ui.adding, ui.presets = ui.settings ~= 'keys' and 'keys' or false, false, false
+    elseif kind == 'guide' then ui.settings, ui.adding, ui.presets = ui.settings ~= 'guide' and 'guide' or false, false, false
+    elseif kind == 'wear' then                     -- the header: go to your armor's tab, or add it
+        local wr = PP.wearing()
+        if wr.tab then
+            ui.tab, ui.sel, ui.adding, ui.presets, ui.settings = wr.tab, nil, false, false, false
+        elseif wr.kind == 'none' then
+            LOADOUT.profiles[#LOADOUT.profiles + 1] = { perk = wr.perk, conflicts = 'stack', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
+            ui.tab, ui.sel, ui.adding, ui.presets, ui.settings = #LOADOUT.profiles, nil, false, false, false
+            changed(wr.perk, 'Added ' .. CAT[wr.perk].name .. ' (your armor)')
+        end
     elseif kind == 'blockin' then
         ui.block_input = arg == 'on'
         pcall(PP.save_pos)
@@ -2396,7 +2525,7 @@ end
 function PP.tab_step(step)
     local tabs = ui.tab_order or {}
     if #tabs == 0 then return end
-    local active = ui.settings and 'settings' or ui.presets and 'presets' or ui.adding and 'add' or ('tab:' .. ui.tab)
+    local active = ui.settings == 'guide' and 'guide' or ui.settings and 'settings' or ui.presets and 'presets' or ui.adding and 'add' or ('tab:' .. ui.tab)
     local at = 1
     for i, k in ipairs(tabs) do if k == active then at = i end end
     local k = tabs[(at - 1 + step) % #tabs + 1]
@@ -2577,7 +2706,8 @@ local function panel_frame(now)
     local width, height = sr.Gui.resolution()
     if ui.message and now >= ui.message.till then ui.message = nil end
     if ui.confirm and now >= ui.confirm.till then ui.confirm = nil; ui.version = ui.version + 1 end
-    local signature = table.concat({ width, height, state.phase, perks_found, ui.tab, tostring(ui.sel),
+    local signature = table.concat({ width, height, state.phase, perks_found, ui.tab, tostring(ui.sel), tostring(KITS.worn),
+                                     tostring(ui.settings),
                                      tostring(ui.hover), ui.version, tostring(ui.adding), tostring(ui.presets),
                                      ui.message and ui.message.text or '',
                                      ui.value and (ui.value.n .. '=' .. ui.value.text) or '-',

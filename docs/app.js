@@ -7,6 +7,7 @@
   let state, active = 0;
   const open = new Set();
   let search = "";
+  let guideOpen = false;                     // the Guide tab is showing
   let lastIni = "", lastOk = false;
 
   // ---------------------------------------------------------------- storage (optional)
@@ -123,7 +124,10 @@
       `<div class="tab" role="tab" tabindex="0" aria-selected="${i === active}" data-tab="${i}">${esc(nameOf(p.perk))}` +
       (state.profiles.length > 1 ? `<span class="x" data-remove="${i}" title="Remove this armor stack" role="button" aria-label="Remove">&times;</span>` : "") +
       `<span class="n">${i + 1}</span></div>`).join("") +
-      `<button class="tab add" type="button" id="addTab" title="Give another armor passive its own stack">+ Armor</button>`;
+      `<button class="tab add" type="button" id="addTab" title="Give another armor passive its own stack">+ Armor</button>` +
+      `<button class="tab guide" type="button" id="guideTab" role="tab" aria-selected="${guideOpen}" title="How to use it (G)">Guide</button>`;
+    $("guidePanel").hidden = !guideOpen;
+    $("mainLayout").hidden = guideOpen;
     $("stackLab").textContent = `Armor stack ${active + 1} / ${state.profiles.length}`;
   }
 
@@ -305,9 +309,10 @@
         render();
         return;
       }
-      if (e.target.closest("#addTab")) return openAdd();
+      if (e.target.closest("#addTab")) { guideOpen = false; return openAdd(); }
+      if (e.target.closest("#guideTab")) return toggleGuide();
       const t = e.target.closest("[data-tab]");
-      if (t) { active = +t.dataset.tab; search = ""; render(); }
+      if (t) { active = +t.dataset.tab; search = ""; guideOpen = false; render(); }
     });
     $("tabs").addEventListener("keydown", (e) => {
       const t = e.target.closest("[data-tab]");
@@ -409,10 +414,19 @@
       else if (k === "s") act("share");
       else if (k === "i") act("import");
       else if (k === "/") { e.preventDefault(); act("search"); }
+      else if (k === "g" || k === "?") toggleGuide();
     });
   }
 
+  // the Guide tab: how to use the page and the mod, in place of the editor
+  function toggleGuide() {
+    guideOpen = !guideOpen;
+    renderTabs();
+    if (guideOpen) $("guidePanel").scrollIntoView({ block: "nearest" });
+  }
+
   function switchTab(d) {
+    guideOpen = false;
     if (state.profiles.length < 2) return;
     active = (active + d + state.profiles.length) % state.profiles.length;
     search = "";
@@ -423,7 +437,8 @@
     if (what === "download") $("dlZip").click();
     else if (what === "share") $("shareBtn").click();
     else if (what === "import") $("importBtn").click();
-    else if (what === "search") { const s = $("search"); if (s) { s.focus(); s.scrollIntoView({ block: "center" }); } }
+    else if (what === "guide") toggleGuide();
+    else if (what === "search") { if (guideOpen) toggleGuide(); const s = $("search"); if (s) { s.focus(); s.scrollIntoView({ block: "center" }); } }
   }
 
   function setTweak(key, raw, final) {

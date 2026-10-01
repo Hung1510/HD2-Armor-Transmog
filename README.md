@@ -53,7 +53,8 @@ Then:
 - **Armor weight:** the *Armor weight* row sets how every armor with that passive moves: *Light* (armor 50, speed 550, stamina regen 125), *Medium* (100 / 500 / 100), *Heavy* (150 / 450 / 50) or *Game*. The look doesn't change, so a heavy armor can run like a light one. Also `weight = light` in a `[profile]`. Full edition only.
 - **Lots of armors:** when the tabs don't fit, `<` `>` scroll the row; LB / RB reach every tab.
 - **Weight for one armor:** under *Armor weight*, *Only the armor you're wearing* sets just that armor (full edition). Saved as `[armor: <name or id>]` with `weight = light`.
-- **It knows what you wear:** the panel opens on your armor's tab, and *+ Armor* lists your armor's passive first.
+- **It knows what you wear:** the box at the top shows your armor and its tab's state (click it to jump there, or to add the tab); the panel opens on your armor's tab, and *+ Armor* lists your armor's passive first.
+- **Guide tab:** step-by-step use and every control, in the panel and in the web builder (G).
 - **The game ignores your keyboard and mouse while the panel is open** (no moving, shooting, turning or clicking the armory behind it); the wheel still scrolls the panel. Keys tab: *Blocked / Let through*.
 - **Confirmed or not:** each value says *UNTESTED* or *CONFIRMED IN GAME* (from [TESTING.md](TESTING.md)).
 - **When two passives change the same thing:** *Stack all* or *Strongest only*.

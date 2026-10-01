@@ -148,6 +148,8 @@ for measure_mode, (rw, rh), scale in CONFIGS:
     g.click("tab:1")
     g.click("remove")
     views.append(("remove: click again", layout_problems(g)))
+    g.click("guide")
+    views.append(("guide", layout_problems(g)))
     g.click("add")
     views.append(("+ Armor", layout_problems(g)))
     g.reveal("addpick:6")
@@ -207,10 +209,14 @@ for res in ((1920, 1080), (1280, 720)):
     mode = "swap edition %dx%d" % res
     g = FakeGame(swap_lua, appdata=tempfile.mkdtemp())
     g.set_resolution(*res)
+    g.wear(longest)                                   # wearing an armor with no swap yet: the header offers it
     g.tick(420)
     g.key(F7)
     g.tick(120)
-    views = [("empty", layout_problems(g))]
+    views = [("empty, wearing an armor with no tab", layout_problems(g))]
+    g.click("guide")
+    views.append(("guide", layout_problems(g)))
+    g.click("guide")
     g.click("add")
     views.append(("+ Armor", layout_problems(g)))
     g.click("addpick:%d" % medkit)
@@ -221,6 +227,8 @@ for res in ((1920, 1080), (1280, 720)):
         if "swap:%d" % pid in g.regions():
             g.click("swap:%d" % pid)
             views.append(("swapped to %d" % pid, layout_problems(g)))
+    g.click("wear")
+    views.append(("header: added the worn armor's tab", layout_problems(g)))
     g.click("presets")
     g.click("psave")
     views.append(("presets, naming", layout_problems(g)))
