@@ -20,6 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - run: python tools/release_notes.py "${{ github.ref_name }}" > /dev/null   # tag = VERSION, changelog has it
       - run: pip install lupa pillow unicorn keystone-engine
       - run: python tools/picker.py export-web --check
       - run: python tests/run_all.py

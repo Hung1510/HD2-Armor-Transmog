@@ -24,9 +24,17 @@ Single-player / private lobbies only.
 
 def notes(tag):
     version = tag.lstrip("vV")
+    # a tag on the wrong commit (e.g. pushed from a clone that wasn't pulled) builds old code
+    # under the new number: refuse it
+    picker = open(os.path.join(ROOT, "tools", "picker.py"), encoding="utf-8").read()
+    built = re.search(r'^VERSION = "([^"]+)"', picker, re.M).group(1)
+    if built != version:
+        sys.exit("tag %s is on a commit whose tools/picker.py says VERSION %s: pull, then tag the latest main" % (tag, built))
     text = open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8").read()
     m = re.search(r"^## %s\b[^\n]*\n(.*?)(?=^## |\Z)" % re.escape(version), text, re.S | re.M)
-    body = m.group(1).strip() if m else "See CHANGELOG.md."
+    if not m:
+        sys.exit("CHANGELOG.md has no '## %s' section" % version)
+    body = m.group(1).strip()
     return "## What's new in %s\n\n%s\n%s" % (version, body, FOOTER)
 
 
