@@ -2381,6 +2381,11 @@ panel_tick = function(now)
         open_panel(not ui.open)
         if ui.open then ui.pad_mode, ui.focus = true, nil end
     end
+    if state.research_note then                -- research builds only: show what the test just did
+        clear_toast()
+        toast.text, toast.sub, toast.till = state.research_note, 'research', now + 5
+        state.research_note = nil
+    end
     if not ui.hinted and state.phase == 'ready' then
         -- nothing stacked yet (fresh install): say where the panel is, once
         ui.hinted = true

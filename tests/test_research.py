@@ -34,6 +34,11 @@ def check(cond, what):
         failed.append(what)
 
 
+def lut_of(kid, slot):
+    """a colour LUT hash too big for a Lua number, so a lossy copy would show"""
+    return 0xFC00000000000001 + (kid << 20) + (slot << 4)
+
+
 def kit_block(at, kid, ktype, passive, bodies, relative=False):
     """One LDLD block holding a HelldiverCustomizationKit at address `at` (the header).
     bodies: [(body_type, [(slot, piece_type, weight), ...]), ...]"""
@@ -52,7 +57,7 @@ def kit_block(at, kid, ktype, passive, bodies, relative=False):
         for slot, ptype, weight in plist:
             weights_at.append((rec + piece_off + len(pieces) + 16, ptype, weight))
             p = bytearray(96)
-            struct.pack_into("<QIIII", p, 0, 0x9A7B000000000000 + slot, slot, ptype, weight, 0)
+            struct.pack_into("<QIIIIQ", p, 0, 0x9A7B000000000000 + slot, slot, ptype, weight, 0, lut_of(kid, slot))
             pieces += p
     blob += pieces
     hdr = b"LDLD" + struct.pack("<III", 1, TYPE_KIT, len(blob)) + b"\0" * 8
@@ -68,6 +73,7 @@ def game_with_kits(lua_path):
         ("armor", dict(kid=0x1111, ktype=0, passive=7, bodies=[(1, [(2, 0, 2), (3, 1, 1), (6, 0, 2)])])),
         ("helmet", dict(kid=0x2222, ktype=1, passive=0, bodies=[(1, [(0, 0, 2)])])),
         ("file-form", dict(kid=0x3333, ktype=0, passive=11, bodies=[(0, [(2, 0, 1)]), (1, [(2, 0, 1)])], relative=True)),
+        ("cape", dict(kid=0x4444, ktype=2, passive=0, bodies=[(3, [(1, 0, 1)])])),
     ):
         block, weights = kit_block(GAME_BASE + at, **args)
         mem[at:at + len(block)] = block
@@ -85,11 +91,11 @@ def dump_of(g):
     return open(path, encoding="utf-8").read() if os.path.exists(path) else ""
 
 
-def build(weight):
+def build(weight, lut=16):
     s, _ = picker.load_config_text("[settings]\nname = x\n[profile: Med-Kit]\n")
     path = tempfile.mktemp(suffix=".lua")
     with open(path, "w", encoding="utf-8") as f:
-        f.write(picker.research_lua(s, weight))
+        f.write(picker.research_lua(s, weight, lut))
     return path
 
 
@@ -118,6 +124,40 @@ check(weight_now(g, pieces["helmet"][0][0]) == 2, "helmet kits are left alone")
 check(all(weight_now(g, a) == 0 for a, _, _ in pieces["file-form"]), "file-form (relative) pointers are followed too")
 check("failed 0" in text and "pieces changed 0," not in text, "the dump counts the changes (%s)" %
       next((ln for ln in text.splitlines() if ln.startswith("pieces changed")), "-"))
+
+# ------------------------------------------------------------------ 5. F10: where is the equipped armor?
+LOAD = 0x30000000
+g3, _ = game_with_kits(build(None, lut=7))
+g3.mem[LOAD] = bytearray(0x10000)
+struct.pack_into("<III", g3.mem[LOAD], 0x100, 0x1111, 0, 0)      # a loadout: armor, helmet, cape
+struct.pack_into("<I", g3.mem[LOAD], 0x108, 0x2222)
+struct.pack_into("<I", g3.mem[LOAD], 0x110, 0x4444)
+struct.pack_into("<I", g3.mem[LOAD], 0x800, 0x1111)               # an armor id on its own: not a loadout
+g3.tick(420)
+lpath = os.path.join(os.environ["LOCALAPPDATA"], "CowboyBingus", "Helldivers2", "ArmoryForge", "loadout-research.txt")
+g3.key(0x79)
+g3.tick(300)
+lt = open(lpath, encoding="utf-8").read() if os.path.exists(lpath) else ""
+check("at 0x30000100: armor 0x00001111 (Med-Kit) | helmet 0x00002222 (+8) | cape 0x00004444 (+16)" in lt,
+      "F10 finds the armor + helmet + cape ids stored together")
+check("0x30000800" not in lt, "... and not an armor id on its own")
+check(not any("0x%X" % (GAME_BASE + 0x10000) in ln for ln in lt.splitlines()), "... nor the kit records themselves")
+struct.pack_into("<I", g3.mem[LOAD], 0x100, 0x3333)               # the player equips another armor
+g3.key(0x79)
+g3.tick(300)
+lt = open(lpath, encoding="utf-8").read()
+check("CHANGED 0x30000100: armor 0x00001111 (Med-Kit) -> armor 0x00003333 (Inflammable)" in lt,
+      "F10 again: the place that now holds the new armor is reported")
+
+# ------------------------------------------------------------------ 6. F11: another armor's colours
+arm_pieces = [GAME_BASE + 0x10000 + 24 + 64 + 24 + i * 96 for i in range(3)]   # kit 0x1111, one body
+before = [bytes(g3._read(a + 24, 8)) for a in arm_pieces]
+g3.key(0x7A)
+after = [bytes(g3._read(a + 24, 8)) for a in arm_pieces]
+want = struct.pack("<Q", lut_of(0x3333, 2))
+check(all(a == want for a in after), "F11: the Med-Kit armor takes the other armor's colour LUT, all 64 bits exact")
+g3.key(0x7A)
+check([bytes(g3._read(a + 24, 8)) for a in arm_pieces] == before, "F11 again (after the last armor): its own colours back")
 
 # ------------------------------------------------------------------ 4. dump only
 g2, pieces2 = game_with_kits(build(None))

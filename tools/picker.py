@@ -985,6 +985,11 @@ What it does:
   %%LOCALAPPDATA%%\\CowboyBingus\\Helldivers2\\ArmoryForge\\kits-dump.txt
 - Experiment: %(what)s
   Memory only. Restart the game to undo; nothing on disk is changed.
+- F10 (wait ~30 s after start): finds where your equipped armor is stored.
+  Press F10, change armor in the armory (EQUIP), press F10 again.
+  Results: ...\\ArmoryForge\\loadout-research.txt
+- F11: colour test. Every %(lut)s armor takes the next armor's colours
+  (press again for the next one; after the last, its own colours).
 Everything else works as usual (F7 panel, your loadouts).
 
 When done, reinstall the normal Super Earth Armory Forge zip (same mod, it replaces this one).
@@ -992,7 +997,7 @@ Single-player / private lobbies only.
 """
 
 
-def research_lua(settings, weight):
+def research_lua(settings, weight, lut_passive=16):
     """A blank full-edition build with tools/research.lua spliced in before the panel."""
     full = compile_loadout(settings, [], blank=True)
     with open(os.path.join(HERE, "research.lua"), encoding="utf-8") as f:
@@ -1000,8 +1005,8 @@ def research_lua(settings, weight):
     with open(os.path.join(HERE, "panel.lua"), encoding="utf-8") as f:
         panel = f.read()
     assert full.count(panel) == 1 and full.count("    blank = true,") == 1
-    flag = "    research = { weight = %s },   -- research build: see tools/research.lua\n" % (
-        "nil" if weight is None else weight)
+    flag = "    research = { weight = %s, lut_passive = %d },   -- research build: see tools/research.lua\n" % (
+        "nil" if weight is None else weight, lut_passive)
     full = full.replace("    blank = true,", flag + "    blank = true,", 1)
     return full.replace(panel, research + "\n" + panel, 1)
 
@@ -1011,7 +1016,7 @@ def cmd_research(args):
     root = os.path.dirname(HERE)
     settings, _ = load_config_text("[settings]\nname = %s\n[profile: Med-Kit]\n" % TITLE)
     weight = RESEARCH_WEIGHTS[args.weight]
-    full = research_lua(settings, weight)
+    full = research_lua(settings, weight, find_perk(args.lut_passive, "--lut-passive"))
     ok, err = compile_lua(full)
     if ok is False:
         print("Lua FAIL: %s" % err)
@@ -1032,7 +1037,8 @@ def cmd_research(args):
         _zip_write(z, ARCHIVE_NAME, archive_for(full))
         _zip_write(z, ARCHIVE_NAME + ".stream", b"")
         _zip_write(z, ARCHIVE_NAME + ".gpu_resources", b"")
-        _zip_write(z, "README.txt", (RESEARCH_README % {"v": VERSION, "what": what}).encode("utf-8"))
+        _zip_write(z, "README.txt", (RESEARCH_README % {"v": VERSION, "what": what,
+                                                         "lut": CATALOG[find_perk(args.lut_passive, "--lut-passive")][0]}).encode("utf-8"))
     print("Wrote research    : %s  (experiment: %s)" % (args.zip, what))
     return 0
 
@@ -1205,6 +1211,7 @@ def main(argv=None):
     rs = sub.add_parser("research", help="research build: dump armor kits, optionally set every armor's weight")
     rs.add_argument("--zip", required=True)
     rs.add_argument("--weight", choices=list(RESEARCH_WEIGHTS), default="none")
+    rs.add_argument("--lut-passive", default="Siege-Ready", help="colour test (F11): armors with this passive")
     rs.set_defaults(func=cmd_research)
     d = sub.add_parser("check-dump", help="compare the game's passives (passives-dump.txt) with CATALOG")
     d.add_argument("dump", nargs="?", help="path to passives-dump.txt (default: %%LOCALAPPDATA%%\\...\\ArmoryForge)")

@@ -48,6 +48,7 @@ local function tick()
     end
 
     if save_at and now >= save_at then pcall(save_now) end
+    if research and research.tick and state.phase == 'ready' then pcall(research.tick, now) end
     if not MOD.no_panel then
         local ok, why = pcall(panel_tick, now)
         if not ok then log('panel: ' .. tostring(why)) end
