@@ -29,7 +29,7 @@ import uuid
 import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "panel.lua", "main.lua")]
+ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "lang_zh.lua", "panel.lua", "main.lua")]
 
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "ArmoryForge"
@@ -38,7 +38,7 @@ VERSION = "6.2"
 # The only tool files that go in the player zip: plain-text sources of the mod and the
 # builder. Dev scripts (badge updaters, PowerShell) stay out; mod sites quarantine
 # archives that carry scripts or executables.
-RELEASE_TOOLS = ["picker.py", "engine.lua", "panel.lua", "main.lua"]
+RELEASE_TOOLS = ["picker.py", "engine.lua", "lang_zh.lua", "panel.lua", "main.lua"]
 RELEASE_ALLOWED_EXT = (".json", ".png", ".patch_0", ".stream", ".gpu_resources", ".md", ".txt", ".ini", ".py", ".lua")
 AUTHOR = "mostlycloudy (original v3), Hung1510 (v4 edit)"
 DEFAULT_HOTKEY = "F7"

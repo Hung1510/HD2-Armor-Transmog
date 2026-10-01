@@ -242,6 +242,7 @@ It only commits when a number changed, never lowers downloads/views, and logs to
 - **mostlycloudy**: Passive Picker v3, where this started: memory-patching engine, archive format, passive data ([AyakaMods](https://ayakamods.com/mods/modular-armor-passives.4350/))
 - **SHODAN**: engine credit, as noted in v3; the panel's drawing, input and font handling are adapted from [SHODAN Stat Editor](https://github.com/SHODAN-HORAI/SHODAN-Stat-Editor) v1.4.1 (public domain)
 - **Bingus Shared Loader**: the loader this runs on
+- **hd2modpj**: the Simplified Chinese (简体中文) translation of the panel, from their *Super Earth Armory Forge 简体中文* addon
 - **FileDiver** by xypwn (BSD-3-Clause): the armor kit record layout behind *Armor weight* ([GitHub](https://github.com/xypwn/filediver))
 - **JSZip** (MIT): zip writing in the web builder
 - **Hung1510**: Super Earth Armory Forge: armory terminal, loadouts, config layer, web builder

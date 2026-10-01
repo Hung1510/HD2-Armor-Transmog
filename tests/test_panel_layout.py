@@ -99,11 +99,26 @@ CONFIGS = [("measured", (1920, 1080), 1.0), ("estimated", (1920, 1080), 1.0),
            ("measured", (2560, 1440), 1.0), ("estimated", (2560, 1440), 1.2),
            ("measured", (3840, 2160), 1.5), ("measured", (1920, 1080), 0.8),
            ("measured", (1920, 1080), 1.5), ("measured", (1280, 720), 1.0)]
+# the same in Chinese (6.2): longer words, other line breaks
+CONFIGS = [c + ("en",) for c in CONFIGS] + [
+    ("measured", (1920, 1080), 1.0, "zh"), ("measured", (1280, 720), 1.0, "zh"),
+    ("estimated", (1920, 1080), 1.0, "zh"), ("measured", (3840, 2160), 1.5, "zh")]
 
-for measure_mode, (rw, rh), scale in CONFIGS:
-    mode = "%s %dx%d %d%%" % (measure_mode, rw, rh, scale * 100)
+
+def appdata_for(lang):
+    app = tempfile.mkdtemp()
+    if lang != "en":
+        d = os.path.join(app, "CowboyBingus", "Helldivers2", "ArmoryForge")
+        os.makedirs(d)
+        with open(os.path.join(d, "panel-position.txt"), "w", encoding="utf-8") as f:
+            f.write("lang = %s\n" % lang)
+    return app
+
+
+for measure_mode, (rw, rh), scale, lang in CONFIGS:
+    mode = "%s %dx%d %d%%%s" % (measure_mode, rw, rh, scale * 100, "" if lang == "en" else " " + lang)
     path = build(sink.replace("[settings]", "[settings]\npanel_scale = %.1f" % scale, 1))
-    g = FakeGame(path, appdata=tempfile.mkdtemp())
+    g = FakeGame(path, appdata=appdata_for(lang))
     g.set_resolution(rw, rh)
     if measure_mode == "estimated":
         g.L.execute(b"stingray.Gui.text_extents = nil")

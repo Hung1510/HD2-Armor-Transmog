@@ -40,7 +40,12 @@ stingray = {
         resolution = function() return RES_W, RES_H end,
         rect = function(g, p, s, c) DRAW[#DRAW + 1] = { 'rect', p[1], p[2], p[3], s[1], s[2], c[1], c[2], c[3], c[4] } end,
         text = function(g, t, f, size, m, p, c) DRAW[#DRAW + 1] = { 'text', p[1], p[2], p[3], size, t, c[1], c[2], c[3], c[4] } end,
-        text_extents = function(g, t, f, size) return { 0, 0 }, { #t * size * 0.52, size } end,
+        -- a Chinese character is about one em wide; ASCII about half
+        text_extents = function(g, t, f, size)
+            local wide = select(2, t:gsub('[\194-\244]', ''))
+            local cont = select(2, t:gsub('[\128-\191]', ''))
+            return { 0, 0 }, { ((#t - wide - cont) * 0.52 + wide * 1.0) * size, size }
+        end,
         material = function() return {} end,
     },
     Material = { set_texture = function() end },
@@ -168,9 +173,21 @@ class FakeGame:
                 self._measure_font[sz] = ImageFont.load_default()
         return self._measure_font[sz]
 
+    def _length(self, t, size):
+        """text width: DejaVu for Latin, one em per Chinese / Japanese character (the same on
+        every machine, so layout checks don't depend on which CJK fonts are installed)"""
+        wide = [ch for ch in t if ord(ch) >= 0x2E80]
+        rest = "".join(ch for ch in t if ord(ch) < 0x2E80)
+        missing = getattr(self, "missing_glyphs", None)     # a font without these: the engine draws "?"
+        if missing is not None:
+            q = self._font(size).getlength("?")
+            return self._font(size).getlength(rest) + sum(q if (missing == "all" or ch in missing) else max(6, int(round(size)))
+                                                          for ch in wide)
+        return self._font(size).getlength(rest) + len(wide) * max(6, int(round(size)))
+
     def _text_extents(self, gui, text, font, size):
         t = text.decode("utf-8", "replace") if isinstance(text, bytes) else str(text)
-        w = self._font(size).getlength(t)
+        w = self._length(t, size)
         return self.L.table_from([0, 0]), self.L.table_from([w, size])
 
     def res(self):
@@ -189,7 +206,7 @@ class FakeGame:
             if c[0] != b"text":
                 continue
             _, x, y, z, size, t, *_ = c
-            w = self._font(size).getlength(t.decode("utf-8", "replace"))
+            w = self._length(t.decode("utf-8", "replace"), size)
             base = self.res()[1] - y
             out.append((t.decode("utf-8", "replace"), x, x + w, base - size * 0.8, base))
         return out
@@ -505,13 +522,19 @@ class FakeGame:
             else:
                 _, x, y, z, size, t, a, r, g, b = c
                 sz = max(6, int(round(size)))
-                if sz not in fonts:
-                    try:
-                        fonts[sz] = ImageFont.truetype("DejaVuSans.ttf", sz)
-                    except OSError:
-                        fonts[sz] = ImageFont.load_default()
+                cjk = any(ord(ch) >= 0x2E80 for ch in t.decode("utf-8", "replace"))
+                if (sz, cjk) not in fonts:
+                    for name in (("NotoSansCJK-Regular.ttc", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
+                                 if cjk else ()) + ("DejaVuSans.ttf",):
+                        try:
+                            fonts[(sz, cjk)] = ImageFont.truetype(name, sz)
+                            break
+                        except OSError:
+                            continue
+                    else:
+                        fonts[(sz, cjk)] = ImageFont.load_default()
                 # the mod passes the text's baseline
-                dr.text((x, height - y), t.decode("utf-8", "replace"), font=fonts[sz], anchor="ls",
+                dr.text((x, height - y), t.decode("utf-8", "replace"), font=fonts[(sz, cjk)], anchor="ls",
                         fill=(int(r), int(g), int(b), int(a)))
         if crop:
             rects = [c for c in calls if c[0] == b"rect"]

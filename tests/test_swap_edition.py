@@ -147,7 +147,8 @@ check(names == {"manifest.json", "icon.png", picker.ARCHIVE_NAME, picker.ARCHIVE
                 picker.ARCHIVE_NAME + ".gpu_resources", "CREDITS.txt", "README.txt"},
       "the zip holds only the mod, CREDITS and its README: %s" % sorted(names))
 lua = z.read(picker.ARCHIVE_NAME)
-check(b"swap_only = true" in lua and b"Kitchen Sink" not in lua, "the patch is the swap edition without presets")
+check(b"swap_only = true" in lua and b"Kitchen Sink" not in lua.replace(b"['Kitchen Sink']", b""),
+      "the patch is the swap edition without presets (the Chinese name table aside)")
 import json  # noqa: E402
 man = json.loads(z.read("manifest.json"))
 check(man["Name"].endswith("(Passive Swap)") and man["Guid"] == "e6ba95c4-beaa-54c0-96c2-a2ab56021b87",

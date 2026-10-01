@@ -268,6 +268,116 @@ local toast = { text = nil, sub = nil, till = 0, gui = nil, world = nil }
 -- presets, share codes and units live in one table to keep the chunk's local count low
 local PP = { user = nil }
 
+-- ---------------------------------------------------------------- language
+-- The panel's text in another language (Keys tab: Language; saved as lang = zh in
+-- panel-position.txt). Everything is drawn in English by the code below and translated at
+-- the moment it's drawn or measured (PP.tr), from LANGS (tools/lang_zh.lua). The data
+-- (loadout.ini, share codes, logs, the problem report) stays English, so loadouts move
+-- between languages unchanged. How the lookup works follows hd2modpj's 简体中文 addon:
+-- whole strings first (any case), then sentences with numbers or names in them, then
+-- known names (passives, effects, armors, presets) inside other text. A string with a
+-- character the game's font can't draw stays English rather than show "?".
+PP.lang_cache = {}
+PP.CLOSING = {}
+for _, ch in ipairs({ '，', '。', '、', '：', '；', '！', '？', '）', '」', '』', '”', '》' }) do PP.CLOSING[ch] = true end
+function PP.lang_data()
+    local code = ui.lang
+    if not code or code == 'en' or type(LANGS) ~= 'table' or not LANGS[code] then return nil end
+    if PP.font_cjk == false then return nil end              -- the game's font can't draw it
+    local L = LANGS[code]
+    if not L.index then PP.lang_build(L) end
+    return L
+end
+
+function PP.lang_build(L)
+    L.index, L.subs, L.pats = {}, {}, {}
+    for _, g in ipairs({ 'ui', 'perk', 'effect', 'unit', 'preset', 'desc', 'armor' }) do
+        for k, v in pairs(L[g] or {}) do L.index[k:lower()] = v end
+    end
+    for _, item in ipairs(L.frag or {}) do L.subs[#L.subs + 1] = { item[1]:lower(), item[2] } end
+    for _, g in ipairs({ 'perk', 'preset', 'effect', 'armor' }) do
+        local min = g == 'effect' and 5 or 6                   -- short common words aren't replaced inside text
+        for k, v in pairs(L[g] or {}) do
+            if #k >= min and not (L.no_frag or {})[k:lower()] then L.subs[#L.subs + 1] = { k:lower(), v } end
+        end
+    end
+    table.sort(L.subs, function(a, b) return #a[1] > #b[1] end)
+    local function upper_pattern(p)
+        return (p:gsub('%%?%a', function(c) return c:sub(1, 1) == '%' and c or c:upper() end))
+    end
+    for _, item in ipairs(L.pat or {}) do
+        L.pats[#L.pats + 1] = { item[1], item[2] }
+        local u = upper_pattern(item[1])
+        if u ~= item[1] then L.pats[#L.pats + 1] = { u, item[2] } end
+    end
+    table.sort(L.pats, function(a, b) return #a[1] > #b[1] end)
+end
+
+-- characters the game's font has no glyph for: their ASCII stand-in, or the line stays English
+function PP.lang_fit(L, s)
+    local bad = PP.font_bad
+    if not bad then return s end
+    local out = {}
+    for ch in s:gmatch('[%z\1-\127\194-\244][\128-\191]*') do
+        if bad[ch] then
+            local alt = (L.fallback or {})[ch]
+            if not alt then return nil end
+            out[#out + 1] = alt
+        else
+            out[#out + 1] = ch
+        end
+    end
+    return table.concat(out)
+end
+
+function PP.tr(s)
+    if type(s) ~= 'string' or s == '' or not s:find('%a') then return s end
+    local L = PP.lang_data()
+    if not L then return s end
+    local cache = PP.lang_cache[ui.lang]
+    if not cache then cache = {}; PP.lang_cache[ui.lang] = cache end
+    local hit = cache[s]
+    if hit ~= nil then return hit end
+    local out = L.index[s:lower()]
+    if not out then
+        for _, sf in ipairs(L.suffix or {}) do              -- "Stims (name is a guess)": both halves
+            if #s > #sf[1] and s:sub(-#sf[1]):lower() == sf[1]:lower() then
+                local head = PP.tr(s:sub(1, -#sf[1] - 1))
+                out = head .. sf[2]
+                break
+            end
+        end
+    end
+    if not out then
+        out = s
+        -- a sentence's names and words are looked up too ("Reset Scout" -> "重置 侦察")
+        local function fill(rep, caps)
+            return (rep:gsub('%%([%d%%])', function(d)
+                if d == '%' then return '%' end
+                local c = caps[tonumber(d)]
+                if c == nil then return '' end
+                return L.index[c:lower()] or PP.tr(c)
+            end))
+        end
+        for _, p in ipairs(L.pats) do
+            local one, n = out:gsub(p[1], function(...) return fill(p[2], { ... }) end)
+            if n > 0 then out = one end
+        end
+        for _, kv in ipairs(L.subs) do
+            local low = out:lower()
+            local i = low:find(kv[1], 1, true)
+            while i do
+                out = out:sub(1, i - 1) .. kv[2] .. out:sub(i + #kv[1])
+                low = out:lower()
+                i = low:find(kv[1], i + #kv[2], true)
+            end
+        end
+    end
+    out = out ~= s and PP.lang_fit(L, out) or s
+    cache[s] = out or s
+    return out or s
+end
+
 -- The panel key and the quick-swap key: F1..F12 (quick-swap also OFF). A bad value in a
 -- hand-edited loadout.ini falls back to F7 / F9, so the panel can always be opened.
 function PP.fkey(k) return type(k) == 'string' and k:match('^F%d%d?$') and VK[k] and k or nil end
@@ -1026,16 +1136,20 @@ local function draw(width, height)
         end
         local w = 0
         for ch in value:gmatch('.') do
-            w = w + (ch:find('[%%@MWmw]') and 0.98 or ch:find('[%u+=<>#&]') and 0.8 or ch:find('%d') and 0.66
-                     or ch:find('[%s%.,:;!|il\'%-%(%)%[%]]') and 0.36 or 0.62)
+            local b = ch:byte()
+            if b >= 128 then w = w + (b >= 192 and 1.0 or 0)     -- a UTF-8 character (Chinese: about one em)
+            else w = w + (ch:find('[%%@MWmw]') and 0.98 or ch:find('[%u+=<>#&]') and 0.8 or ch:find('%d') and 0.66
+                     or ch:find('[%s%.,:;!|il\'%-%(%)%[%]]') and 0.36 or 0.62) end
         end
         return w * sz
     end
     -- width in panel units
-    local function measure(value, size) return measure_px(value, font_px(size)) / s end
+    local T = PP.tr                       -- the panel's language (English: unchanged)
+    local function measure(value, size) return measure_px(T(value), font_px(size)) / s end
     -- limit: shrink (in whole pixels) to fit that width; align: 'right' or 'center' around x
-    local function text(value, x, y, size, c, limit, align)
+    local function text(value, x, y, size, c, limit, align, raw)
         if value == nil or value == '' or not ink_font then return 0 end
+        if not raw then value = T(value) end
         local sz = font_px(size)
         local w = measure_px(value, sz) / s
         while limit and w > limit and sz > 6 do
@@ -1052,8 +1166,14 @@ local function draw(width, height)
     end
     -- a long name cut to fit at a readable size: "KDM-728 KINETIC DISPLACEMENT M.."
     local function cut(value, size, limit)
+        value = T(value)
         if measure(value, size) <= limit then return value end
-        while #value > 3 and measure(value .. '..', size) > limit do value = value:sub(1, -2) end
+        -- whole characters off the end (a Chinese character is several bytes)
+        local function shorter(v)
+            local w = (v:gsub('[\194-\244][\128-\191]*$', ''))
+            return #w < #v and w or v:sub(1, -2)
+        end
+        while #value > 3 and measure(value .. '..', size) > limit do value = shorter(value) end
         return (value:gsub('[%s,%-]+$', '')) .. '..'
     end
     local function border(x, y, w, h, c, z)
@@ -1083,10 +1203,10 @@ local function draw(width, height)
         region(key, x, y, w, h, enabled)
         return w
     end
-    local function keycap(k, x, y)
-        local w = math.max(26, measure(k, 12) + 14)
+    local function keycap(k, x, y)                 -- key names stay as printed on the key
+        local w = math.max(26, measure_px(k, font_px(12)) / s + 14)
         border(x, y, w, 22, C.TEXT, 953)
-        text(k, x + w / 2, y + 5, 12, C.TEXT, w - 6, 'center')
+        text(k, x + w / 2, y + 5, 12, C.TEXT, w - 6, 'center', true)
         return w
     end
     local function checkbox(key, x, y, on, enabled)
@@ -1351,12 +1471,37 @@ local function draw(width, height)
     end
     -- text over up to `lines` lines of `width`, cut with '..' if it doesn't fit; returns the next y
     local function wrap(value, x, y, size, c, width, lines)
+        value = T(value)
         local line, n = '', 0
-        local words = {}
-        for w in value:gmatch('%S+') do words[#words + 1] = w end
+        -- words, and each Chinese / Japanese character on its own (they break anywhere);
+        -- gap: a space came before it
+        local words, gaps = {}, {}
+        for chunk in value:gmatch('%S+') do
+            local first = true
+            local i, len = 1, #chunk
+            while i <= len do
+                local b = chunk:byte(i)
+                local j
+                if b >= 194 then
+                    j = i + 1
+                    while j <= len do local cb = chunk:byte(j); if cb < 128 or cb >= 192 then break end; j = j + 1 end
+                else
+                    j = i
+                    while j <= len and chunk:byte(j) < 128 do j = j + 1 end
+                end
+                local piece = chunk:sub(i, j - 1)
+                -- closing marks stay with what they close: never at the start of a line
+                if #words > 0 and not first and PP.CLOSING[piece] then
+                    words[#words] = words[#words] .. piece
+                else
+                    words[#words + 1], gaps[#gaps + 1] = piece, first
+                end
+                first, i = false, j
+            end
+        end
         local i = 1
         while i <= #words do
-            local try = line == '' and words[i] or (line .. ' ' .. words[i])
+            local try = line == '' and words[i] or (line .. (gaps[i] and ' ' or '') .. words[i])
             if line ~= '' and measure(try, size) > width then
                 n = n + 1
                 if n == lines then text(line .. ' ..', x, y, size, c, width); return y + size + 6 end
@@ -1550,10 +1695,14 @@ local function draw(width, height)
         local gx = RX + button('blockin:on', 'Blocked', RX, ry + 20, nil, 30, true, PP.block_on()) + 8
         button('blockin:off', 'Let through', gx, ry + 20, nil, 30, true, not PP.block_on())
         ry = ry + 64
-        label('Language  /  语言  /  言語', RX, ry, nil, RIW)
+        label('Language  /  语言', RX, ry, nil, RIW)
         local lx = RX
         for _, l in ipairs(PP.LANGS) do
             lx = lx + button('lang:' .. l[1], l[2], lx, ry + 20, nil, 30, true, (ui.lang or 'en') == l[1]) + 8
+        end
+        if PP.font_cjk == false and (ui.lang or 'en') ~= 'en' then
+            text("The game's font has no Chinese here: set the game's text language to Chinese.", RX, ry + 56, 11, C.YELLOW, RIW)
+            ry = ry + 16
         end
         ry = ry + 64
         rect(RX, ry, RIW, 1, C.LINE, 951)
@@ -2033,7 +2182,7 @@ local function click(key)
     elseif kind == 'lang' then
         ui.lang = arg
         pcall(PP.save_pos)
-        say(arg == 'zh' and '简体中文：测试版（6.2 起完整翻译）' or arg == 'ja' and '日本語：テスト版（6.2 で完全翻訳）' or 'English')
+        say(arg == 'zh' and '界面语言：简体中文' or 'Language: English')
     elseif kind == 'blockin' then
         ui.block_input = arg == 'on'
         pcall(PP.save_pos)
@@ -2241,23 +2390,50 @@ PP.gi = { state = 'not yet', saved = nil, next_check = 0 }
 
 function PP.block_on() return ui.block_input ~= false end
 
--- Chinese / Japanese (6.2): can the game's UI font draw them? Measures the same number of
--- Latin, Chinese and Japanese characters; a font without those glyphs gives ~0 width.
-PP.LANGS = { { 'en', 'English' }, { 'zh', '简体中文' }, { 'ja', '日本語' } }
-function PP.font_test(gui)
+-- Can the game's UI font draw the panel's language? The font is the game's own, so it has
+-- Chinese characters when the game's text language is Chinese, and may not otherwise. Each
+-- character the translation uses is measured once per font: no width, or the width of the
+-- "?" the engine draws for a missing glyph, means it can't be drawn. A few missing marks
+-- (，。：) get ASCII stand-ins; if the characters themselves are missing, the panel stays
+-- English (PP.font_cjk = false) and the Keys tab says why.
+PP.LANGS = { { 'en', 'English' }, { 'zh', '简体中文' } }
+function PP.font_test(gui, font)
+    PP.font_cjk, PP.font_bad, PP.lang_cache = nil, nil, {}
     local te = sr.Gui and rawget(sr.Gui, 'text_extents')
-    if type(te) ~= 'function' or not font or not font.font then PP.font_result = 'no measuring'; return end
+    if te == nil or not font or not font.font then PP.font_result = 'no measuring'; return end
     local function width(s)
         local ok, a, b = pcall(te, gui, s, font.font, 20)
-        if not ok or not a or not b then return -1 end
+        if not ok or not a or not b then return nil end
         local okx, x0 = pcall(sr.Vector3.x, a)
         local okx2, x1 = pcall(sr.Vector3.x, b)
         if not (okx and okx2) then x0, x1 = a[1], b[1] end
-        return math.floor(((tonumber(x1) or 0) - (tonumber(x0) or 0)) + 0.5)
+        return (tonumber(x1) or 0) - (tonumber(x0) or 0)
     end
-    PP.font_result = string.format('latin %d, chinese %d, japanese %d (px for 4 characters at 20)',
-                                   width('ABCD'), width('简体中文'), width('日本語テ'))
-    log('panel font test: ' .. PP.font_result .. ' with ' .. tostring(font.text))
+    local base, q = width('MMM'), width('?')
+    if not base or base <= 0 then PP.font_result = 'the font measures nothing (not ready?)'; return end
+    local function missing(ch)
+        local w = width(ch)
+        return not w or w <= 0 or (q and q > 0 and math.abs(w - q) < 0.01)
+    end
+    local bad, seen, checked, nbad = {}, {}, 0, 0
+    for _, L in pairs(type(LANGS) == 'table' and LANGS or {}) do
+        for _, g in ipairs({ 'ui', 'perk', 'effect', 'unit', 'preset', 'desc', 'armor', 'pat', 'frag' }) do
+            for _, v in pairs(L[g] or {}) do
+                local str = type(v) == 'table' and v[2] or v
+                for ch in tostring(str):gmatch('[\194-\244][\128-\191]*') do
+                    if not seen[ch] then
+                        seen[ch], checked = true, checked + 1
+                        if missing(ch) then bad[ch], nbad = true, nbad + 1 end
+                    end
+                end
+            end
+        end
+    end
+    PP.font_cjk = checked == 0 or nbad / checked < 0.5
+    PP.font_bad = nbad > 0 and bad or nil
+    PP.font_result = string.format('%d characters checked, %d missing: %s', checked, nbad,
+                                   PP.font_cjk and 'Chinese can be drawn' or 'no Chinese in this font')
+    log('panel font test: ' .. PP.font_result .. ' (' .. tostring(font.text) .. ')')
 end
 
 function PP.hold_input(now)
@@ -2759,7 +2935,8 @@ local function panel_frame(now)
         if said ~= ui.font_said then
             ui.font_said = said
             log('panel font: ' .. said)
-            pcall(PP.font_test, ui.gui)
+            local okf, whyf = pcall(PP.font_test, ui.gui, font)
+            if not okf then log('panel font test: ' .. tostring(whyf)) end
         end
         ui.signature = signature
         ui.regions = draw(width, height)
@@ -2812,6 +2989,7 @@ local function toast_frame(now)
     r(4, 0, 476, 1, Color(255, 62, 65, 70)); r(4, 71, 476, 1, Color(255, 62, 65, 70)); r(479, 0, 1, 72, Color(255, 62, 65, 70))
     if f.font then
         local function t(value, tx, py, size, c)
+            value = PP.tr(value)
             local sz = math.max(9, px(size * s))
             Gui.text(gui, value, f.font, sz, f.material, Vector3(px(x + tx * s), px(y + h - py * s - sz * 0.8), 962), c)
         end

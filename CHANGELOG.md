@@ -1,5 +1,10 @@
 # Changelog
 
+## 6.2 (unreleased)
+Both editions (full and Passive Swap):
+- **简体中文:** the in-game panel in Simplified Chinese. Keys tab → *Language / 语言* → 简体中文. Passive and armor names are the game's own Chinese names. The translation is hd2modpj's, from their *Super Earth Armory Forge 简体中文* addon (now built in; the separate addon isn't needed). Your loadout file, share codes and the problem report stay in English, so loadouts move between languages unchanged.
+- The panel draws Chinese with the game's own font: set the game's *text language* to Chinese (简体 or 繁體) and the characters are there. If the font can't draw them, the panel stays English and the Keys tab says so.
+
 ## 6.1 (2026-10-01)
 Both editions (full and Passive Swap):
 - **What you're wearing, at the top of the panel:** the armor's name and how its passive's tab stands: how many passives it stacks (or, in Passive Swap, what it's swapped to), "nothing ticked yet", or, when there's no tab for it, "click to add its tab". Click the box to jump to your armor's tab or add it. Most "my stack doesn't work" reports were an armor whose passive had no tab.
