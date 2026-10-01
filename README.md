@@ -9,6 +9,7 @@
 <a href="https://www.nexusmods.com/helldivers2/mods/16789"><img src="https://img.shields.io/badge/Nexus%20Mods-Lite%20edition-ffe710?labelColor=0b0c0d" alt="Nexus Mods"></a>
 <a href="https://github.com/Hung1510/Super-Earth-Armory-Forge/releases"><img src="https://img.shields.io/github/downloads/Hung1510/Super-Earth-Armory-Forge/total?label=GitHub%20downloads&color=ffe710&labelColor=0b0c0d&cacheSeconds=3600" alt="GitHub downloads"></a>
 <a href="TESTING.md"><img src="https://img.shields.io/badge/armor%20passives-31%2F31-ffe710?labelColor=0b0c0d" alt="passives"></a>
+<a href="#languages"><img src="https://img.shields.io/badge/languages-English%20%C2%B7%20%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-ffe710?labelColor=0b0c0d" alt="English, 简体中文"></a>
 <a href="https://ko-fi.com/phamtrangiahung"><img src="https://img.shields.io/badge/Ko--fi-support%20the%20mod-ffe710?logo=ko-fi&logoColor=ffe710&labelColor=0b0c0d" alt="Support on Ko-fi"></a>
 </p>
 
@@ -24,6 +25,7 @@
 
 Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3](https://ayakamods.com/mods/modular-armor-passives.4350/) by mostlycloudy**, and its memory-patching core, archive format and passive data still come from that mod (engine credit also to SHODAN). The in-game terminal, loadouts, config layer and web builder are Armory Forge's own. See [CREDITS.txt](CREDITS.txt).
 
+- **Languages:** English · 简体中文 (Simplified Chinese), in game and in the web builder. [More below](#languages).
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
 - Download: [AyakaMods](https://ayakamods.com/mods/super-earth-armory-forge.4359/) · [GitHub Releases](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest) (full edition) · [Nexus Mods: Passive Swap - Armory Forge Lite](https://www.nexusmods.com/helldivers2/mods/16789) (Passive Swap edition)
@@ -43,6 +45,19 @@ Then:
 1. Remove Passive Picker v3 if you have it. Passive Picker v4 is this mod under its old name; the update replaces it and keeps your saved builds.
 2. Deploy, **fully restart the game**, and wear armor with the passive your stack is on (for example Med-Kit; use Armor Transmog if you want a different look).
 3. Check `%LOCALAPPDATA%\CowboyBingus\Helldivers2\Logs\ArmoryForge-STATUS.txt`. It should say `OK - perk stacked` once something is stacked; a fresh install shows a *Press F7* card when the game is ready.
+
+## Languages
+
+**English** and **简体中文 (Simplified Chinese)**, in the panel and the web builder.
+
+- **In game:** F7 → **Keys** tab → *Language / 语言* → 简体中文. Remembered next time.
+- **Web builder:** 简体中文 at the top right (or add `?lang=zh` to the link). Browsers set to Chinese get it by default.
+- Passive and armor names are the **game's own official Chinese names**. The translation is by **hd2modpj**, from their *Super Earth Armory Forge 简体中文* addon, now built in: you don't need the addon any more.
+- The panel draws with the game's own font. Set the game's **text language** to Chinese (简体 or 繁體) and the characters are there. If the font can't draw them, the panel stays English and the Keys tab says so.
+- Your `loadout.ini`, share codes and the problem report stay in English, so loadouts move between languages unchanged.
+- **Translators:** the panel's text lives in [`tools/lang_zh.lua`](tools/lang_zh.lua) (English → Chinese tables) and the web page's in [`docs/i18n.js`](docs/i18n.js). Anything missing simply shows in English; corrections are welcome as issues or pull requests.
+
+> **简体中文：** 按 F7 →「按键」页 → Language / 语言 → 简体中文。被动与护甲名称为游戏官方中文译名；请把游戏的文字语言设为中文（简体或繁體）。网页版生成器右上角点「简体中文」。中文翻译：hd2modpj。
 
 ## The armory terminal (F7)
 
@@ -70,6 +85,7 @@ Then:
 - **No panel at all:** in the web builder, set *In-game panel* to *Off* (or `panel = off` in `[settings]`). The build just applies its loadout, and no keys or controller are read.
 - **Controller:** **Back + Start** opens the panel. D-pad / left stick moves, **A** selects, **B** goes back, **LB / RB** switch tabs, **X** undoes, **Y** ticks, right stick scrolls.
 - **Search:** **Ctrl+F** (or click the field above a list) and type part of a passive's name or effect, e.g. `reload`. Esc clears it.
+- **Language:** English or 简体中文 on the Keys tab ([Languages](#languages)).
 - **Keys tab:** pick the panel key (F1–F12) and the quick-swap key (F1–F12 or off). Also `hotkey = F7` / `swap_hotkey = F9` in `[settings]`. A bad key there falls back to F7 / F9, so the panel always opens. SHODAN Stat Editor uses F8, and its panel sits on the right while this one sits on the left.
 - If a change doesn't show, re-equip the armor or start a mission.
 
@@ -150,6 +166,9 @@ Advanced: `raw = 0xHEXID type value, ...` and `raw_stats = stat unk1 unk2, ...` 
 tools/picker.py            catalog, config parser, Lua generator, .patch_0 + zip writer, CLI
 tools/engine.lua           runtime engine: finds the perk records, applies/restores stacks, loadout file
 tools/panel.lua            the F7 in-game panel (drawing, mouse, keyboard)
+tools/lang_zh.lua          the panel in Simplified Chinese (hd2modpj): English -> Chinese tables
+docs/i18n.js               the web builder in Simplified Chinese (names from lang_zh.lua via data.json)
+tools/window_filter.py     the game-window input filter (x64), assembled into panel.lua
 tools/main.lua             per-frame tick and startup
 docs/                      web builder (GitHub Pages): index.html, app.js (UI), core.js (build logic)
 docs/data.json             generated by `picker.py export-web`, never hand-edited
@@ -170,6 +189,8 @@ tools/research.lua         research builds only (`picker.py research`): armor ki
 tests/test_research.py     the research build, and that no release carries it
 tests/test_wearing.py      what you wear, one armor's weight, the game's input while the panel is open
 tests/test_window_filter.py the game-window input filter's machine code, run on an x64 emulator
+tests/test_lang.py         the panel in Simplified Chinese: coverage, fonts without Chinese, data stays English
+tests/test_web_i18n.js     the web builder in Simplified Chinese
 tests/test_weight.py       armor weight: loadout line, panel, undo, save, share codes, Passive Swap untouched
 tools/armor-names/         builds FileDiver's armor dumper for Windows (CI: armor-names-tool.yml) with a double-click runner
 tools/armor_names.py       FileDiver's armor list -> tools/armor-names.json (ids to names), checked against the game's kits
