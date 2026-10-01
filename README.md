@@ -52,8 +52,9 @@ Then:
 - **Which armor do I wear?** Your armor's passive shows *Wear any of: …*, e.g. Med-Kit: CM-09 Bonesnapper, CM-14 Physician, …
 - **Armor weight:** the *Armor weight* row sets how every armor with that passive moves: *Light* (armor 50, speed 550, stamina regen 125), *Medium* (100 / 500 / 100), *Heavy* (150 / 450 / 50) or *Game*. The look doesn't change, so a heavy armor can run like a light one. Also `weight = light` in a `[profile]`. Full edition only.
 - **Lots of armors:** when the tabs don't fit, `<` `>` scroll the row; LB / RB reach every tab.
-- **Colours tab:** armors built on the same model (B-01 Tactical, TR-40 Gold Eagle, B-22 Model Citizen, …) can wear each other's colour schemes (only you see them). Your current armor is at the top (*WEARING*); pick a scheme on the right, or *Original*. It shows when the game next builds the armor: re-select it in the armory, or re-equip it. The full edition also sets *Weight, this armor only* here. Saved as `[armor: <name or id>]` with `colours = <armor>` / `weight = light`.
+- **Weight for one armor:** under *Armor weight*, *Only the armor you're wearing* sets just that armor (full edition). Saved as `[armor: <name or id>]` with `weight = light`.
 - **It knows what you wear:** the panel opens on your armor's tab, and *+ Armor* lists your armor's passive first.
+- **No clicks through the panel:** while the cursor is on the panel, the game ignores the mouse (no shooting or turning behind it).
 - **Confirmed or not:** each value says *UNTESTED* or *CONFIRMED IN GAME* (from [TESTING.md](TESTING.md)).
 - **When two passives change the same thing:** *Stack all* or *Strongest only*.
 - Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a web-builder build starts fresh from that build; the release zip always keeps what you made.
@@ -80,7 +81,7 @@ A mod that edits a live game's data while you play, built and tested like a prod
 - **An in-game UI from scratch.** An immediate-mode panel on the engine's raw GUI calls: whole-pixel layout that stays sharp from 720p to 4K, drag, scroll, search, undo, presets, share codes and typed values in plain units. Mouse and keyboard come through the Windows API and controllers through XInput, both over LuaJIT FFI, with spatial focus navigation for the controller.
 - **One format, three implementations, identical output.** The same `.ini` is parsed and compiled by Python (CLI), JavaScript (the web builder) and Lua (in game). A parity test requires Python and JS to produce **byte-identical** mod archives.
 - **Tested without the game.** A fake game runs the real mod code under LuaJIT, with memory laid out like the game's, a GUI, a mouse, a keyboard and an Xbox controller. 600+ checks drive it like a player and verify both the screen and the game's memory. Layout checks use real font metrics at every resolution and size.
-- **Research builds, then features.** Armor weight was found the measured way: a research build dumped every armor record (layout from FileDiver's open-source data library), an experiment changed one field, and the result was confirmed in game before any feature code was written. The same method located the equipped-armor loadout (a helmet, cape, armor id triple, found by diffing two full memory scans) and proved live colour-scheme swaps.
+- **Research builds, then features.** Armor weight was found the measured way: a research build dumped every armor record (layout from FileDiver's open-source data library), an experiment changed one field, and the result was confirmed in game before any feature code was written. The same method located the equipped-armor loadout (a helmet, cape, armor id triple, found by diffing two full memory scans). It also ruled features out: live colour-scheme swaps worked for a second, then the game unloaded the textures and the armor went black, so that feature was dropped instead of shipped.
 - **Data tooling.** `tools/armor-names/` reproducibly builds FileDiver's armor dumper for Windows in CI, from a pinned commit, with a double-click runner. `tools/armor_names.py` turns its output into the mod's id-to-name table and checks it against what the game had in memory, so a new Warbond's armors show up as a list of missing names.
 - **Two editions from one codebase.** The Nexus build limits itself to one game passive per armor at the game's own values. The engine enforces it, and a test attacks it with a hostile save file.
 - **CI/CD.** Lint, all suites on every push, and tag-to-release: both editions built, release notes from the changelog, zips checked so no script or executable slips in.
@@ -166,7 +167,7 @@ tests/test_passive_info.py passive descriptions, armor lists, stack summary, Rem
 tests/test_report_share.py panel off, short share codes, the problem report
 tools/research.lua         research builds only (`picker.py research`): armor kit dump, weight experiment
 tests/test_research.py     the research build, and that no release carries it
-tests/test_colours.py      what you wear, the Colours tab, per-armor weight, Passive Swap colours
+tests/test_wearing.py      what you wear, one armor's weight, the game's mouse behind the panel
 tests/test_weight.py       armor weight: loadout line, panel, undo, save, share codes, Passive Swap untouched
 tools/armor-names/         builds FileDiver's armor dumper for Windows (CI: armor-names-tool.yml) with a double-click runner
 tools/armor_names.py       FileDiver's armor list -> tools/armor-names.json (ids to names), checked against the game's kits

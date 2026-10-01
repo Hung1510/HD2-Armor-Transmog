@@ -2,15 +2,17 @@
 
 ## 6.0 (2026-10-01)
 Both editions (full and Passive Swap):
-- **New Colours tab:** armors built on the same model come in several colour schemes, and now any of them can wear another's. The B-01 model alone has ten: B-01 Tactical and its variants, TR-40 Gold Eagle, TR-7 Ambassador of the Brand, B-22 Model Citizen and B-16 Battle-Scarred Veteran. B-24 Enforcer, CM-09 Bonesnapper, FS-05 Marksman, SC-30 Trailblazer Scout and others have their own sets. Because the schemes come from the same model, the colours land on the right parts. Pick the armor on the left, then a scheme on the right (*Original* puts it back). Only you see it. The game shows it the next time it builds the armor, so re-select it in the armory or re-equip it. Saved with your loadout, undoable, and carried in share codes. Custom schemes for other armors come later.
-- **It knows what you're wearing:** a few seconds after the scan, the mod finds the armor you have equipped and follows it when you change. It's at the top of the Colours tab (*WEARING*), the panel opens on its passive's tab, and *+ Armor* lists your armor's passive first, marked *YOUR ARMOR*. Thanks Triwxys.
-- **Real armor names** (127 armors) in the Colours tab, from the game's own data. Armors that share a name are numbered (*B-01 Tactical #2*).
+- **The panel no longer lets clicks through:** while the cursor is on the panel, the game ignores the mouse, so you don't shoot, turn the camera or click the armory behind it. Off the panel (or with the panel closed) the mouse works as usual. Thanks anmayvuong9x.
+- **It knows what you're wearing:** a few seconds after the scan, the mod finds the armor you have equipped and follows it when you change. The panel opens on its passive's tab, and *+ Armor* lists your armor's passive first, marked *YOUR ARMOR*. Thanks Triwxys.
+- **Real armor names** from the game's own data; armors that share a name are numbered (*B-01 Tactical #2*).
 
 Full edition:
-- **Weight for one armor:** the Colours tab also sets *Weight, this armor only* (Game / Light / Medium / Heavy). It overrides the passive-wide weight from 5.7, so you can make just your Cinderblock light.
-- **Web builder:** a new *Armor colours & weight* card picks the same per armor. In the loadout it's an `[armor: SR-64 Cinderblock]` section with `colours = RS-89 Shadow Paragon` and `weight = light`; names or ids both work.
+- **Weight for one armor:** the *Armor weight* row has a second line, *Only the armor you're wearing* (As above / Light / Medium / Heavy). It overrides the passive-wide weight from 5.7, so you can make just your Cinderblock light.
+- **Web builder:** a new *Armor weight* card sets the same for any armor. In the loadout it's an `[armor: SR-64 Cinderblock]` section with `weight = light`; names or ids both work.
 
-Under the hood: the equipped loadout is a helmet, cape and armor id stored back to back, found by a 5.7 research build that diffed two full memory scans. A one-time background pass finds it, and after that it's re-read every second. Colours swap each piece's 64-bit colour-texture hash, kept as raw bytes because a Lua number can't hold it exactly. Armor names come from FileDiver's armor dump through the new `tools/armor_names.py`. `tests/test_colours.py` covers all of it, and the fake game now has colour textures and a loadout. 600+ checks.
+Tried and dropped: colour schemes from other armors (6.0 test builds). The game unloads the other armor's textures a second or two later and the armor turns black, so it's out.
+
+Under the hood: the equipped loadout is a helmet, cape and armor id stored back to back, found by a 5.7 research build that diffed two full memory scans. A one-time background pass finds it, and after that it's re-read every second. The mouse block swaps the engine's `stingray.Mouse` read functions for "nothing pressed" ones while the cursor is on the panel and puts the originals back when it leaves; the panel reads the originals. Armor names come from FileDiver's armor dump through the new `tools/armor_names.py`. `tests/test_wearing.py` covers all of it. 600+ checks.
 
 ## 5.7 (2026-10-01)
 Full edition:

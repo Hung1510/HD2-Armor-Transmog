@@ -335,17 +335,16 @@ footer a { color: var(--muted); }
         </div>
       </section>
 
-      <section class="panel" id="coloursCard">
-        <div class="ph"><div><span class="lab">Colours</span><h2>Armor colours &amp; weight</h2></div></div>
+      <section class="panel" id="armorCard">
+        <div class="ph"><div><span class="lab">One armor</span><h2>Armor weight</h2></div></div>
         <div class="pb">
-          <p class="hint" style="margin:0 0 12px">Armors built on the same model come in several colour schemes (B-01 Tactical, TR-40 Gold Eagle, B-22 Model Citizen…): give an armor another scheme of its model (only you see it), or set its own weight class. In game it shows when the armor is next built: re-select it in the armory, or re-equip it. The in-game <b>Colours</b> tab does the same and finds the armor you're wearing.</p>
-          <div class="field"><label for="carmSel">Armor</label><select id="carmSel"></select></div>
-          <div class="row" style="margin-top:10px">
-            <div class="field grow"><label for="csrcSel">Colours from</label><select id="csrcSel"></select></div>
+          <p class="hint" style="margin:0 0 12px">Give one armor its own weight class, whatever its passive's tab says. In game it shows when the armor is next built: re-select it in the armory, or re-equip it. In game, the <b>Armor weight</b> row of your armor's tab does the same for the armor you're wearing.</p>
+          <div class="row">
+            <div class="field grow"><label for="carmSel">Armor</label><select id="carmSel"></select></div>
             <div class="field"><label for="cwSel">Weight</label>
-              <select id="cwSel"><option value="">Game</option><option value="0">Light</option><option value="1">Medium</option><option value="2">Heavy</option></select></div>
+              <select id="cwSel"><option value="">As its passive</option><option value="0">Light</option><option value="1">Medium</option><option value="2">Heavy</option></select></div>
           </div>
-          <ul class="build" id="colourList" style="margin-top:14px"></ul>
+          <ul class="build" id="armorList" style="margin-top:14px"></ul>
         </div>
       </section>
 

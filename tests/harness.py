@@ -49,6 +49,7 @@ stingray = {
                     can_get = function() return true end },
     IdString64 = { from_hex = function(s) return s end },
     Mouse = { button = function() return MOUSE_DOWN and 1 or 0 end, button_id = function() return 0 end,
+              pressed = function() return MOUSE_DOWN end, released = function() return false end,
               axis_id = function(name) return name end, axis = function(id) return { 0, WHEEL, 0 } end },
 }
 PP_TEST_INPUT = {

@@ -6,8 +6,7 @@
    "name": "AD-26 Bleeding Edge",
    "kind": "armor",
    "passive": "ADRENO-DEFIBRILLATOR",
-   "weight": "medium",
-   "model": "2b4422fe"
+   "weight": "medium"
   },
   "0x020A57A8": {
    "name": "",
@@ -33,8 +32,7 @@
    "name": "SR-24 Street Scout",
    "kind": "armor",
    "passive": "SIEGE-READY",
-   "weight": "light",
-   "model": "66d55aef"
+   "weight": "light"
   },
   "0x06B9BE43": {
    "name": "Drape of Glory",
@@ -52,8 +50,7 @@
    "name": "FS-05 Marksman",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "heavy",
-   "model": "219bda47"
+   "weight": "heavy"
   },
   "0x085838C1": {
    "name": "DP-53 Savior of the Free",
@@ -71,29 +68,25 @@
    "name": "BP-32 Jackboot",
    "kind": "armor",
    "passive": "BALLISTIC PADDING",
-   "weight": "light",
-   "model": "04ff1db2"
+   "weight": "light"
   },
   "0x0A18C237": {
    "name": "AD-49 Apollonian",
    "kind": "armor",
    "passive": "ADRENO-DEFIBRILLATOR",
-   "weight": "heavy",
-   "model": "54e49b80"
+   "weight": "heavy"
   },
   "0x0ADE6719": {
    "name": "DS-191 Scorpion",
    "kind": "armor",
    "passive": "DESERT STORMER",
-   "weight": "medium",
-   "model": "3106507f"
+   "weight": "medium"
   },
   "0x0B5CD386": {
    "name": "CW-36 Winter Warrior",
    "kind": "armor",
    "passive": "SERVO-ASSISTED",
-   "weight": "heavy",
-   "model": "bb1782d9"
+   "weight": "heavy"
   },
   "0x0B66FC55": {
    "name": "TG-8 Sharpshooter",
@@ -127,8 +120,7 @@
    "name": "AF-91 Field Chemist",
    "kind": "armor",
    "passive": "ADVANCED FILTRATION",
-   "weight": "medium",
-   "model": "8696fa2e"
+   "weight": "medium"
   },
   "0x10707D29": {
    "name": "B-01 Tactical",
@@ -162,29 +154,25 @@
    "name": "",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "medium",
-   "model": "52a3234e"
+   "weight": "medium"
   },
   "0x135C4274": {
    "name": "",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "8696fa2e"
+   "weight": "medium"
   },
   "0x1369B95B": {
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0x14209E3A": {
    "name": "SC-37 Legionnaire",
    "kind": "armor",
    "passive": "SERVO-ASSISTED",
-   "weight": "light",
-   "model": "1d9c2a23"
+   "weight": "light"
   },
   "0x144C1D6F": {
    "name": "Podium of Prosperity",
@@ -202,15 +190,13 @@
    "name": "A-9 Helljumper",
    "kind": "armor",
    "passive": "FEET FIRST",
-   "weight": "medium",
-   "model": "0cb7516c"
+   "weight": "medium"
   },
   "0x16EEB860": {
    "name": "GS-17 Frontier Marshal",
    "kind": "armor",
    "passive": "GUNSLINGER",
-   "weight": "medium",
-   "model": "52a3234e"
+   "weight": "medium"
   },
   "0x175295C9": {
    "name": "Agent of Oblivion",
@@ -244,8 +230,7 @@
    "name": "KDM-73 Dragoon",
    "kind": "armor",
    "passive": "KINETIC DISPLACEMENT MITIGATION",
-   "weight": "medium",
-   "model": "1adce9ab"
+   "weight": "medium"
   },
   "0x1B99D742": {
    "name": "Emblem of Freedom",
@@ -255,43 +240,37 @@
    "name": "TR-40 Gold Eagle",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0x1C6C05FA": {
    "name": "CM-09 Bonesnapper",
    "kind": "armor",
    "passive": "MED-KIT",
-   "weight": "medium",
-   "model": "5ace97bb"
+   "weight": "medium"
   },
   "0x1D0E3431": {
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0x1D20D6EE": {
    "name": "B-08 Light Gunner",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "light",
-   "model": "c9e01ab8"
+   "weight": "light"
   },
   "0x1D60FC90": {
    "name": "SC-30 Trailblazer Scout",
    "kind": "armor",
    "passive": "SCOUT",
-   "weight": "light",
-   "model": "cd98d387"
+   "weight": "light"
   },
   "0x1E28F118": {
    "name": "KDM-763 Pacesetter",
    "kind": "armor",
    "passive": "KINETIC DISPLACEMENT MITIGATION",
-   "weight": "light",
-   "model": "23393c35"
+   "weight": "light"
   },
   "0x1E9444F9": {
    "name": "FS-23 Battle Master",
@@ -301,8 +280,7 @@
    "name": "FS-37 Ravager",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "light",
-   "model": "0aaf5828"
+   "weight": "light"
   },
   "0x1FE1655F": {
    "name": "",
@@ -316,8 +294,7 @@
    "name": "FS-38 Eradicator",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "light",
-   "model": "b14ab504"
+   "weight": "light"
   },
   "0x212DF664": {
    "name": "EX-16 Prototype 16",
@@ -331,8 +308,7 @@
    "name": "I-44 Salamander",
    "kind": "armor",
    "passive": "INFLAMMABLE",
-   "weight": "heavy",
-   "model": "be57eaf4"
+   "weight": "heavy"
   },
   "0x22B66E27": {
    "name": "Eye of Freedom",
@@ -346,22 +322,19 @@
    "name": "PH-56 Jaguar",
    "kind": "armor",
    "passive": "PEAK PHYSIQUE",
-   "weight": "medium",
-   "model": "b644ddd4"
+   "weight": "medium"
   },
   "0x242702A5": {
    "name": "CPH-26 Commandant",
    "kind": "armor",
    "passive": "CONCUSSIVE PADDING, HAZMAT",
-   "weight": "light",
-   "model": "f11755be"
+   "weight": "light"
   },
   "0x24E3D6BA": {
    "name": "EX-03 Prototype 3",
    "kind": "armor",
    "passive": "ELECTRICAL CONDUIT",
-   "weight": "medium",
-   "model": "0c8d1210"
+   "weight": "medium"
   },
   "0x24E765BA": {
    "name": "AD-11 Livewire",
@@ -375,15 +348,13 @@
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0x2521D401": {
    "name": "UF-84 Doubt Killer",
    "kind": "armor",
    "passive": "UNFLINCHING",
-   "weight": "medium",
-   "model": "2aae9dd9"
+   "weight": "medium"
   },
   "0x261C4A52": {
    "name": "B-01 Tactical",
@@ -393,15 +364,13 @@
    "name": "CE-74 Breaker",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "light",
-   "model": "d97c097e"
+   "weight": "light"
   },
   "0x26D572A4": {
    "name": "FS-23 Battle Master",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "heavy",
-   "model": "a7c89d77"
+   "weight": "heavy"
   },
   "0x289884F4": {
    "name": "AC-2 Obedient",
@@ -419,8 +388,7 @@
    "name": "I-09 Heatseeker",
    "kind": "armor",
    "passive": "INFLAMMABLE",
-   "weight": "light",
-   "model": "89498ad5"
+   "weight": "light"
   },
   "0x2D61F0F9": {
    "name": "BFM-16 Tanker",
@@ -434,8 +402,7 @@
    "name": "O-2 Heavy Operator",
    "kind": "armor",
    "passive": "OXYGENATOR",
-   "weight": "heavy",
-   "model": "4bff38a7"
+   "weight": "heavy"
   },
   "0x2F51D8DC": {
    "name": "TR-117 Alpha Commander",
@@ -453,8 +420,7 @@
    "name": "RE-2310 Honorary Guard",
    "kind": "armor",
    "passive": "REINFORCED EPAULETTES",
-   "weight": "medium",
-   "model": "e94f7810"
+   "weight": "medium"
   },
   "0x32451E35": {
    "name": "Mantle of True Citizenship",
@@ -472,8 +438,7 @@
    "name": "BFM-77 Reformer",
    "kind": "armor",
    "passive": "BLUNT-FORCE MITIGATION",
-   "weight": "medium",
-   "model": "368832fa"
+   "weight": "medium"
   },
   "0x35E8934F": {
    "name": "TR-7 Ambassador of the Brand",
@@ -499,8 +464,7 @@
    "name": "CM-14 Physician",
    "kind": "armor",
    "passive": "MED-KIT",
-   "weight": "medium",
-   "model": "0465949b"
+   "weight": "medium"
   },
   "0x38B05B83": {
    "name": "FS-34 Exterminator",
@@ -526,8 +490,7 @@
    "name": "SA-32 Dynamo",
    "kind": "armor",
    "passive": "SERVO-ASSISTED",
-   "weight": "heavy",
-   "model": "37183dac"
+   "weight": "heavy"
   },
   "0x3D7E4AC7": {
    "name": "Crest of the Unsullied",
@@ -537,15 +500,13 @@
    "name": "DP-00 Tactical",
    "kind": "armor",
    "passive": "DEMOCRACY PROTECTS",
-   "weight": "medium",
-   "model": "e1d64616"
+   "weight": "medium"
   },
   "0x407AB98A": {
    "name": "GS-11 Democracy's Deputy",
    "kind": "armor",
    "passive": "GUNSLINGER",
-   "weight": "light",
-   "model": "b26259cb"
+   "weight": "light"
   },
   "0x40A7D694": {
    "name": "B-01 Tactical",
@@ -555,8 +516,7 @@
    "name": "BP-20 Correct Officer",
    "kind": "armor",
    "passive": "BALLISTIC PADDING",
-   "weight": "medium",
-   "model": "bd7989e5"
+   "weight": "medium"
   },
   "0x4100AF4B": {
    "name": "Tyrant Hunter",
@@ -618,8 +578,7 @@
    "name": "DS-42 Federation's Blade",
    "kind": "armor",
    "passive": "DESERT STORMER",
-   "weight": "heavy",
-   "model": "0035d20f"
+   "weight": "heavy"
   },
   "0x4DB09CA4": {
    "name": "CM-09 Bonesnapper",
@@ -633,8 +592,7 @@
    "name": "RS-100 Sanctioner",
    "kind": "armor",
    "passive": "REDUCED SIGNATURE",
-   "weight": "light",
-   "model": "130880c4"
+   "weight": "light"
   },
   "0x4E0785AE": {
    "name": "CE-64 Grenadier",
@@ -656,15 +614,13 @@
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "medium",
-   "model": "e6267732"
+   "weight": "medium"
   },
   "0x5096BCE9": {
    "name": "SR-64 Cinderblock",
    "kind": "armor",
    "passive": "SIEGE-READY",
-   "weight": "heavy",
-   "model": "df990c28"
+   "weight": "heavy"
   },
   "0x52045A9B": {
    "name": "",
@@ -686,8 +642,7 @@
    "name": "FS-61 Dreadnought",
    "kind": "armor",
    "passive": "SERVO-ASSISTED",
-   "weight": "heavy",
-   "model": "4dd94e18"
+   "weight": "heavy"
   },
   "0x53B64BF8": {
    "name": "Cresting Honor",
@@ -705,8 +660,7 @@
    "name": "AC-2 Obedient",
    "kind": "armor",
    "passive": "ACCLIMATED",
-   "weight": "light",
-   "model": "30f19311"
+   "weight": "light"
   },
   "0x5642FA1A": {
    "name": "FS-11 Executioner",
@@ -716,8 +670,7 @@
    "name": "I-102 Draconaught",
    "kind": "armor",
    "passive": "INFLAMMABLE",
-   "weight": "medium",
-   "model": "88ed45cd"
+   "weight": "medium"
   },
   "0x57A7F31D": {
    "name": "PH-202 Twigsnapper",
@@ -739,15 +692,13 @@
    "name": "FS-05 Marksman",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "heavy",
-   "model": "66453b2b"
+   "weight": "heavy"
   },
   "0x5A17D6D6": {
    "name": "CE-07 Demolition Specialist",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "light",
-   "model": "7470101b"
+   "weight": "light"
   },
   "0x5A32915A": {
    "name": "Thundering Hooves of Loyalty",
@@ -761,8 +712,7 @@
    "name": "SC-34 Infiltrator",
    "kind": "armor",
    "passive": "SCOUT",
-   "weight": "light",
-   "model": "276fcd89"
+   "weight": "light"
   },
   "0x5C1A87D2": {
    "name": "",
@@ -776,15 +726,13 @@
    "name": "AF-50 Noxious Ranger",
    "kind": "armor",
    "passive": "ADVANCED FILTRATION",
-   "weight": "light",
-   "model": "cbb09bc7"
+   "weight": "light"
   },
   "0x5D0D8002": {
    "name": "TG-8 Sharpshooter",
    "kind": "armor",
    "passive": "TRUE GRIT",
-   "weight": "medium",
-   "model": "f75bf268"
+   "weight": "medium"
   },
   "0x5EB11243": {
    "name": "",
@@ -794,8 +742,7 @@
    "name": "CPG-48 Sapper",
    "kind": "armor",
    "passive": "CONCUSSIVE PADDING, GRENADIER",
-   "weight": "medium",
-   "model": "d97457ac"
+   "weight": "medium"
   },
   "0x5FACABB9": {
    "name": "SC-37 Legionnaire",
@@ -805,15 +752,13 @@
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0x6351A9AA": {
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "medium",
-   "model": "e0cfedae"
+   "weight": "medium"
   },
   "0x63AA42C5": {
    "name": "CW-4 Arctic Ranger",
@@ -843,8 +788,7 @@
    "name": "CE-64 Grenadier",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "heavy",
-   "model": "8f4212e3"
+   "weight": "heavy"
   },
   "0x677BEE02": {
    "name": "RE-1861 Parade Commander",
@@ -866,8 +810,7 @@
    "name": "CW-22 Kodiak",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "heavy",
-   "model": "1aa88a07"
+   "weight": "heavy"
   },
   "0x6AB440FA": {
    "name": "Wings of Valor",
@@ -877,15 +820,13 @@
    "name": "",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "8696fa2e"
+   "weight": "medium"
   },
   "0x6D30F386": {
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "medium",
-   "model": "6389e42d"
+   "weight": "medium"
   },
   "0x6D9B8E21": {
    "name": "United in Equality",
@@ -899,8 +840,7 @@
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0x71644FC9": {
    "name": "Ingress-81",
@@ -922,22 +862,19 @@
    "name": "PH-9 Predator",
    "kind": "armor",
    "passive": "PEAK PHYSIQUE",
-   "weight": "light",
-   "model": "08cdab44"
+   "weight": "light"
   },
   "0x732693A1": {
    "name": "",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "8696fa2e"
+   "weight": "medium"
   },
   "0x7346EDC6": {
    "name": "TR-62 Knight",
    "kind": "armor",
    "passive": "SERVO-ASSISTED",
-   "weight": "heavy",
-   "model": "a4ab60e9"
+   "weight": "heavy"
   },
   "0x735A0C0B": {
    "name": "SR-64 Cinderblock",
@@ -955,8 +892,7 @@
    "name": "SC-30 Trailblazer Scout",
    "kind": "armor",
    "passive": "SCOUT",
-   "weight": "light",
-   "model": "cd98d387"
+   "weight": "light"
   },
   "0x7757D8E8": {
    "name": "Protector of the Heart",
@@ -966,8 +902,7 @@
    "name": "FS-11 Executioner",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "heavy",
-   "model": "a7484470"
+   "weight": "heavy"
   },
   "0x77AE3AF0": {
    "name": "Will of the People",
@@ -997,8 +932,7 @@
    "name": "CM-10 Clinician",
    "kind": "armor",
    "passive": "MED-KIT",
-   "weight": "medium",
-   "model": "45b44412"
+   "weight": "medium"
   },
   "0x7B6406DA": {
    "name": "FS-05 Marksman",
@@ -1016,15 +950,13 @@
    "name": "CM-09 Bonesnapper",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "5ace97bb"
+   "weight": "medium"
   },
   "0x7EDF6505": {
    "name": "CE-27 Ground Breaker",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "medium",
-   "model": "0494d01a"
+   "weight": "medium"
   },
   "0x7EEE690B": {
    "name": "Windswept Wayfinder",
@@ -1042,8 +974,7 @@
    "name": "B-24 Enforcer",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "medium",
-   "model": "b308810f"
+   "weight": "medium"
   },
   "0x8166C1CC": {
    "name": "SC-15 Drone Master",
@@ -1077,8 +1008,7 @@
    "name": "TR-7 Ambassador of the Brand",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0x8ABCCC54": {
    "name": "EX-03 Prototype 3",
@@ -1092,22 +1022,19 @@
    "name": "B-24 Enforcer",
    "kind": "armor",
    "passive": "MED-KIT",
-   "weight": "medium",
-   "model": "b308810f"
+   "weight": "medium"
   },
   "0x8BD85DD2": {
    "name": "FS-34 Exterminator",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "medium",
-   "model": "f7aec1e0"
+   "weight": "medium"
   },
   "0x8C6AE37C": {
    "name": "BFM-16 Tanker",
    "kind": "armor",
    "passive": "BLUNT-FORCE MITIGATION",
-   "weight": "light",
-   "model": "5879e8e4"
+   "weight": "light"
   },
   "0x8C6B78E3": {
    "name": "9a7c0da",
@@ -1117,8 +1044,7 @@
    "name": "I-92 Fire Fighter",
    "kind": "armor",
    "passive": "INFLAMMABLE",
-   "weight": "medium",
-   "model": "8d9288e0"
+   "weight": "medium"
   },
   "0x8CD3973B": {
    "name": "SA-12 Servo-Assisted",
@@ -1152,8 +1078,7 @@
    "name": "TR-9 Cavalier of Democracy",
    "kind": "armor",
    "passive": "DEMOCRACY PROTECTS",
-   "weight": "medium",
-   "model": "1c53eba8"
+   "weight": "medium"
   },
   "0x9488C3DB": {
    "name": "Rags of the Fashionable",
@@ -1163,8 +1088,7 @@
    "name": "CM-17 Butcher",
    "kind": "armor",
    "passive": "MED-KIT",
-   "weight": "heavy",
-   "model": "cebdf9f7"
+   "weight": "heavy"
   },
   "0x95AC1CFD": {
    "name": "B-16 Battle-Scarred Veteran",
@@ -1174,8 +1098,7 @@
    "name": "CE-81 Juggernaut",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "medium",
-   "model": "5a866712"
+   "weight": "medium"
   },
   "0x97D7668F": {
    "name": "CE-67 Titan",
@@ -1185,8 +1108,7 @@
    "name": "RS-6 Fiend Destroyer",
    "kind": "armor",
    "passive": "ROCK-SOLID",
-   "weight": "medium",
-   "model": "2114a96e"
+   "weight": "medium"
   },
   "0x9A42A639": {
    "name": "City Fighter's Resolve",
@@ -1208,15 +1130,13 @@
    "name": "",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "light",
-   "model": "1d9c2a23"
+   "weight": "light"
   },
   "0x9C0BBE91": {
    "name": "CPR-80 Bulwark",
    "kind": "armor",
    "passive": "CONCUSSIVE PADDING, REINFORCED",
-   "weight": "heavy",
-   "model": "6d33dfc3"
+   "weight": "heavy"
   },
   "0x9CC5CC35": {
    "name": "Dignity of Toil",
@@ -1242,8 +1162,7 @@
    "name": "",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "light",
-   "model": "217c6b09"
+   "weight": "light"
   },
   "0x9F3F8A17": {
    "name": "A-9 Helljumper",
@@ -1253,15 +1172,13 @@
    "name": "TR-117 Alpha Commander",
    "kind": "armor",
    "passive": "MED-KIT",
-   "weight": "medium",
-   "model": "21f7953b"
+   "weight": "medium"
   },
   "0x9FA96490": {
    "name": "IE-12 Righteous",
    "kind": "armor",
    "passive": "INTEGRATED EXPLOSIVES",
-   "weight": "medium",
-   "model": "de8a4326"
+   "weight": "medium"
   },
   "0x9FB9D7B0": {
    "name": "Seal of General Consensus",
@@ -1279,8 +1196,7 @@
    "name": "TG-122 Demo-Trooper",
    "kind": "armor",
    "passive": "TRUE GRIT",
-   "weight": "heavy",
-   "model": "7a35d930"
+   "weight": "heavy"
   },
   "0xA5574AC2": {
    "name": "CPR-80 Bulwark",
@@ -1290,8 +1206,7 @@
    "name": "",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "2aae9dd9"
+   "weight": "medium"
   },
   "0xA57E78BA": {
    "name": "",
@@ -1317,15 +1232,13 @@
    "name": "DP-8 Mountain-Scaled",
    "kind": "armor",
    "passive": "SIEGE-READY",
-   "weight": "medium",
-   "model": "fa5d7c44"
+   "weight": "medium"
   },
   "0xAA32B384": {
    "name": "EX-16 Prototype 16",
    "kind": "armor",
    "passive": "ELECTRICAL CONDUIT",
-   "weight": "medium",
-   "model": "a1bd1ec1"
+   "weight": "medium"
   },
   "0xAB29952A": {
    "name": "Pinions of Everlasting Glory",
@@ -1335,15 +1248,13 @@
    "name": "B-24 Enforcer",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "medium",
-   "model": "b308810f"
+   "weight": "medium"
   },
   "0xAC4235B3": {
    "name": "AC-1 Dutiful",
    "kind": "armor",
    "passive": "ACCLIMATED",
-   "weight": "medium",
-   "model": "29d41703"
+   "weight": "medium"
   },
   "0xAC5D49F9": {
    "name": "CE-27 Ground Breaker",
@@ -1357,8 +1268,7 @@
    "name": "KDM-500 Outrider",
    "kind": "armor",
    "passive": "KINETIC DISPLACEMENT MITIGATION",
-   "weight": "heavy",
-   "model": "98d532c9"
+   "weight": "heavy"
   },
   "0xAE8F7B4C": {
    "name": "AC-1 Dutiful",
@@ -1368,8 +1278,7 @@
    "name": "RS-89 Shadow Paragon",
    "kind": "armor",
    "passive": "REDUCED SIGNATURE",
-   "weight": "light",
-   "model": "891268f3"
+   "weight": "light"
   },
   "0xAFFB955B": {
    "name": "CE-35 Trench Engineer",
@@ -1379,15 +1288,13 @@
    "name": "IE-3 Martyr",
    "kind": "armor",
    "passive": "INTEGRATED EXPLOSIVES",
-   "weight": "medium",
-   "model": "295987d4"
+   "weight": "medium"
   },
   "0xB08E0939": {
    "name": "B-16 Battle-Scarred Veteran",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0xB18B6C66": {
    "name": "CM-10 Clinician",
@@ -1405,15 +1312,13 @@
    "name": "UF-50 Bloodhound",
    "kind": "armor",
    "passive": "UNFLINCHING",
-   "weight": "medium",
-   "model": "3b7836d1"
+   "weight": "medium"
   },
   "0xB3DEB5D9": {
    "name": "CW-9 White Wolf",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "medium",
-   "model": "9a113158"
+   "weight": "medium"
   },
   "0xB4027B70": {
    "name": "B-01 Tactical",
@@ -1431,15 +1336,13 @@
    "name": "GS-66 Lawmaker",
    "kind": "armor",
    "passive": "GUNSLINGER",
-   "weight": "heavy",
-   "model": "76c54ae4"
+   "weight": "heavy"
   },
   "0xB513FD54": {
    "name": "DP-40 Hero of the Federation",
    "kind": "armor",
    "passive": "DEMOCRACY PROTECTS",
-   "weight": "medium",
-   "model": "1c53eba8"
+   "weight": "medium"
   },
   "0xB545A9BF": {
    "name": "Badge of Order",
@@ -1457,15 +1360,13 @@
    "name": "UF-16 Inspector",
    "kind": "armor",
    "passive": "UNFLINCHING",
-   "weight": "light",
-   "model": "fdb07ae5"
+   "weight": "light"
   },
   "0xB69DF10D": {
    "name": "SA-8 Ram",
    "kind": "armor",
    "passive": "SUPPLEMENTAL ADRENALINE",
-   "weight": "heavy",
-   "model": "ef50c494"
+   "weight": "heavy"
   },
   "0xB6A2F46A": {
    "name": "",
@@ -1479,8 +1380,7 @@
    "name": "CW-4 Arctic Ranger",
    "kind": "armor",
    "passive": "SCOUT",
-   "weight": "light",
-   "model": "def16b38"
+   "weight": "light"
   },
   "0xBA9E281B": {
    "name": "Watchful Compatriot",
@@ -1490,8 +1390,7 @@
    "name": "O-44 Bonded Pilot",
    "kind": "armor",
    "passive": "OXYGENATOR",
-   "weight": "medium",
-   "model": "6e2d224a"
+   "weight": "medium"
   },
   "0xBCA406F6": {
    "name": "Reaper of Bounties",
@@ -1533,29 +1432,25 @@
    "name": "",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "light",
-   "model": "1d9c2a23"
+   "weight": "light"
   },
   "0xC60C706D": {
    "name": "DS-10 Big Game Hunter",
    "kind": "armor",
    "passive": "DESERT STORMER",
-   "weight": "light",
-   "model": "4a5eb86a"
+   "weight": "light"
   },
   "0xC71DBBA4": {
    "name": "RE-1861 Parade Commander",
    "kind": "armor",
    "passive": "REINFORCED EPAULETTES",
-   "weight": "light",
-   "model": "b1d77583"
+   "weight": "light"
   },
   "0xC7A5782F": {
    "name": "SA-7 Headfirst",
    "kind": "armor",
    "passive": "SUPPLEMENTAL ADRENALINE",
-   "weight": "medium",
-   "model": "7937e63d"
+   "weight": "medium"
   },
   "0xC83B625E": {
    "name": "Drape of Glory",
@@ -1565,22 +1460,19 @@
    "name": "SA-04 Combat Technician",
    "kind": "armor",
    "passive": "SCOUT",
-   "weight": "medium",
-   "model": "4269a694"
+   "weight": "medium"
   },
   "0xCA092176": {
    "name": "RS-67 Null Cipher",
    "kind": "armor",
    "passive": "REDUCED SIGNATURE",
-   "weight": "medium",
-   "model": "a4e4a11b"
+   "weight": "medium"
   },
   "0xCB7E9736": {
    "name": "B-22 Model Citizen",
    "kind": "armor",
    "passive": "DEMOCRACY PROTECTS",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0xCD3D20DC": {
    "name": "CW-36 Winter Warrior",
@@ -1618,15 +1510,13 @@
    "name": "B-27 Fortified Commando",
    "kind": "armor",
    "passive": "EXTRA PADDING",
-   "weight": "heavy",
-   "model": "9535403b"
+   "weight": "heavy"
   },
   "0xD3461392": {
    "name": "FS-55 Devastator",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "heavy",
-   "model": "400568a8"
+   "weight": "heavy"
   },
   "0xD3E885CE": {
    "name": "Gilded Quill",
@@ -1640,22 +1530,19 @@
    "name": "CM-21 Trench Paramedic",
    "kind": "armor",
    "passive": "MED-KIT",
-   "weight": "light",
-   "model": "96c0c01c"
+   "weight": "light"
   },
   "0xD59566D5": {
    "name": "B-01 Tactical",
    "kind": "armor",
    "passive": "STANDARD ISSUE",
-   "weight": "medium",
-   "model": "32aeb907"
+   "weight": "medium"
   },
   "0xD63FFDD3": {
    "name": "SR-18 Roadblock",
    "kind": "armor",
    "passive": "SIEGE-READY",
-   "weight": "heavy",
-   "model": "ba42f219"
+   "weight": "heavy"
   },
   "0xD6768531": {
    "name": "Cloak of Posterity's Gratitude",
@@ -1669,15 +1556,13 @@
    "name": "EX-00 Prototype X",
    "kind": "armor",
    "passive": "ELECTRICAL CONDUIT",
-   "weight": "light",
-   "model": "36a5a043"
+   "weight": "light"
   },
   "0xD879973A": {
    "name": "A-35 Recon",
    "kind": "armor",
    "passive": "FEET FIRST",
-   "weight": "medium",
-   "model": "5e36eefb"
+   "weight": "medium"
   },
   "0xD915A671": {
    "name": "FS-05 Marksman",
@@ -1699,8 +1584,7 @@
    "name": "SA-25 Steel Trooper",
    "kind": "armor",
    "passive": "SERVO-ASSISTED",
-   "weight": "medium",
-   "model": "f43307c9"
+   "weight": "medium"
   },
   "0xDB7DB6AA": {
    "name": "",
@@ -1710,8 +1594,7 @@
    "name": "RS-40 Beast of Prey",
    "kind": "armor",
    "passive": "ROCK-SOLID",
-   "weight": "heavy",
-   "model": "03a0a6f2"
+   "weight": "heavy"
   },
   "0xDBF9CA34": {
    "name": "Light of Eternal Liberty",
@@ -1733,15 +1616,13 @@
    "name": "PH-202 Twigsnapper",
    "kind": "armor",
    "passive": "PEAK PHYSIQUE",
-   "weight": "heavy",
-   "model": "2cabf6a4"
+   "weight": "heavy"
   },
   "0xDEE800A8": {
    "name": "CE-101 Guerilla Gorilla",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "heavy",
-   "model": "9ef95d32"
+   "weight": "heavy"
   },
   "0xDF5F7CCB": {
    "name": "AF-91 Field Chemist",
@@ -1759,8 +1640,7 @@
    "name": "IE-57 Hell-Bent",
    "kind": "armor",
    "passive": "INTEGRATED EXPLOSIVES",
-   "weight": "light",
-   "model": "6c7434cc"
+   "weight": "light"
   },
   "0xE207C84A": {
    "name": "B-01 Tactical",
@@ -1770,8 +1650,7 @@
    "name": "DP-11 Champion of the People",
    "kind": "armor",
    "passive": "DEMOCRACY PROTECTS",
-   "weight": "medium",
-   "model": "7d389c75"
+   "weight": "medium"
   },
   "0xE3CFD2FB": {
    "name": "Prosperous Green",
@@ -1813,8 +1692,7 @@
    "name": "AF-02 Haz-Master",
    "kind": "armor",
    "passive": "ADVANCED FILTRATION",
-   "weight": "medium",
-   "model": "5ace97bb"
+   "weight": "medium"
   },
   "0xEBB26E73": {
    "name": "Conductor of Brilliance",
@@ -1824,8 +1702,7 @@
    "name": "RS-20 Constrictor",
    "kind": "armor",
    "passive": "ROCK-SOLID",
-   "weight": "light",
-   "model": "88d92d6f"
+   "weight": "light"
   },
   "0xEC49526F": {
    "name": "B-22 Model Citizen",
@@ -1839,8 +1716,7 @@
    "name": "FS-05 Marksman",
    "kind": "armor",
    "passive": "FORTIFIED",
-   "weight": "heavy",
-   "model": "66453b2b"
+   "weight": "heavy"
   },
   "0xED2350CA": {
    "name": "RS-40 Beast of Prey",
@@ -1890,8 +1766,7 @@
    "name": "SA-12 Servo-Assisted",
    "kind": "armor",
    "passive": "SERVO-ASSISTED",
-   "weight": "medium",
-   "model": "db7bd359"
+   "weight": "medium"
   },
   "0xF2DCC254": {
    "name": "DS-191 Scorpion",
@@ -1901,8 +1776,7 @@
    "name": "CE-67 Titan",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "medium",
-   "model": "1b85a1ad"
+   "weight": "medium"
   },
   "0xF35ECA5B": {
    "name": "Mark of the Constrictor",
@@ -1916,8 +1790,7 @@
    "name": "BP-77 Grand Juror",
    "kind": "armor",
    "passive": "BALLISTIC PADDING",
-   "weight": "heavy",
-   "model": "9383334e"
+   "weight": "heavy"
   },
   "0xF509B363": {
    "name": "Agent of Oblivion",
@@ -1935,8 +1808,7 @@
    "name": "SC-15 Drone Master",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "medium",
-   "model": "60350428"
+   "weight": "medium"
   },
   "0xF5CB7633": {
    "name": "KDM-73 Dragoon",
@@ -1954,8 +1826,7 @@
    "name": "AF-52 Lockdown",
    "kind": "armor",
    "passive": "ADVANCED FILTRATION",
-   "weight": "heavy",
-   "model": "3aac7ce5"
+   "weight": "heavy"
   },
   "0xF646F083": {
    "name": "GS-17 Frontier Marshal",
@@ -1969,8 +1840,7 @@
    "name": "O-3 Free Spirit",
    "kind": "armor",
    "passive": "OXYGENATOR",
-   "weight": "light",
-   "model": "62e5dbb3"
+   "weight": "light"
   },
   "0xF89E3F1E": {
    "name": "Holder of the Yellow Line",
@@ -1980,8 +1850,7 @@
    "name": "BFM-220 Ironclad",
    "kind": "armor",
    "passive": "BLUNT-FORCE MITIGATION",
-   "weight": "heavy",
-   "model": "3c752001"
+   "weight": "heavy"
   },
   "0xF8C6437F": {
    "name": "AD-49 Apollonian",
@@ -1995,8 +1864,7 @@
    "name": "AD-11 Livewire",
    "kind": "armor",
    "passive": "ADRENO-DEFIBRILLATOR",
-   "weight": "light",
-   "model": "e53fb66a"
+   "weight": "light"
   },
   "0xF9D912A7": {
    "name": "TR-40 Gold Eagle",
@@ -2006,8 +1874,7 @@
    "name": "CE-35 Trench Engineer",
    "kind": "armor",
    "passive": "ENGINEERING KIT",
-   "weight": "medium",
-   "model": "65e778c0"
+   "weight": "medium"
   },
   "0xFC920AE4": {
    "name": "Patient Zero's Rememberance",
@@ -2025,8 +1892,7 @@
    "name": "DP-53 Savior of the Free",
    "kind": "armor",
    "passive": "DEMOCRACY PROTECTS",
-   "weight": "medium",
-   "model": "68e0a520"
+   "weight": "medium"
   },
   "0xFDB93622": {
    "name": "CPG-48 Sapper",
@@ -2040,8 +1906,7 @@
    "name": "RE-824 Bearer of the Standard",
    "kind": "armor",
    "passive": "REINFORCED EPAULETTES",
-   "weight": "heavy",
-   "model": "e8647730"
+   "weight": "heavy"
   },
   "0xFE3437E9": {
    "name": "",

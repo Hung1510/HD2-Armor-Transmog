@@ -6,7 +6,7 @@ The game's memory only has armor ids (0xA9A71FE7); the names ("SR-64 Cinderblock
 its language files. tools/armor-names/ builds FileDiver's armor-set-json-dumper, which
 reads a game install and prints every armor, helmet and cape with its id and name. This
 script turns that output into a small, sorted, diff-friendly table the mod and the web
-builder use (Colours tab, per-armor weight), and checks it against what the game had in
+builder use (panel names, per-armor weight), and checks it against what the game had in
 memory (ArmoryForge\\kits-dump.txt), so a new Warbond's armors show up as missing names.
 
     python tools/armor_names.py armors.json                      # writes tools/armor-names.json
@@ -89,14 +89,6 @@ def tidy(name):
     return " ".join(words)
 
 
-def model_of(kit):
-    """armors built from the same pieces (slot + model path) share a colour layout, so one
-    can wear another's colour textures and they land on the right parts"""
-    parts = sorted("%s:%s" % (pc.get("slot"), pc.get("path")) for body in kit.get("body_types") or []
-                   for pc in body.get("pieces") or [] if pc.get("piece_type") in (0, "armor"))
-    return "%08x" % (murmur64a("|".join(parts).encode()) >> 32) if parts else None
-
-
 def majority_weight(kit):
     count = {}
     for body in kit.get("body_types") or []:
@@ -130,9 +122,6 @@ def convert(dump):
         w = majority_weight(kit) if kind == "armor" else None
         if w:
             entry["weight"] = w
-        m = model_of(kit) if kind == "armor" else None
-        if m:
-            entry["model"] = m
         if kid in out and out[kid] != entry:
             raise NamesError("id %s appears twice with different data" % kid)
         out[kid] = entry

@@ -274,15 +274,12 @@ def load_config_text(text, source="<loadout>"):
             entry = {}
             for k, v in cp[sec].items():
                 lk = k.strip().lower()
-                if lk in ("colours", "colors"):
-                    if v.strip().lower() not in ("original", "game", ""):
-                        entry["colours"] = find_armor(v, where + " colours")
-                elif lk == "weight":
+                if lk == "weight":
                     w = parse_weight(v, where)
                     if w is not None:
                         entry["weight"] = w
                 else:
-                    raise ConfigError("%s: unknown key '%s' (colours, weight)" % (where, k))
+                    raise ConfigError("%s: unknown key '%s' (only weight)" % (where, k))
             if entry:
                 settings["armors"][kid] = entry
             continue
@@ -557,7 +554,7 @@ def armor_list():
             kits = json.load(f)["kits"]
     except (OSError, ValueError, KeyError):
         return []
-    return [{"id": int(k, 16), "name": v["name"], "weight": v.get("weight", ""), "model": v.get("model", "")}
+    return [{"id": int(k, 16), "name": v["name"], "weight": v.get("weight", "")}
             for k, v in sorted(kits.items()) if v.get("kind") == "armor" and v.get("name")]
 
 
@@ -573,7 +570,7 @@ def armor_names_lua():
 
 
 def find_armor(text, where):
-    """an [armor: ...] / colours = ... value: a kit id (0xA9A71FE7) or an armor's name"""
+    """an [armor: ...] section's armor: a kit id (0xA9A71FE7) or an armor's name"""
     t = text.strip()
     if re.fullmatch(r"0x[0-9A-Fa-f]{1,8}", t):
         return int(t, 16)
@@ -638,14 +635,12 @@ def generate_lua(settings, profiles, blank=False, swap_only=False):
         L.append("    blank = true,   -- the release: nothing built in; keeps what you make in the panel")
     if swap_only:
         L.append("    swap_only = true,   -- Passive Swap edition: one game passive per armor, game values, no stacking")
-    if settings.get("armors"):
-        L.append("    -- [armor: ...] sections: one armor's own colours / weight")
+    if settings.get("armors") and not swap_only:
+        L.append("    -- [armor: ...] sections: one armor's own weight")
         L.append("    armors = {")
         for kid, a in sorted(settings["armors"].items()):
             parts = ["id = 0x%08X" % kid]
-            if a.get("colours") is not None:
-                parts.append("colours = 0x%08X" % a["colours"])
-            if a.get("weight") is not None and not swap_only:
+            if a.get("weight") is not None:
                 parts.append("weight = %d" % a["weight"])
             L.append("        { %s }," % ", ".join(parts))
         L.append("    },")
@@ -891,9 +886,8 @@ How to use
 3. Pick the armor passive you wear (the tab), then the passive it should have instead.
    "Original" puts the game's passive back.
 4. Save loadouts in the Presets tab; %(s)s swaps between them without opening the panel.
-5. Colours tab: armors built on the same model (B-01 Tactical, TR-40 Gold Eagle, ...) can
-   wear each other's colour schemes (only you see them). Your current armor is at the top. It shows when the game next builds the armor:
-   re-select it in the armory, or re-equip it.
+5. The panel opens on the tab of the armor you're wearing, and + Armor lists it first.
+   While the cursor is on the panel, the game ignores the mouse (no shooting or turning).
 
 The swap applies to every armor that has that passive. Use Armor Transmog for the look.
 Some passives have effects the game hard-wires to its own armor (e.g. Adreno-Defibrillator's

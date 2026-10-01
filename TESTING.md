@@ -40,9 +40,10 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | A `panel = off` build applies its loadout with no panel | ❔ | v5.6; offline test passes |
 | Armor weight: a heavy armor set to Light shows 50 / 550 / 125 and runs like light | ✅ | 5.6 research build (SR-64 Cinderblock, BFM-220 Ironclad), confirmed in a mission |
 | Armor weight also changes damage taken (armor rating) in a mission | ❔ | v5.7; the armory card changes, damage not measured yet |
-| Colours: another armor's colour texture shows on the armor | ✅ | 5.7 research build (Siege-Ready armors, camo and purple/yellow schemes); shows after re-selecting / re-equipping |
+| Colours: another armor's colour texture on an armor | ❌ | dropped in 6.0: shows for 1-2 s, then the game unloads the texture and the armor turns black |
 | The equipped armor is found (WEARING) and followed | ✅ | 5.7 research build: helmet, cape, armor ids back to back; v6.0 offline test passes |
-| Colours tab in game, saved and reloaded | ❔ | v6.0; offline test passes |
+| Weight for only the worn armor, saved and reloaded | ❔ | v6.0; offline test passes |
+| Cursor on the panel: no shooting, turning or armory clicks behind it | ❔ | v6.0; offline test passes (the problem report says when the block is on) |
 | Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Armory Forge leaves that passive alone |
 
 ## Effects

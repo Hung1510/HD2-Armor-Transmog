@@ -22,7 +22,7 @@ except ImportError:
     sys.exit(0)
 import picker  # noqa: E402
 
-# the fake game's armors (ids 0x7000 + n) get long, real-looking names for the Colours tab
+# the fake game's armors (ids 0x7000 + n) get long, real-looking names (the worn-armor weight row)
 picker.armor_names = lambda: {0x7000 + n: "KDM-%d %s Commando" % (700 + n, v[0].split(",")[0])
                               for n, (k, v) in enumerate(picker.CATALOG.items())}
 from harness import FakeGame  # noqa: E402
@@ -91,6 +91,7 @@ def build(text):
 
 
 sink = open(os.path.join(ROOT, "presets", "01-kitchen-sink.ini"), encoding="utf-8").read()
+FIRST = picker.load_config_text(sink)[1][0]["perk"]          # tab 1's passive: the test wears its armor
 
 # (text measurement, screen, panel_scale): 1080p both ways, 1440p, 4K, smallest and
 # largest panel (1.5 on 1080p is capped so the panel still fits the screen)
@@ -106,6 +107,7 @@ for measure_mode, (rw, rh), scale in CONFIGS:
     g.set_resolution(rw, rh)
     if measure_mode == "estimated":
         g.L.execute(b"stingray.Gui.text_extents = nil")
+    g.wear(FIRST)
     g.tick(420)
     g.key(F7)
     g.tick(120)
@@ -138,11 +140,11 @@ for measure_mode, (rw, rh), scale in CONFIGS:
     g.click("sel:weight")
     g.click("weight:heavy")
     views.append(("armor weight", layout_problems(g)))
-    g.click("colours")
-    views.append(("colours, nothing picked", layout_problems(g)))
-    g.click(next(k for k in g.regions() if k.startswith("carm:")))
-    g.click(next(k for k in g.regions() if k.startswith("csrc:") and k != "csrc:0"))
-    views.append(("colours, a scheme picked", layout_problems(g)))
+    if "aw:light" not in g.regions():
+        failed.append("%s: no weight row for the worn armor" % mode)
+    else:
+        g.click("aw:light")
+        views.append(("armor weight, the worn armor light", layout_problems(g)))
     g.click("tab:1")
     g.click("remove")
     views.append(("remove: click again", layout_problems(g)))

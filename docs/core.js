@@ -203,12 +203,10 @@
         const entry = {};
         for (const [k, v] of sec.items) {
           const lk = k.trim().toLowerCase();
-          if (lk === "colours" || lk === "colors") {
-            if (!["original", "game", ""].includes(v.trim().toLowerCase())) entry.colours = findArmor(cat, v, where + " colours");
-          } else if (lk === "weight") {
+          if (lk === "weight") {
             const w = parseWeight(v, where);
             if (w !== null) entry.weight = w;
-          } else throw new ConfigError(`${where}: unknown key '${k}' (colours, weight)`);
+          } else throw new ConfigError(`${where}: unknown key '${k}' (only weight)`);
         }
         if (Object.keys(entry).length) settings.armors.set(kid, entry);
         continue;
@@ -434,12 +432,11 @@
     L.push(`    panel_scale = ${(settings.panel_scale || data.default_panel_scale || 1).toFixed(1)},`);
     if (settings.panel === false) L.push("    no_panel = true,   -- panel = off: no panel, no hotkeys, no controller polling");
     if (settings.armors && settings.armors.size) {
-      L.push("    -- [armor: ...] sections: one armor's own colours / weight");
+      L.push("    -- [armor: ...] sections: one armor's own weight");
       L.push("    armors = {");
       for (const kid of [...settings.armors.keys()].sort((x, y) => x - y)) {
         const a = settings.armors.get(kid);
         const parts = [`id = ${hex8(kid)}`];
-        if (a.colours !== undefined && a.colours !== null) parts.push(`colours = ${hex8(a.colours)}`);
         if (a.weight !== undefined && a.weight !== null) parts.push(`weight = ${a.weight}`);
         L.push(`        { ${parts.join(", ")} },`);
       }
@@ -610,17 +607,16 @@
     for (const [kid, a] of armorEntries(state)) {
       L.push("");
       L.push(`[armor: ${hex8(kid)}]${armorName(cat, kid) ? "   ; " + armorName(cat, kid) : ""}`);
-      if (a.colours != null) L.push(`colours = ${hex8(a.colours)}${armorName(cat, a.colours) ? "   ; " + armorName(cat, a.colours) : ""}`);
       if (a.weight != null) L.push(`weight  = ${WEIGHT_NAMES[a.weight]}`);
     }
     return L.join("\n") + "\n";
   }
 
-  // GUI state.armors {id: {colours, weight}} -> [[id, entry]] by id, set ones only
+  // GUI state.armors {id: {weight}} -> [[id, entry]] by id, set ones only
   function armorEntries(state) {
     return Object.entries(state.armors || {})
       .map(([k, a]) => [parseInt(k, 10), a])
-      .filter(([, a]) => a && (a.colours != null || a.weight != null))
+      .filter(([, a]) => a && a.weight != null)
       .sort((x, y) => x[0] - y[0]);
   }
   function armorName(cat, kid) {
@@ -649,7 +645,6 @@
     }
     for (const [kid, a] of armorEntries(state)) {
       L.push(`[armor: ${hex8(kid)}]`);
-      if (a.colours != null) L.push(`colours=${hex8(a.colours)}`);
       if (a.weight != null) L.push(`weight=${WEIGHT_NAMES[a.weight]}`);
     }
     return L.join("\n") + "\n";

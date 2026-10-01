@@ -36,15 +36,9 @@ SAMPLE = os.path.join(HERE, "fixtures", "armors-sample.json")
 
 # ------------------------------------------------------------------ 1. conversion
 kits, skipped = armor_names.convert(json.loads(armor_names.read_text(SAMPLE)))
-cb = dict(kits["0xA9A71FE7"])
-model = cb.pop("model", None)
+cb = kits["0xA9A71FE7"]
 check(cb == {"name": "SR-64 Cinderblock", "kind": "armor", "passive": "Siege-Ready", "weight": "heavy"},
       "an armor keeps its name, passive and weight (the armor pieces' majority)")
-twin = {"id": "0x1", "name": "Twin", "kit_type": "Armor", "body_types": [{"pieces": [
-    {"path": "c", "slot": "left_arm", "piece_type": "armor"}, {"path": "a", "slot": "torso", "piece_type": "armor"},
-    {"path": "zz", "slot": "hips", "piece_type": "undergarment"}]}]}
-check(model and armor_names.model_of(twin) == model and kits["0xAED67D10"]["model"] != model,
-      "armors on the same pieces share a model key (their colours fit each other); others don't")
 check(kits["0xAED67D10"]["weight"] == "light" and kits["0x2D61F0F9"] == {"name": "Some Helmet", "kind": "helmet"},
       "ids are upper-case 0x%08X; helmets and capes have no passive or weight")
 check(kits["0x12345678"]["name"] == "", "a name FileDiver couldn't resolve (it prints the hash) is left empty")

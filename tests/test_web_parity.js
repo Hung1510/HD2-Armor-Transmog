@@ -89,14 +89,13 @@ Fortified = on
 [profile: Scout]
 weight = heavy
 `,
-  "edge: armor colours + per-armor weight": `
+  "edge: per-armor weight": `
 [settings]
-name = Colours
+name = One Armor
 [armor: DP-8 Mountain-Scaled]
-colours = RS-89 Shadow Paragon
 weight = light
 [armor: 0xAED67D10]
-colours = 0xA9A71FE7
+weight = heavy
 [profile: Siege-Ready]
 weight = heavy
 `,

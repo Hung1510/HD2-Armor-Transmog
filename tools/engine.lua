@@ -437,7 +437,7 @@ end
 local function default_loadout()
     local l = { name = MOD.name or MOD.title, retire = MOD.retire, hotkey = MOD.hotkey or 'F7',
                 swap_hotkey = MOD.swap_hotkey or 'F9', panel_scale = MOD.panel_scale or 1, profiles = {}, armors = {} }
-    for _, a in ipairs(MOD.armors or {}) do l.armors[a.id] = { colours = a.colours, weight = a.weight } end
+    for _, a in ipairs(MOD.armors or {}) do l.armors[a.id] = { weight = a.weight } end
     for _, d in ipairs(MOD.default or {}) do
         local p = { perk = d.perk, conflicts = d.conflicts, enabled = {}, tweaks = {},
                     raw = d.raw, raw_stats = d.raw_stats, weight = d.weight }
@@ -546,7 +546,7 @@ local function resolve_profile(p)
 end
 
 local LOADOUT = nil          -- the live loadout
-local KITS = { list = {}, by_record = {}, found = 0 }    -- armor kit records (weight, colours); below
+local KITS = { list = {}, by_record = {}, found = 0 }    -- armor kit records (weight, what you wear); below
 
 -- an armor in a loadout: its id (0xA9A71FE7) or its name (SR-64 Cinderblock)
 function KITS.find(text)
@@ -619,20 +619,16 @@ local function serialize(l, base_key)
         if #raw > 0 then L[#L + 1] = 'raw_stats = ' .. table.concat(raw, ', ') end
         end
     end
-    -- one section per armor with its own colours (and weight, full edition)
+    -- one section per armor with its own weight (full edition)
     local ids = {}
     for id, a in pairs(l.armors or {}) do
-        if a.colours or (a.weight and not MOD.swap_only) then ids[#ids + 1] = id end
+        if a.weight and not MOD.swap_only then ids[#ids + 1] = id end
     end
     table.sort(ids)
     for _, id in ipairs(ids) do
-        local a = l.armors[id]
         L[#L + 1] = ''
         L[#L + 1] = string.format('[armor: 0x%08X]', id) .. (ARMOR_NAMES[id] and ('   ; ' .. ARMOR_NAMES[id]) or '')
-        if a.colours then
-            L[#L + 1] = string.format('colours = 0x%08X', a.colours) .. (ARMOR_NAMES[a.colours] and ('   ; ' .. ARMOR_NAMES[a.colours]) or '')
-        end
-        if a.weight and not MOD.swap_only then L[#L + 1] = 'weight  = ' .. WEIGHTS[a.weight] end
+        L[#L + 1] = 'weight  = ' .. WEIGHTS[l.armors[id].weight]
     end
     return table.concat(L, '\r\n') .. '\r\n'
 end
@@ -675,13 +671,8 @@ local function parse_loadout(text)
                 local k, val = v:match('^(.-)%s*=%s*(.*)$')
                 if k and arm then
                     local lk = k:lower()
-                    if lk == 'colours' or lk == 'colors' then
-                        local low = val:lower()
-                        arm.colours = (low ~= 'original' and low ~= 'game' and low ~= '') and KITS.find(val) or nil
-                        if not arm.colours and low ~= 'original' and low ~= 'game' then log('loadout: unknown armor ' .. val .. ' for colours') end
-                    elseif lk == 'weight' then
-                        arm.weight = WEIGHTS[val:lower()]
-                    end
+                    if lk == 'weight' then arm.weight = WEIGHTS[val:lower()]
+                    else log('loadout: [armor] ' .. k .. ' is not used (only weight)') end
                 elseif k and section == 'settings' then
                     if k == 'name' then l.name = val
                     elseif k == 'retire' then l.retire = TRUE_WORDS[val:lower()] or false
@@ -973,24 +964,21 @@ local function capture(record, block, blob)
     end
 end
 
--- ---------------------------------------------------------------- armor kits: weight, colours, what you wear
+-- ---------------------------------------------------------------- armor kits: weight, what you wear
 -- Each armor, helmet and cape is a kit record (HelldiverCustomizationKit, LDLD type
 -- 0xD9A55AA0). Layout (FileDiver datalibrary/armor_sets.go):
 --   kit   +0 Id  +28 Passive  +40 Type (0 armor, 1 helmet, 2 cape)  +48 Bodies (ptr)  +56 BodyCount
 --   body  +0 BodyType  +8 Pieces (ptr)  +16 PieceCount            (24 bytes)
---   piece +8 Slot  +12 Type (0 = armor piece)  +16 Weight  +24 MaterialLut (u64)   (96 bytes)
+--   piece +8 Slot  +12 Type (0 = armor piece)  +16 Weight   (96 bytes)
 -- Pointers are offsets from the record in the files and absolute once loaded.
 --
 -- Weight (full edition): an armor's weight class sets its speed, stamina regen and base
 -- armor rating; the game reads it from the weight of each ARMOR piece (confirmed in game,
 -- 5.6 research build). A profile's `weight` sets it on every armor with that passive; an
 -- [armor: id] section's `weight` on that one armor, and wins.
--- Colours (both editions, cosmetic, only on your screen): each piece's MaterialLut names the
--- colour texture it uses. `colours = <armor>` gives an armor another armor's textures, slot
--- by slot (confirmed live, 5.7 research build; the game shows it when it next builds the
--- armor model: re-select it in the armory, or re-equip).
--- The original weights and textures are kept and put back when a setting is cleared.
-local NO_LUT = string.rep('\0', 8)
+-- The original weights are kept and put back when a setting is cleared.
+-- (Colour schemes were tried in 6.0 test builds and dropped: the game unloads another
+-- armor's colour texture, so the armor turned black.)
 KITS.ids = {}                                   -- kit id -> 0 armor / 1 helmet / 2 cape
 
 function KITS.capture(block, blob)
@@ -1012,32 +1000,20 @@ function KITS.capture(block, blob)
             local raw = pcount > 0 and api.read(pptr, pcount * 96)
             for i = 0, (raw and pcount - 1 or -1) do
                 local o = i * 96
-                local w, lut = u32(raw, o + 16), raw:sub(o + 25, o + 32)
-                local pc = { base = pptr + o, slot = u32(raw, o + 8), type = u32(raw, o + 12), body = btype,
-                             path = raw:sub(o + 1, o + 8) }
-                if pc.type == 0 and WEIGHTS[w] then pc.w_orig, pc.w_now = w, w end
-                if #lut == 8 and lut ~= NO_LUT then pc.lut_orig, pc.lut_now = lut, lut end
-                if pc.w_orig or pc.lut_orig then kit.pieces[#kit.pieces + 1] = pc end
+                local w = u32(raw, o + 16)
+                if u32(raw, o + 12) == 0 and WEIGHTS[w] then
+                    kit.pieces[#kit.pieces + 1] = { base = pptr + o, w_orig = w, w_now = w }
+                end
             end
         end
     end
     if #kit.pieces == 0 then return end
-    -- the model: its armor pieces (slot + model path). Armors with the same model share a
-    -- colour layout, so they can wear each other's colour textures.
-    local parts = {}
-    for _, pc in ipairs(kit.pieces) do if pc.type == 0 then parts[#parts + 1] = pc.slot .. ':' .. pc.path end end
-    table.sort(parts)
-    kit.model = table.concat(parts, '|')
     KITS.by_record[record] = kit
     KITS.list[#KITS.list + 1] = kit
     KITS.found = KITS.found + 1
     if not KITS.lo or block < KITS.lo then KITS.lo = block end
     if not KITS.hi or block > KITS.hi then KITS.hi = block end
     KITS.apply_kit(kit)
-    -- armors that borrow this one's colours
-    for target, a in pairs(LOADOUT and LOADOUT.armors or {}) do
-        if a.colours == id and target ~= id then KITS.apply_id(target) end
-    end
 end
 
 function KITS.intact(kit)
@@ -1050,51 +1026,30 @@ function KITS.source(id)
     return nil
 end
 
--- the texture a source armor uses for this slot: same slot and body type, same slot, any
-local function source_lut(src, pc)
-    local same_slot, any
-    for _, q in ipairs(src.pieces) do
-        if q.lut_orig then
-            if q.slot == pc.slot and q.body == pc.body then return q.lut_orig end
-            if q.slot == pc.slot then same_slot = same_slot or q.lut_orig end
-            any = any or q.lut_orig
-        end
-    end
-    return same_slot or any
-end
-
--- what this armor should be now: { weight, source kit for colours }
+-- the weight this armor should have now: its own, its passive's, or the game's
 function KITS.wanted(kit)
+    if MOD.swap_only then return nil end
     local a = LOADOUT and LOADOUT.armors and LOADOUT.armors[kit.id]
-    local weight
-    if not MOD.swap_only then
-        local prof = profile_for(kit.passive)
-        weight = (a and a.weight) or (prof and prof.weight)
-    end
-    local src = a and a.colours and a.colours ~= kit.id and KITS.source(a.colours) or nil
-    return weight, src
+    local prof = profile_for(kit.passive)
+    return (a and a.weight) or (prof and prof.weight)
 end
 
 function KITS.apply_kit(kit)
-    local weight, src = KITS.wanted(kit)
+    local weight = KITS.wanted(kit)
     local n, bad, intact = 0, 0, nil
-    local function put(addr, bytes)
-        if intact == nil then intact = KITS.intact(kit) end
-        if intact and api.write(addr, bytes) and api.read(addr, #bytes) == bytes then n = n + 1; return true end
-        bad = bad + 1
-        return false
-    end
     for _, pc in ipairs(kit.pieces) do
-        if pc.w_orig then
-            local w = weight or pc.w_orig
-            if pc.w_now ~= w and put(pc.base + 16, u32_bytes(w)) then pc.w_now = w end
-        end
-        if pc.lut_orig then
-            local lut = src and source_lut(src, pc) or pc.lut_orig
-            if pc.lut_now ~= lut and put(pc.base + 24, lut) then pc.lut_now = lut end
+        local w = weight or pc.w_orig
+        if pc.w_now ~= w then
+            if intact == nil then intact = KITS.intact(kit) end
+            local bytes = u32_bytes(w)
+            if intact and api.write(pc.base + 16, bytes) and api.read(pc.base + 16, 4) == bytes then
+                pc.w_now, n = w, n + 1
+            else
+                bad = bad + 1
+            end
         end
     end
-    if bad > 0 then log(string.format('armor 0x%08X: %d piece field(s) could not be written', kit.id, bad)) end
+    if bad > 0 then log(string.format('armor 0x%08X: %d weight field(s) could not be written', kit.id, bad)) end
     return n
 end
 
@@ -1108,7 +1063,7 @@ end
 function KITS.apply(perk)
     local n = 0
     for _, kit in ipairs(KITS.list) do if kit.passive == perk then n = n + KITS.apply_kit(kit) end end
-    if n > 0 then log('armor kits: ' .. CAT[perk].name .. ' armors updated (' .. n .. ' fields)') end
+    if n > 0 then log('weight: ' .. CAT[perk].name .. ' armors updated (' .. n .. ' pieces)') end
 end
 
 function KITS.apply_all()
@@ -1116,23 +1071,18 @@ function KITS.apply_all()
 end
 
 -- every 5 s: kits the game reloaded are dropped (the next scan finds them again),
--- values the game put back are set again
+-- weights the game put back are set again
 function KITS.enforce()
     local kept = {}
     for _, kit in ipairs(KITS.list) do
         local changed = false
-        for _, pc in ipairs(kit.pieces) do
-            if pc.w_now ~= pc.w_orig or pc.lut_now ~= pc.lut_orig then changed = true break end
-        end
+        for _, pc in ipairs(kit.pieces) do if pc.w_now ~= pc.w_orig then changed = true break end end
         if not changed or KITS.intact(kit) then
             kept[#kept + 1] = kit
             if changed then
                 for _, pc in ipairs(kit.pieces) do
-                    local raw = api.read(pc.base + 16, 16)
-                    if raw then
-                        if pc.w_orig then pc.w_now = u32(raw, 0) end
-                        if pc.lut_orig then pc.lut_now = raw:sub(9, 16) end
-                    end
+                    local cur = api.read(pc.base + 16, 4)
+                    if cur then pc.w_now = u32(cur, 0) end
                 end
             end
         else
@@ -1159,18 +1109,8 @@ function KITS.armors()
             seen[kit.id] = true
             local w
             for _, pc in ipairs(kit.pieces) do if pc.w_orig then w = pc.w_orig break end end
-            out[#out + 1] = { id = kit.id, passive = kit.passive, weight = w, name = ARMOR_NAMES[kit.id], model = kit.model }
+            out[#out + 1] = { id = kit.id, passive = kit.passive, weight = w, name = ARMOR_NAMES[kit.id] }
         end
-    end
-    -- armors on the same model: an unnamed one is shown as a variant of a named one
-    local named_of, members = {}, {}
-    for _, a in ipairs(out) do
-        members[a.model] = (members[a.model] or 0) + 1
-        if a.name and not named_of[a.model] then named_of[a.model] = a.name end
-    end
-    for _, a in ipairs(out) do
-        a.family = members[a.model] or 1
-        if not a.name and named_of[a.model] then a.name = named_of[a.model] .. ' (variant)' end
     end
     -- what the panel shows: the name, numbered when several armors share it (variants)
     local count, nth = {}, {}
