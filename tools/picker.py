@@ -274,6 +274,8 @@ def load_config_text(text, source="<loadout>"):
             entry = {}
             for k, v in cp[sec].items():
                 lk = k.strip().lower()
+                if lk in ("colours", "colors"):
+                    continue                          # 6.0 test builds only; the feature was dropped
                 if lk == "weight":
                     w = parse_weight(v, where)
                     if w is not None:

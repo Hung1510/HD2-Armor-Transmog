@@ -121,7 +121,9 @@ check("[armor: 0x%08X]" % KID[SR] in text and "weight=medium" in text, "share co
 
 s, _ = picker.load_config_text(BASE + "[armor: %s]\nweight = heavy\n" % NAMES[KID[FO]])
 check(s["armors"] == {KID[FO]: {"weight": 2}}, "the ini takes armor names too")
-for bad in ("[armor: No Such Armor]\nweight = light\n", "[armor: 0x7000]\ncolours = 0x7001\n"):
+s, _ = picker.load_config_text(BASE + "[armor: 0x7000]\ncolours = 0x7001\nweight = light\n")
+check(s["armors"] == {0x7000: {"weight": 0}}, "colours lines from the 6.0 test builds are ignored, the rest still loads")
+for bad in ("[armor: No Such Armor]\nweight = light\n", "[armor: 0x7000]\nshine = 0x7001\n"):
     try:
         picker.load_config_text(BASE + bad)
         check(False, "refused: %r" % bad)

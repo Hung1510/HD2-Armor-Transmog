@@ -203,6 +203,7 @@
         const entry = {};
         for (const [k, v] of sec.items) {
           const lk = k.trim().toLowerCase();
+          if (lk === "colours" || lk === "colors") continue;   // 6.0 test builds only; the feature was dropped
           if (lk === "weight") {
             const w = parseWeight(v, where);
             if (w !== null) entry.weight = w;
