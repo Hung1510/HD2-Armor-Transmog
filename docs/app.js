@@ -541,6 +541,7 @@
       return;
     }
     cat = core.makeCatalog(data);
+    if (window.PPI18N) window.PPI18N.start(data);     // 简体中文 (i18n.js)
     $("verTag").textContent = "v" + data.version;      // the mod version this page builds
     for (const p of data.presets) {
       const o = document.createElement("option");

@@ -39,6 +39,7 @@ SUITES = [
     ("test_swap_edition.py", "Passive Swap edition (Nexus build)"),
     ("test_release.py", "release zips, blank install, old saves"),
     ("test_web_parity.js", "web builder output is byte-identical to Python"),
+    ("test_web_i18n.js", "web builder in Simplified Chinese: names, wording, hints"),
 ]
 CHECK = re.compile(r"^(ok|FAIL)\s{2,}", re.M)
 

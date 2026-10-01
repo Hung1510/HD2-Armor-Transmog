@@ -968,6 +968,33 @@ def cmd_release(args):
     return 0
 
 
+LANG_GROUPS = ("ui", "perk", "effect", "unit", "preset", "desc", "armor")
+LUA_STR = r"'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\""
+
+
+LANG_ZH = os.path.join(HERE, "lang_zh.lua")
+
+
+def lang_names(path=LANG_ZH):
+    """the whole-string tables of tools/lang_zh.lua ({group: {english: translation}}), for the
+    web builder, which translates the same names on the page"""
+    try:
+        text = open(path, encoding="utf-8").read()
+    except OSError:
+        return {}
+
+    def unq(s):
+        return re.sub(r"\\(.)", r"\1", s[1:-1])
+    out = {}
+    for g in LANG_GROUPS:
+        m = re.search(r"^    %s = \{\n(.*?)^    \},$" % g, text, re.S | re.M)
+        if not m:
+            continue
+        pairs = re.findall(r"\[(%s)\]\s*=\s*(%s)" % (LUA_STR, LUA_STR), m.group(1))
+        out[g] = {unq(k): unq(v) for k, v in pairs}
+    return out
+
+
 def cmd_export_web(args):
     """Write docs/data.json: catalog, effect names, engine and presets for the web builder."""
     root = os.path.dirname(HERE)
@@ -984,6 +1011,7 @@ def cmd_export_web(args):
         "aliases": ALIASES,
         "armors": armor_list(),
         "engine": engine_text(),
+        "lang": {"zh": lang_names()},
         "presets": [{"file": os.path.basename(p), "ini": open(p, encoding="utf-8").read()}
                     for p in preset_files(os.path.join(root, "presets"))],
     }
