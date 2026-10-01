@@ -24,12 +24,13 @@ jobs:
       - run: pip install lupa pillow unicorn keystone-engine
       - run: python tools/picker.py export-web --check
       - run: python tests/run_all.py
-      - run: python tools/picker.py release --zip dist/Super-Earth-Armory-Forge.zip
-      - run: python tools/picker.py release --edition swap --zip dist/Super-Earth-Armory-Forge-Passive-Swap.zip
+      # the version in every file name (players asked): Super-Earth-Armory-Forge-v6.2.zip
+      - run: python tools/picker.py release --zip "dist/Super-Earth-Armory-Forge-${{ github.ref_name }}.zip"
+      - run: python tools/picker.py release --edition swap --zip "dist/Super-Earth-Armory-Forge-Passive-Swap-${{ github.ref_name }}.zip"
       - run: python tools/release_notes.py "${{ github.ref_name }}" > dist/notes.md
       - uses: softprops/action-gh-release@v2
         with:
           body_path: dist/notes.md
           files: |
-            dist/Super-Earth-Armory-Forge.zip
-            dist/Super-Earth-Armory-Forge-Passive-Swap.zip
+            dist/Super-Earth-Armory-Forge-${{ github.ref_name }}.zip
+            dist/Super-Earth-Armory-Forge-Passive-Swap-${{ github.ref_name }}.zip

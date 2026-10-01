@@ -151,7 +151,7 @@ check(b"swap_only = true" in lua and b"Kitchen Sink" not in lua.replace(b"['Kitc
       "the patch is the swap edition without presets (the Chinese name table aside)")
 import json  # noqa: E402
 man = json.loads(z.read("manifest.json"))
-check(man["Name"].endswith("(Passive Swap)") and man["Guid"] == "e6ba95c4-beaa-54c0-96c2-a2ab56021b87",
+check(man["Name"] == "Super Earth Armory Forge (Passive Swap) v" + picker.VERSION and man["Guid"] == "e6ba95c4-beaa-54c0-96c2-a2ab56021b87",
       "manifest: Passive Swap name, same GUID (one or the other is installed)")
 
 if failed:

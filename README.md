@@ -29,14 +29,14 @@ Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
 - Download: [AyakaMods](https://ayakamods.com/mods/super-earth-armory-forge.4359/) · [GitHub Releases](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest) (full edition) · [Nexus Mods: Passive Swap - Armory Forge Lite](https://www.nexusmods.com/helldivers2/mods/16789) (Passive Swap edition)
-- **Two editions:** the **full edition** (`Super-Earth-Armory-Forge.zip`) stacks passives and edits values. The **Passive Swap edition** (`Super-Earth-Armory-Forge-Passive-Swap.zip`) gives each armor one other passive at the game's own values, with no stacking and no value editing. Install one or the other.
+- **Two editions:** the **full edition** (`Super-Earth-Armory-Forge-v6.2.zip`, the version is always in the name) stacks passives and edits values. The **Passive Swap edition** (`Super-Earth-Armory-Forge-Passive-Swap-v6.2.zip`) gives each armor one other passive at the game's own values, with no stacking and no value editing. Install one or the other.
 - **Support:** the mod is free and always will be. If it's worth a coffee to you, **[tip on Ko-fi](https://ko-fi.com/phamtrangiahung)**. I'd really appreciate it, and it helps me keep updating the mod.
 
 ## Ways to use it
 
 | You want | Do this |
 |---|---|
-| Build in game (most people) | Download **[Super-Earth-Armory-Forge.zip](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest)**, add it to your mod manager (there are no options to pick), start the game, press **F7** |
+| Build in game (most people) | Download **[Super-Earth-Armory-Forge-v…zip](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest)**, add it to your mod manager (there are no options to pick), start the game, press **F7** |
 | A ready-made build | Same zip, then F7, then **Presets**: *Kitchen Sink, Tank, Stealth, Survivor, Demolitionist, Gunner* |
 | Plan a build before playing | **[Web builder](https://hung1510.github.io/Super-Earth-Armory-Forge/)**, then *Download mod (.zip)* |
 | Scripting / version control | `python tools\picker.py build loadout.ini --zip "My Stack.zip"` (below) |
@@ -135,7 +135,7 @@ pip install lupa                                   # optional: Lua syntax check
 python tools\picker.py list                        # every passive, effect, default
 python tools\picker.py build loadout.ini           # preview
 python tools\picker.py build loadout.ini --zip "My Stack.zip"
-python tools\picker.py release --zip dist\Super-Earth-Armory-Forge.zip   # the release zip
+python tools\picker.py release --zip dist\Super-Earth-Armory-Forge-v6.2.zip   # the release zip (CI names it after the tag)
 ```
 
 The web builder can import and export the same `loadout.ini`.

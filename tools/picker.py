@@ -921,14 +921,15 @@ def cmd_release(args):
         print("  preset in the panel: %s" % name)
     guid = str(uuid.uuid5(GUID_NS, MOD_ID))
     manifest = {
-        "Version": 1, "Guid": guid, "Name": TITLE,
+        # the version in the name: mod managers list it, so players see which one they have
+        "Version": 1, "Guid": guid, "Name": "%s v%s" % (TITLE, VERSION),
         "Description": "v%s. Press %s in game to open the armory: tick any armor passives, "
                        "change their values live, save and swap loadouts (%s). Or build one at "
                        "https://hung1510.github.io/Super-Earth-Armory-Forge/ . %s"
                        % (VERSION, DEFAULT_HOTKEY, DEFAULT_SWAP_HOTKEY, CREDIT),
     }
     if swap:
-        manifest["Name"] = TITLE + " (Passive Swap)"
+        manifest["Name"] = "%s (Passive Swap) v%s" % (TITLE, VERSION)
         manifest["Description"] = ("v%s, Passive Swap edition. Press %s in game and give any armor a different "
                                    "armor passive, at the game's own values (one passive per armor, no stacking). "
                                    "Save and swap loadouts (%s). %s" % (VERSION, DEFAULT_HOTKEY, DEFAULT_SWAP_HOTKEY, CREDIT))

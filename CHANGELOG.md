@@ -1,5 +1,8 @@
 # Changelog
 
+## Next
+- **The version is in every file name now:** `Super-Earth-Armory-Forge-v6.3.zip`, and the mod manager lists it as *Super Earth Armory Forge v6.3*, so you can see which one you have. Thanks TheCrimsonFücker.
+
 ## 6.2 (2026-10-01)
 Both editions (full and Passive Swap):
 - **简体中文:** the in-game panel and the web builder in Simplified Chinese. Keys tab → *Language / 语言* → 简体中文. Passive and armor names are the game's own Chinese names. The translation is hd2modpj's, from their *Super Earth Armory Forge 简体中文* addon (now built in; the separate addon isn't needed). Your loadout file, share codes and the problem report stay in English, so loadouts move between languages unchanged.

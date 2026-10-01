@@ -41,8 +41,8 @@ z = zipfile.ZipFile(out)
 names = z.namelist()
 man = json.loads(z.read("manifest.json"))
 check("Options" not in man, "manifest has no options (nothing to pick in the mod manager)")
-check(man["Name"] == "Super Earth Armory Forge" and man.get("IconPath") == "icon.png" and "icon.png" in names,
-      "manifest: name + icon")
+check(man["Name"] == "Super Earth Armory Forge v" + picker.VERSION and man.get("IconPath") == "icon.png" and "icon.png" in names,
+      "manifest: name with the version (players see which one they have) + icon")
 check(man["Guid"] == "e6ba95c4-beaa-54c0-96c2-a2ab56021b87", "same GUID as before, so it updates in place")
 check(picker.ARCHIVE_NAME in names and not any(n.startswith(("Builds/", "Addon/")) for n in names),
       "the patch sits at the zip root")
