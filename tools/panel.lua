@@ -2522,16 +2522,39 @@ local function panel_frame(now)
     local worlds = sr.Application.worlds() or {}
     if not same_worlds(worlds, ui.worlds) or main ~= ui.main then
         if ui.worlds then PP.note('resettle') end
+        -- the armory (and other screens) add and remove worlds: say what changed, a few times
+        -- per opening, so a panel that never shows can be traced in the problem report
+        ui.world_logs = (ui.world_logs or 0) + 1
+        if ui.world_logs <= 4 then
+            local mi = 0
+            for k, w in ipairs(worlds) do if w == main then mi = k end end
+            log('panel: worlds ' .. (ui.worlds and #ui.worlds or 0) .. ' -> ' .. #worlds .. ' (main ' .. mi ..
+                (main ~= ui.main and ui.main and ', main changed' or '') .. '); waiting for the screen to settle')
+        end
+        ui.waiting_since = ui.waiting_since or now
         clear_gui()
         ui.worlds, ui.main, ui.settled_at = worlds, main, now + SETTLE_SECONDS
         return
     end
-    if now < ui.settled_at then return end
+    if now < ui.settled_at then
+        if ui.waiting_since and now - ui.waiting_since > 10 and not ui.said_unsettled then
+            ui.said_unsettled = true
+            log('panel: the screen has not settled for 10 s (worlds keep changing): ' .. (ui.world_logs or 0) .. ' changes')
+        end
+        return
+    end
+    ui.waiting_since = nil
     local world = overlay_world()
     if not world then PP.note('no_world'); clear_gui(); return end
     if ui.world ~= world then
         clear_gui()
         ui.world = world
+        local wi, mi = 0, 0
+        for k, w in ipairs(worlds) do
+            if w == world then wi = k end
+            if w == main then mi = k end
+        end
+        log('panel: drawing on world ' .. wi .. ' of ' .. #worlds .. ' (main ' .. mi .. ')')
     end
 
     ui.hover = nil
@@ -2654,7 +2677,8 @@ local function open_panel(open)
             end
         end
         PP.note('opened')
-        log('panel opened')
+        ui.world_logs, ui.waiting_since, ui.said_unsettled, ui.world = 0, nil, false, nil
+        log('panel opened (' .. #(sr.Application.worlds() or {}) .. ' worlds)')
         local ok, why = pcall(take_cursor)
         if not ok then log('cursor: could not free it: ' .. tostring(why)) end
     else
