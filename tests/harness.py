@@ -223,7 +223,8 @@ class FakeGame:
             weights, at = [], []
             for slot, ptype, weight in pieces:
                 p = bytearray(96)
-                struct.pack_into("<QIIIIQ", p, 0, 0x9A7B000000000000 + n * 16 + slot, slot, ptype, weight, 0,
+                # armors come in pairs on one model (same piece paths), like the game's variants
+                struct.pack_into("<QIIIIQ", p, 0, 0x9A7B000000000000 + (n // 2) * 16 + slot, slot, ptype, weight, 0,
                                  self.lut(kid, slot))
                 weights.append((rec + len(body) + 16, ptype, weight))
                 at.append(rec + len(body))

@@ -89,6 +89,14 @@ def tidy(name):
     return " ".join(words)
 
 
+def model_of(kit):
+    """armors built from the same pieces (slot + model path) share a colour layout, so one
+    can wear another's colour textures and they land on the right parts"""
+    parts = sorted("%s:%s" % (pc.get("slot"), pc.get("path")) for body in kit.get("body_types") or []
+                   for pc in body.get("pieces") or [] if pc.get("piece_type") in (0, "armor"))
+    return "%08x" % (murmur64a("|".join(parts).encode()) >> 32) if parts else None
+
+
 def majority_weight(kit):
     count = {}
     for body in kit.get("body_types") or []:
@@ -122,6 +130,9 @@ def convert(dump):
         w = majority_weight(kit) if kind == "armor" else None
         if w:
             entry["weight"] = w
+        m = model_of(kit) if kind == "armor" else None
+        if m:
+            entry["model"] = m
         if kid in out and out[kid] != entry:
             raise NamesError("id %s appears twice with different data" % kid)
         out[kid] = entry

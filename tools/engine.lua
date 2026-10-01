@@ -1013,7 +1013,8 @@ function KITS.capture(block, blob)
             for i = 0, (raw and pcount - 1 or -1) do
                 local o = i * 96
                 local w, lut = u32(raw, o + 16), raw:sub(o + 25, o + 32)
-                local pc = { base = pptr + o, slot = u32(raw, o + 8), type = u32(raw, o + 12), body = btype }
+                local pc = { base = pptr + o, slot = u32(raw, o + 8), type = u32(raw, o + 12), body = btype,
+                             path = raw:sub(o + 1, o + 8) }
                 if pc.type == 0 and WEIGHTS[w] then pc.w_orig, pc.w_now = w, w end
                 if #lut == 8 and lut ~= NO_LUT then pc.lut_orig, pc.lut_now = lut, lut end
                 if pc.w_orig or pc.lut_orig then kit.pieces[#kit.pieces + 1] = pc end
@@ -1021,6 +1022,12 @@ function KITS.capture(block, blob)
         end
     end
     if #kit.pieces == 0 then return end
+    -- the model: its armor pieces (slot + model path). Armors with the same model share a
+    -- colour layout, so they can wear each other's colour textures.
+    local parts = {}
+    for _, pc in ipairs(kit.pieces) do if pc.type == 0 then parts[#parts + 1] = pc.slot .. ':' .. pc.path end end
+    table.sort(parts)
+    kit.model = table.concat(parts, '|')
     KITS.by_record[record] = kit
     KITS.list[#KITS.list + 1] = kit
     KITS.found = KITS.found + 1
@@ -1152,8 +1159,18 @@ function KITS.armors()
             seen[kit.id] = true
             local w
             for _, pc in ipairs(kit.pieces) do if pc.w_orig then w = pc.w_orig break end end
-            out[#out + 1] = { id = kit.id, passive = kit.passive, weight = w, name = ARMOR_NAMES[kit.id] }
+            out[#out + 1] = { id = kit.id, passive = kit.passive, weight = w, name = ARMOR_NAMES[kit.id], model = kit.model }
         end
+    end
+    -- armors on the same model: an unnamed one is shown as a variant of a named one
+    local named_of, members = {}, {}
+    for _, a in ipairs(out) do
+        members[a.model] = (members[a.model] or 0) + 1
+        if a.name and not named_of[a.model] then named_of[a.model] = a.name end
+    end
+    for _, a in ipairs(out) do
+        a.family = members[a.model] or 1
+        if not a.name and named_of[a.model] then a.name = named_of[a.model] .. ' (variant)' end
     end
     -- what the panel shows: the name, numbered when several armors share it (variants)
     local count, nth = {}, {}

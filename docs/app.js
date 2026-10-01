@@ -231,11 +231,12 @@
   function labels() {
     if (armorLabels) return armorLabels;
     const list = [...(data.armors || [])].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : a.id - b.id));
-    const count = {}, nth = {};
-    for (const a of list) count[a.name] = (count[a.name] || 0) + 1;
+    const count = {}, nth = {}, family = {};
+    for (const a of list) { count[a.name] = (count[a.name] || 0) + 1; if (a.model) family[a.model] = (family[a.model] || 0) + 1; }
     armorLabels = list.map((a) => {
       nth[a.name] = (nth[a.name] || 0) + 1;
-      return { id: a.id, weight: a.weight, label: count[a.name] > 1 ? `${a.name} #${nth[a.name]}` : a.name };
+      return { id: a.id, weight: a.weight, model: a.model, family: a.model ? family[a.model] : 1,
+               label: count[a.name] > 1 ? `${a.name} #${nth[a.name]}` : a.name };
     });
     return armorLabels;
   }
@@ -249,7 +250,11 @@
     $("carmSel").innerHTML = list.map((a) =>
       `<option value="${a.id}"${a.id === colourSel ? " selected" : ""}>${esc(a.label)}${a.weight ? " (" + a.weight + ")" : ""}${state.armors[a.id] ? "  *" : ""}</option>`).join("");
     const mine = state.armors[colourSel] || {};
-    $("csrcSel").innerHTML = `<option value="">Original</option>` + list.filter((a) => a.id !== colourSel).map((a) =>
+    // colour schemes come from armors on the same model; weight works for any armor
+    const me = list.find((a) => a.id === colourSel);
+    $("csrcSel").disabled = !me || me.family < 2;
+    $("csrcSel").innerHTML = `<option value="">${me && me.family < 2 ? "Original (no other scheme for this model yet)" : "Original"}</option>` +
+      list.filter((a) => a.id !== colourSel && me && a.model && a.model === me.model).map((a) =>
       `<option value="${a.id}"${a.id === mine.colours ? " selected" : ""}>${esc(a.label)}</option>`).join("");
     $("cwSel").value = mine.weight != null ? String(mine.weight) : "";
     const set = Object.entries(state.armors).filter(([, a]) => a && (a.colours != null || a.weight != null));

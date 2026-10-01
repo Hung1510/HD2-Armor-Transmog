@@ -557,7 +557,7 @@ def armor_list():
             kits = json.load(f)["kits"]
     except (OSError, ValueError, KeyError):
         return []
-    return [{"id": int(k, 16), "name": v["name"], "weight": v.get("weight", "")}
+    return [{"id": int(k, 16), "name": v["name"], "weight": v.get("weight", ""), "model": v.get("model", "")}
             for k, v in sorted(kits.items()) if v.get("kind") == "armor" and v.get("name")]
 
 
@@ -891,8 +891,8 @@ How to use
 3. Pick the armor passive you wear (the tab), then the passive it should have instead.
    "Original" puts the game's passive back.
 4. Save loadouts in the Presets tab; %(s)s swaps between them without opening the panel.
-5. Colours tab: give any armor the colours of another armor (only you see them). Your
-   current armor is at the top. It shows when the game next builds the armor:
+5. Colours tab: armors built on the same model (B-01 Tactical, TR-40 Gold Eagle, ...) can
+   wear each other's colour schemes (only you see them). Your current armor is at the top. It shows when the game next builds the armor:
    re-select it in the armory, or re-equip it.
 
 The swap applies to every armor that has that passive. Use Armor Transmog for the look.

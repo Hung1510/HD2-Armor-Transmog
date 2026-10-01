@@ -52,7 +52,7 @@ Then:
 - **Which armor do I wear?** Your armor's passive shows *Wear any of: …*, e.g. Med-Kit: CM-09 Bonesnapper, CM-14 Physician, …
 - **Armor weight:** the *Armor weight* row sets how every armor with that passive moves: *Light* (armor 50, speed 550, stamina regen 125), *Medium* (100 / 500 / 100), *Heavy* (150 / 450 / 50) or *Game*. The look doesn't change, so a heavy armor can run like a light one. Also `weight = light` in a `[profile]`. Full edition only.
 - **Lots of armors:** when the tabs don't fit, `<` `>` scroll the row; LB / RB reach every tab.
-- **Colours tab:** give any armor another armor's colours (only you see them). Your current armor is at the top (*WEARING*); pick a scheme on the right, or *Original*. It shows when the game next builds the armor: re-select it in the armory, or re-equip it. The full edition also sets *Weight, this armor only* here. Saved as `[armor: <name or id>]` with `colours = <armor>` / `weight = light`.
+- **Colours tab:** armors built on the same model (B-01 Tactical, TR-40 Gold Eagle, B-22 Model Citizen, …) can wear each other's colour schemes (only you see them). Your current armor is at the top (*WEARING*); pick a scheme on the right, or *Original*. It shows when the game next builds the armor: re-select it in the armory, or re-equip it. The full edition also sets *Weight, this armor only* here. Saved as `[armor: <name or id>]` with `colours = <armor>` / `weight = light`.
 - **It knows what you wear:** the panel opens on your armor's tab, and *+ Armor* lists your armor's passive first.
 - **Confirmed or not:** each value says *UNTESTED* or *CONFIRMED IN GAME* (from [TESTING.md](TESTING.md)).
 - **When two passives change the same thing:** *Stack all* or *Strongest only*.

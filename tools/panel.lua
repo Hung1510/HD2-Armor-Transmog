@@ -760,6 +760,12 @@ function PP.report()
         'loader api=' .. tostring(type(loader) == 'table' and loader.api) .. ' fields: ' .. PP.names_of(loader, 12),
         'update bus jobs: ' .. PP.names_of(type(bus) == 'table' and bus.jobs, 20),
         'globals added after Armory Forge started: ' .. PP.names_of(added, 30),
+        '--- engine ---',
+        'wearing=' .. (KITS.worn and KITS.name(KITS.worn) or '-') .. ' armor kits=' .. KITS.found ..
+            ' loadout spots=' .. #(KITS.wear.spots or {}) .. ' (' .. tostring(KITS.wear.state) .. ')',
+        -- what the engine offers for keeping resources loaded (colour schemes, later versions)
+        'ResourcePackage: ' .. PP.names_of(sr and rawget(sr, 'ResourcePackage'), 30),
+        'Application: ' .. PP.names_of(sr and rawget(sr, 'Application'), 60),
     }
 end
 
@@ -1360,8 +1366,9 @@ local function draw(width, height)
         if KITS.worn then                         -- the armor you're wearing first
             for _, a in ipairs(all) do if a.id == KITS.worn then list[1] = a end end
         end
+        -- armors that share their model with others have colour schemes (each other's)
         for _, a in ipairs(all) do
-            if a.id ~= KITS.worn and (q == '' or (a.name or ''):lower():find(q, 1, true)
+            if a.id ~= KITS.worn and a.family > 1 and (q == '' or (a.name or ''):lower():find(q, 1, true)
                                        or (CAT[a.passive] and CAT[a.passive].name:lower():find(q, 1, true))) then
                 list[#list + 1] = a
             end
@@ -1397,7 +1404,7 @@ local function draw(width, height)
         for _, a in ipairs(all) do if a.id == ui.csel then sel = a end end
         if not sel then
             head(RX, TOP + 14, 'Colours', 'Pick an armor', RIW)
-            local y2 = wrap('Give any armor the colours of another armor. Pick the armor on the left, then a colour scheme. Only you see it.', RX, TOP + 70, 14, C.MUTED, RIW, 3)
+            local y2 = wrap('Armors built on the same model come in several colour schemes. Pick one on the left, then the scheme it should wear. Only you see it.', RX, TOP + 70, 14, C.MUTED, RIW, 3)
             if not KITS.worn then wrap('Your current armor shows at the top as WEARING once it is found (a few seconds after the scan).', RX, y2 + 8, 12, C.DIM, RIW, 2) end
         else
             local mine = LOADOUT.armors and LOADOUT.armors[sel.id] or {}
@@ -1419,9 +1426,13 @@ local function draw(width, height)
             text(mine.colours and cut('FROM ' .. up(KITS.name(mine.colours)), 11, RIW - 130) or 'ORIGINAL', RX + RIW, y2, 11,
                  mine.colours and C.YELLOW or C.DIM, RIW - 120, 'right')
             y2 = y2 + 18
-            -- every other named armor's scheme, two columns, paged
+            -- the other armors on this model: their colours fit it part for part. Two columns, paged.
             local src = {}
-            for _, a in ipairs(all) do if a.id ~= sel.id and a.name then src[#src + 1] = a end end
+            for _, a in ipairs(all) do if a.id ~= sel.id and a.model == sel.model then src[#src + 1] = a end end
+            if #src == 0 then
+                wrap('No colour schemes for this armor yet: no other armor shares its model. More come with custom schemes in a later version.',
+                     RX, y2 + 4, 13, C.DIM, RIW, 2)
+            end
             local colw, rh = (RIW - 8) / 2, 30
             local rows = math.max(2, math.floor((BOT - 132 - y2 - 38) / rh))
             local per = rows * 2 - 1                    -- the first cell is Original
