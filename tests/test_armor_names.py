@@ -43,6 +43,11 @@ check(kits["0xAED67D10"]["weight"] == "light" and kits["0x2D61F0F9"] == {"name":
 check(kits["0x12345678"]["name"] == "", "a name FileDiver couldn't resolve (it prints the hash) is left empty")
 check(skipped == ["not-an-id"], "an entry without a usable id is skipped and reported")
 check(armor_names.norm_id(0xA9A71FE7) == "0xA9A71FE7" and armor_names.norm_id("0x0") is None, "ids as numbers work; 0 is not an id")
+# FileDiver prints a known id's string instead of its hex; the id is its thin hash
+# (0xB92E1781 was in the game's memory, kits-dump of 2026-10-01)
+check(armor_names.norm_id("armor_warbond_5_3") == "0xB92E1781", "a named id (armor_warbond_5_3) resolves to the game's id")
+check(armor_names.tidy("BFM-16 TANKER") == "BFM-16 Tanker" and armor_names.tidy("PILLAR OF THE ABYSS") == "Pillar of the Abyss"
+      and armor_names.tidy("DP-8 Mountain-Scaled") == "DP-8 Mountain-Scaled", "names only in capitals are tidied; model codes stay")
 try:
     armor_names.convert({"not": "a list"})
     check(False, "something that isn't FileDiver's list is refused")

@@ -1,0 +1,1920 @@
+{
+ "about": "Armor, helmet and cape names by id, from FileDiver's armor-set-json-dumper (tools/armor-names/). Regenerate: python tools/armor_names.py armors.json",
+ "source": "ed77fd94-armors.json",
+ "kits": {
+  "0x01C2A674": {
+   "name": "AD-26 Bleeding Edge",
+   "kind": "armor",
+   "passive": "ADRENO-DEFIBRILLATOR",
+   "weight": "medium"
+  },
+  "0x020A57A8": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x03F9D46B": {
+   "name": "Cover of Darkness",
+   "kind": "cape"
+  },
+  "0x0542E6F1": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x056848E9": {
+   "name": "FS-55 Devastator",
+   "kind": "helmet"
+  },
+  "0x05720B46": {
+   "name": "UF-84 Doubt Killer",
+   "kind": "helmet"
+  },
+  "0x05E56EE5": {
+   "name": "SR-24 Street Scout",
+   "kind": "armor",
+   "passive": "SIEGE-READY",
+   "weight": "light"
+  },
+  "0x06B9BE43": {
+   "name": "Drape of Glory",
+   "kind": "cape"
+  },
+  "0x06CE8D18": {
+   "name": "Patriot Blue",
+   "kind": "cape"
+  },
+  "0x06D37083": {
+   "name": "Triangulation Veil",
+   "kind": "cape"
+  },
+  "0x076D9AAD": {
+   "name": "FS-05 Marksman",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "heavy"
+  },
+  "0x085838C1": {
+   "name": "DP-53 Savior of the Free",
+   "kind": "helmet"
+  },
+  "0x08CBB74B": {
+   "name": "Per Democrasum",
+   "kind": "cape"
+  },
+  "0x099116E7": {
+   "name": "Purifying Eclipse",
+   "kind": "cape"
+  },
+  "0x09B08EC4": {
+   "name": "BP-32 Jackboot",
+   "kind": "armor",
+   "passive": "BALLISTIC PADDING",
+   "weight": "light"
+  },
+  "0x0A18C237": {
+   "name": "AD-49 Apollonian",
+   "kind": "armor",
+   "passive": "ADRENO-DEFIBRILLATOR",
+   "weight": "heavy"
+  },
+  "0x0ADE6719": {
+   "name": "DS-191 Scorpion",
+   "kind": "armor",
+   "passive": "DESERT STORMER",
+   "weight": "medium"
+  },
+  "0x0B5CD386": {
+   "name": "CW-36 Winter Warrior",
+   "kind": "armor",
+   "passive": "SERVO-ASSISTED",
+   "weight": "heavy"
+  },
+  "0x0B66FC55": {
+   "name": "TG-8 Sharpshooter",
+   "kind": "helmet"
+  },
+  "0x0B84E99D": {
+   "name": "",
+   "kind": "cape"
+  },
+  "0x0BEB97BC": {
+   "name": "",
+   "kind": "cape"
+  },
+  "0x0C0AF708": {
+   "name": "FS-05 Marksman",
+   "kind": "helmet"
+  },
+  "0x0E3B10BF": {
+   "name": "UF-50 Bloodhound",
+   "kind": "helmet"
+  },
+  "0x0F41A67E": {
+   "name": "FS-05 Marksman",
+   "kind": "helmet"
+  },
+  "0x0FB65A0E": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x100A5DCD": {
+   "name": "AF-91 Field Chemist",
+   "kind": "armor",
+   "passive": "ADVANCED FILTRATION",
+   "weight": "medium"
+  },
+  "0x10707D29": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x10FD9607": {
+   "name": "De-Forester's Sailcloth",
+   "kind": "cape"
+  },
+  "0x110B2608": {
+   "name": "Beacon of Mercy",
+   "kind": "cape"
+  },
+  "0x115D8156": {
+   "name": "Executioner's Canopy",
+   "kind": "cape"
+  },
+  "0x1264718E": {
+   "name": "Harbinger of True Equality",
+   "kind": "cape"
+  },
+  "0x126F9CB6": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x12832E96": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x1348E7C7": {
+   "name": "",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "medium"
+  },
+  "0x135C4274": {
+   "name": "",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0x1369B95B": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0x14209E3A": {
+   "name": "SC-37 Legionnaire",
+   "kind": "armor",
+   "passive": "SERVO-ASSISTED",
+   "weight": "light"
+  },
+  "0x144C1D6F": {
+   "name": "Podium of Prosperity",
+   "kind": "cape"
+  },
+  "0x14712621": {
+   "name": "Standard of Safe Distance",
+   "kind": "cape"
+  },
+  "0x1674440A": {
+   "name": "Over Artifice Triumphant",
+   "kind": "cape"
+  },
+  "0x16E1B9D3": {
+   "name": "A-9 Helljumper",
+   "kind": "armor",
+   "passive": "FEET FIRST",
+   "weight": "medium"
+  },
+  "0x16EEB860": {
+   "name": "GS-17 Frontier Marshal",
+   "kind": "armor",
+   "passive": "GUNSLINGER",
+   "weight": "medium"
+  },
+  "0x175295C9": {
+   "name": "Agent of Oblivion",
+   "kind": "cape"
+  },
+  "0x1805A245": {
+   "name": "BP-77 Grand Juror",
+   "kind": "helmet"
+  },
+  "0x1A0297E0": {
+   "name": "Tread of Liberty",
+   "kind": "cape"
+  },
+  "0x1AF6BA63": {
+   "name": "Veil of the Valorous Vagabond",
+   "kind": "cape"
+  },
+  "0x1B03E942": {
+   "name": "Eye of Liberty",
+   "kind": "cape"
+  },
+  "0x1B2FDE48": {
+   "name": "PH-9 Predator",
+   "kind": "helmet"
+  },
+  "0x1B3BD8A1": {
+   "name": "Federation's Embrace",
+   "kind": "cape"
+  },
+  "0x1B8329AB": {
+   "name": "KDM-73 Dragoon",
+   "kind": "armor",
+   "passive": "KINETIC DISPLACEMENT MITIGATION",
+   "weight": "medium"
+  },
+  "0x1B99D742": {
+   "name": "Emblem of Freedom",
+   "kind": "cape"
+  },
+  "0x1C089A28": {
+   "name": "TR-40 Gold Eagle",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "medium"
+  },
+  "0x1C6C05FA": {
+   "name": "CM-09 Bonesnapper",
+   "kind": "armor",
+   "passive": "MED-KIT",
+   "weight": "medium"
+  },
+  "0x1D0E3431": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0x1D20D6EE": {
+   "name": "B-08 Light Gunner",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "light"
+  },
+  "0x1D60FC90": {
+   "name": "SC-30 Trailblazer Scout",
+   "kind": "armor",
+   "passive": "SCOUT",
+   "weight": "light"
+  },
+  "0x1E28F118": {
+   "name": "KDM-763 Pacesetter",
+   "kind": "armor",
+   "passive": "KINETIC DISPLACEMENT MITIGATION",
+   "weight": "light"
+  },
+  "0x1E9444F9": {
+   "name": "FS-23 Battle Master",
+   "kind": "helmet"
+  },
+  "0x1F9BFA78": {
+   "name": "FS-37 Ravager",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "light"
+  },
+  "0x1FE1655F": {
+   "name": "",
+   "kind": "cape"
+  },
+  "0x203F720C": {
+   "name": "CM-14 Physician",
+   "kind": "helmet"
+  },
+  "0x20A85CC1": {
+   "name": "FS-38 Eradicator",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "light"
+  },
+  "0x212DF664": {
+   "name": "EX-16 Prototype 16",
+   "kind": "helmet"
+  },
+  "0x2180EB8D": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x223A3B4B": {
+   "name": "I-44 Salamander",
+   "kind": "armor",
+   "passive": "INFLAMMABLE",
+   "weight": "heavy"
+  },
+  "0x22B66E27": {
+   "name": "Eye of Freedom",
+   "kind": "cape"
+  },
+  "0x22ECC10E": {
+   "name": "Wedgeful Tricorn",
+   "kind": "cape"
+  },
+  "0x23D0E15C": {
+   "name": "PH-56 Jaguar",
+   "kind": "armor",
+   "passive": "PEAK PHYSIQUE",
+   "weight": "medium"
+  },
+  "0x242702A5": {
+   "name": "CPH-26 Commandant",
+   "kind": "armor",
+   "passive": "CONCUSSIVE PADDING, HAZMAT",
+   "weight": "light"
+  },
+  "0x24E3D6BA": {
+   "name": "EX-03 Prototype 3",
+   "kind": "armor",
+   "passive": "ELECTRICAL CONDUIT",
+   "weight": "medium"
+  },
+  "0x24E765BA": {
+   "name": "AD-11 Livewire",
+   "kind": "helmet"
+  },
+  "0x24FDB2C0": {
+   "name": "GS-66 Lawmaker",
+   "kind": "helmet"
+  },
+  "0x250FD6C1": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0x2521D401": {
+   "name": "UF-84 Doubt Killer",
+   "kind": "armor",
+   "passive": "UNFLINCHING",
+   "weight": "medium"
+  },
+  "0x261C4A52": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x26BF31FE": {
+   "name": "CE-74 Breaker",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "light"
+  },
+  "0x26D572A4": {
+   "name": "FS-23 Battle Master",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "heavy"
+  },
+  "0x289884F4": {
+   "name": "AC-2 Obedient",
+   "kind": "helmet"
+  },
+  "0x2BCC4463": {
+   "name": "Botslayer",
+   "kind": "cape"
+  },
+  "0x2CD5CFB0": {
+   "name": "Independence Bringer",
+   "kind": "cape"
+  },
+  "0x2D1DD830": {
+   "name": "I-09 Heatseeker",
+   "kind": "armor",
+   "passive": "INFLAMMABLE",
+   "weight": "light"
+  },
+  "0x2D61F0F9": {
+   "name": "BFM-16 Tanker",
+   "kind": "helmet"
+  },
+  "0x2E15716B": {
+   "name": "FS-61 Dreadnought",
+   "kind": "helmet"
+  },
+  "0x2E706DB8": {
+   "name": "O-2 Heavy Operator",
+   "kind": "armor",
+   "passive": "OXYGENATOR",
+   "weight": "heavy"
+  },
+  "0x2F51D8DC": {
+   "name": "TR-117 Alpha Commander",
+   "kind": "helmet"
+  },
+  "0x2F748B84": {
+   "name": "AF-02 Haz-Master",
+   "kind": "helmet"
+  },
+  "0x30D1157A": {
+   "name": "Rightful Occupier",
+   "kind": "cape"
+  },
+  "0x30E54B57": {
+   "name": "RE-2310 Honorary Guard",
+   "kind": "armor",
+   "passive": "REINFORCED EPAULETTES",
+   "weight": "medium"
+  },
+  "0x32451E35": {
+   "name": "Mantle of True Citizenship",
+   "kind": "cape"
+  },
+  "0x3313A0EC": {
+   "name": "TR-62 Knight",
+   "kind": "helmet"
+  },
+  "0x33929CAA": {
+   "name": "Fallen Hero's Vengeance",
+   "kind": "cape"
+  },
+  "0x3412F5E4": {
+   "name": "BFM-77 Reformer",
+   "kind": "armor",
+   "passive": "BLUNT-FORCE MITIGATION",
+   "weight": "medium"
+  },
+  "0x35E8934F": {
+   "name": "TR-7 Ambassador of the Brand",
+   "kind": "helmet"
+  },
+  "0x36456057": {
+   "name": "FS-05 Marksman",
+   "kind": "helmet"
+  },
+  "0x37442029": {
+   "name": "CPH-26 Commandant",
+   "kind": "helmet"
+  },
+  "0x37C61642": {
+   "name": "BFM-220 Ironclad",
+   "kind": "helmet"
+  },
+  "0x38068BEB": {
+   "name": "Strength in Our Arms",
+   "kind": "cape"
+  },
+  "0x38AA207D": {
+   "name": "CM-14 Physician",
+   "kind": "armor",
+   "passive": "MED-KIT",
+   "weight": "medium"
+  },
+  "0x38B05B83": {
+   "name": "FS-34 Exterminator",
+   "kind": "helmet"
+  },
+  "0x391BC756": {
+   "name": "Fre Liberam",
+   "kind": "cape"
+  },
+  "0x3A28A2E7": {
+   "name": "Way of the Bandolier",
+   "kind": "cape"
+  },
+  "0x3B5AF7C7": {
+   "name": "BP-20 Correct Officer",
+   "kind": "helmet"
+  },
+  "0x3BF70DE7": {
+   "name": "Mother Eagle's Wings",
+   "kind": "cape"
+  },
+  "0x3C3EBAF0": {
+   "name": "SA-32 Dynamo",
+   "kind": "armor",
+   "passive": "SERVO-ASSISTED",
+   "weight": "heavy"
+  },
+  "0x3D7E4AC7": {
+   "name": "Crest of the Unsullied",
+   "kind": "cape"
+  },
+  "0x3F1BEC1A": {
+   "name": "DP-00 Tactical",
+   "kind": "armor",
+   "passive": "DEMOCRACY PROTECTS",
+   "weight": "medium"
+  },
+  "0x407AB98A": {
+   "name": "GS-11 Democracy's Deputy",
+   "kind": "armor",
+   "passive": "GUNSLINGER",
+   "weight": "light"
+  },
+  "0x40A7D694": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x40C6635C": {
+   "name": "BP-20 Correct Officer",
+   "kind": "armor",
+   "passive": "BALLISTIC PADDING",
+   "weight": "medium"
+  },
+  "0x4100AF4B": {
+   "name": "Tyrant Hunter",
+   "kind": "cape"
+  },
+  "0x41211C7F": {
+   "name": "B-24 Enforcer",
+   "kind": "helmet"
+  },
+  "0x41DD184D": {
+   "name": "O-44 Bonded Pilot",
+   "kind": "helmet"
+  },
+  "0x4260B28C": {
+   "name": "Defender of Our Dream",
+   "kind": "cape"
+  },
+  "0x42F33241": {
+   "name": "Stone-Wrought Perseverance",
+   "kind": "cape"
+  },
+  "0x43265392": {
+   "name": "Pride of the Whistleblower",
+   "kind": "cape"
+  },
+  "0x4452E375": {
+   "name": "FS-05 Marksman",
+   "kind": "helmet"
+  },
+  "0x4470F6FF": {
+   "name": "Miranda's Legacy",
+   "kind": "cape"
+  },
+  "0x44D93620": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x457526D1": {
+   "name": "Vision of Freedom",
+   "kind": "cape"
+  },
+  "0x45D80A38": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x4657CFB3": {
+   "name": "Foesmasher",
+   "kind": "cape"
+  },
+  "0x47BCEC20": {
+   "name": "RS-100 Sanctioner",
+   "kind": "helmet"
+  },
+  "0x48226E8F": {
+   "name": "B-08 Light Gunner",
+   "kind": "helmet"
+  },
+  "0x4A545F06": {
+   "name": "DS-42 Federation's Blade",
+   "kind": "armor",
+   "passive": "DESERT STORMER",
+   "weight": "heavy"
+  },
+  "0x4DB09CA4": {
+   "name": "CM-09 Bonesnapper",
+   "kind": "helmet"
+  },
+  "0x4DCEC343": {
+   "name": "Standard of Rapid Evacuation",
+   "kind": "cape"
+  },
+  "0x4DD749C6": {
+   "name": "RS-100 Sanctioner",
+   "kind": "armor",
+   "passive": "REDUCED SIGNATURE",
+   "weight": "light"
+  },
+  "0x4E0785AE": {
+   "name": "CE-64 Grenadier",
+   "kind": "helmet"
+  },
+  "0x4E8F9F4F": {
+   "name": "SA-04 Combat Technician",
+   "kind": "helmet"
+  },
+  "0x4F079D05": {
+   "name": "Pillar of the Abyss",
+   "kind": "cape"
+  },
+  "0x4F6CCD6C": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x4F7FB2BD": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "medium"
+  },
+  "0x5096BCE9": {
+   "name": "SR-64 Cinderblock",
+   "kind": "armor",
+   "passive": "SIEGE-READY",
+   "weight": "heavy"
+  },
+  "0x52045A9B": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x52791E64": {
+   "name": "DS-10 Big Game Hunter",
+   "kind": "helmet"
+  },
+  "0x529EFE65": {
+   "name": "FS-05 Marksman",
+   "kind": "helmet"
+  },
+  "0x52F858A8": {
+   "name": "Honored Heirloom",
+   "kind": "cape"
+  },
+  "0x537E8E45": {
+   "name": "FS-61 Dreadnought",
+   "kind": "armor",
+   "passive": "SERVO-ASSISTED",
+   "weight": "heavy"
+  },
+  "0x53B64BF8": {
+   "name": "Cresting Honor",
+   "kind": "cape"
+  },
+  "0x542C752E": {
+   "name": "IE-3 Martyr",
+   "kind": "helmet"
+  },
+  "0x55D5144B": {
+   "name": "Humble Regalia",
+   "kind": "cape"
+  },
+  "0x55FD699B": {
+   "name": "AC-2 Obedient",
+   "kind": "armor",
+   "passive": "ACCLIMATED",
+   "weight": "light"
+  },
+  "0x5642FA1A": {
+   "name": "FS-11 Executioner",
+   "kind": "helmet"
+  },
+  "0x5662C173": {
+   "name": "I-102 Draconaught",
+   "kind": "armor",
+   "passive": "INFLAMMABLE",
+   "weight": "medium"
+  },
+  "0x57A7F31D": {
+   "name": "PH-202 Twigsnapper",
+   "kind": "helmet"
+  },
+  "0x584AB37B": {
+   "name": "DP-00 Tactical",
+   "kind": "helmet"
+  },
+  "0x58716E11": {
+   "name": "RS-67 Null Cipher",
+   "kind": "helmet"
+  },
+  "0x58D5CD85": {
+   "name": "GS-11 Democracy's Deputy",
+   "kind": "helmet"
+  },
+  "0x58DBDACD": {
+   "name": "FS-05 Marksman",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "heavy"
+  },
+  "0x5A17D6D6": {
+   "name": "CE-07 Demolition Specialist",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "light"
+  },
+  "0x5A32915A": {
+   "name": "Thundering Hooves of Loyalty",
+   "kind": "cape"
+  },
+  "0x5AAF5D66": {
+   "name": "SC-30 Trailblazer Scout",
+   "kind": "helmet"
+  },
+  "0x5BB4BBB0": {
+   "name": "SC-34 Infiltrator",
+   "kind": "armor",
+   "passive": "SCOUT",
+   "weight": "light"
+  },
+  "0x5C1A87D2": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x5C3087D2": {
+   "name": "DP-40 Hero of the Federation",
+   "kind": "helmet"
+  },
+  "0x5CC09255": {
+   "name": "AF-50 Noxious Ranger",
+   "kind": "armor",
+   "passive": "ADVANCED FILTRATION",
+   "weight": "light"
+  },
+  "0x5D0D8002": {
+   "name": "TG-8 Sharpshooter",
+   "kind": "armor",
+   "passive": "TRUE GRIT",
+   "weight": "medium"
+  },
+  "0x5EB11243": {
+   "name": "",
+   "kind": "cape"
+  },
+  "0x5F075DC5": {
+   "name": "CPG-48 Sapper",
+   "kind": "armor",
+   "passive": "CONCUSSIVE PADDING, GRENADIER",
+   "weight": "medium"
+  },
+  "0x5FACABB9": {
+   "name": "SC-37 Legionnaire",
+   "kind": "helmet"
+  },
+  "0x61B31723": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "medium"
+  },
+  "0x6351A9AA": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "medium"
+  },
+  "0x63AA42C5": {
+   "name": "CW-4 Arctic Ranger",
+   "kind": "helmet"
+  },
+  "0x63DCDD68": {
+   "name": "Will of the People",
+   "kind": "cape"
+  },
+  "0x6478678E": {
+   "name": "Ix-Voidwalker",
+   "kind": "helmet"
+  },
+  "0x64D8BA07": {
+   "name": "Foe Rent Asunder",
+   "kind": "cape"
+  },
+  "0x651133DD": {
+   "name": "Beacon of Mercy",
+   "kind": "cape"
+  },
+  "0x65C07DF2": {
+   "name": "CE-07 Demolition Specialist",
+   "kind": "helmet"
+  },
+  "0x674671A0": {
+   "name": "CE-64 Grenadier",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "heavy"
+  },
+  "0x677BEE02": {
+   "name": "RE-1861 Parade Commander",
+   "kind": "helmet"
+  },
+  "0x6809AD22": {
+   "name": "RE-2310 Honorary Guard",
+   "kind": "helmet"
+  },
+  "0x68AA2D85": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x69B2EC39": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x69BC2D4A": {
+   "name": "CW-22 Kodiak",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "heavy"
+  },
+  "0x6AB440FA": {
+   "name": "Wings of Valor",
+   "kind": "cape"
+  },
+  "0x6B619174": {
+   "name": "",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0x6D30F386": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "medium"
+  },
+  "0x6D9B8E21": {
+   "name": "United in Equality",
+   "kind": "cape"
+  },
+  "0x6E72F493": {
+   "name": "Light of Eternal Liberty",
+   "kind": "cape"
+  },
+  "0x708451E9": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0x71644FC9": {
+   "name": "Ingress-81",
+   "kind": "cape"
+  },
+  "0x71E406E4": {
+   "name": "KDM-763 Pacesetter",
+   "kind": "helmet"
+  },
+  "0x724501BE": {
+   "name": "Camo Cloak",
+   "kind": "cape"
+  },
+  "0x72492837": {
+   "name": "Against the Tyrant Cloud",
+   "kind": "cape"
+  },
+  "0x72B472A7": {
+   "name": "PH-9 Predator",
+   "kind": "armor",
+   "passive": "PEAK PHYSIQUE",
+   "weight": "light"
+  },
+  "0x732693A1": {
+   "name": "",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0x7346EDC6": {
+   "name": "TR-62 Knight",
+   "kind": "armor",
+   "passive": "SERVO-ASSISTED",
+   "weight": "heavy"
+  },
+  "0x735A0C0B": {
+   "name": "SR-64 Cinderblock",
+   "kind": "helmet"
+  },
+  "0x73893816": {
+   "name": "I-102 Draconaught",
+   "kind": "helmet"
+  },
+  "0x7451BAA3": {
+   "name": "B-02 Gloom Warden",
+   "kind": "helmet"
+  },
+  "0x756159E4": {
+   "name": "SC-30 Trailblazer Scout",
+   "kind": "armor",
+   "passive": "SCOUT",
+   "weight": "light"
+  },
+  "0x7757D8E8": {
+   "name": "Protector of the Heart",
+   "kind": "cape"
+  },
+  "0x77947ADD": {
+   "name": "FS-11 Executioner",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "heavy"
+  },
+  "0x77AE3AF0": {
+   "name": "Will of the People",
+   "kind": "cape"
+  },
+  "0x782087B2": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x7870337B": {
+   "name": "Bugslayer",
+   "kind": "cape"
+  },
+  "0x790C1B61": {
+   "name": "SA-8 Ram",
+   "kind": "helmet"
+  },
+  "0x7934ED8B": {
+   "name": "FS-37 Ravager",
+   "kind": "helmet"
+  },
+  "0x79A037C0": {
+   "name": "Eagle's Fury",
+   "kind": "cape"
+  },
+  "0x7A07031F": {
+   "name": "CM-10 Clinician",
+   "kind": "armor",
+   "passive": "MED-KIT",
+   "weight": "medium"
+  },
+  "0x7B6406DA": {
+   "name": "FS-05 Marksman",
+   "kind": "helmet"
+  },
+  "0x7C59469B": {
+   "name": "CW-9 White Wolf",
+   "kind": "helmet"
+  },
+  "0x7D1003D0": {
+   "name": "Freedom's Tapestry",
+   "kind": "cape"
+  },
+  "0x7D96D0C6": {
+   "name": "CM-09 Bonesnapper",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0x7EDF6505": {
+   "name": "CE-27 Ground Breaker",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "medium"
+  },
+  "0x7EEE690B": {
+   "name": "Windswept Wayfinder",
+   "kind": "cape"
+  },
+  "0x7FA29B61": {
+   "name": "SC-30 Trailblazer Scout",
+   "kind": "helmet"
+  },
+  "0x7FA97F66": {
+   "name": "BP-32 Jackboot",
+   "kind": "helmet"
+  },
+  "0x803276CE": {
+   "name": "B-24 Enforcer",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "medium"
+  },
+  "0x8166C1CC": {
+   "name": "SC-15 Drone Master",
+   "kind": "helmet"
+  },
+  "0x843DF174": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x8507BB35": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x86CA918C": {
+   "name": "Free-Spirited Spangles",
+   "kind": "cape"
+  },
+  "0x89B1B9E3": {
+   "name": "CE-101 Guerilla Gorilla",
+   "kind": "helmet"
+  },
+  "0x8A1D4C1C": {
+   "name": "Shroud of the Juggernaut",
+   "kind": "cape"
+  },
+  "0x8A5EC750": {
+   "name": "Tideturner",
+   "kind": "cape"
+  },
+  "0x8A957897": {
+   "name": "TR-7 Ambassador of the Brand",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "medium"
+  },
+  "0x8ABCCC54": {
+   "name": "EX-03 Prototype 3",
+   "kind": "helmet"
+  },
+  "0x8AF14536": {
+   "name": "IE-12 Righteous",
+   "kind": "helmet"
+  },
+  "0x8B9ED77D": {
+   "name": "B-24 Enforcer",
+   "kind": "armor",
+   "passive": "MED-KIT",
+   "weight": "medium"
+  },
+  "0x8BD85DD2": {
+   "name": "FS-34 Exterminator",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "medium"
+  },
+  "0x8C6AE37C": {
+   "name": "BFM-16 Tanker",
+   "kind": "armor",
+   "passive": "BLUNT-FORCE MITIGATION",
+   "weight": "light"
+  },
+  "0x8C6B78E3": {
+   "name": "9a7c0da",
+   "kind": "helmet"
+  },
+  "0x8C83C789": {
+   "name": "I-92 Fire Fighter",
+   "kind": "armor",
+   "passive": "INFLAMMABLE",
+   "weight": "medium"
+  },
+  "0x8CD3973B": {
+   "name": "SA-12 Servo-Assisted",
+   "kind": "helmet"
+  },
+  "0x8CE73DAE": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0x8D06EA5A": {
+   "name": "O-3 Free Spirit",
+   "kind": "helmet"
+  },
+  "0x91D773C8": {
+   "name": "CW-22 Kodiak",
+   "kind": "helmet"
+  },
+  "0x92762946": {
+   "name": "Infiltrator",
+   "kind": "cape"
+  },
+  "0x930DC02F": {
+   "name": "IE-57 Hell-Bent",
+   "kind": "helmet"
+  },
+  "0x93AD3833": {
+   "name": "SR-24 Street Scout",
+   "kind": "helmet"
+  },
+  "0x940716D6": {
+   "name": "TR-9 Cavalier of Democracy",
+   "kind": "armor",
+   "passive": "DEMOCRACY PROTECTS",
+   "weight": "medium"
+  },
+  "0x9488C3DB": {
+   "name": "Rags of the Fashionable",
+   "kind": "cape"
+  },
+  "0x95903ADF": {
+   "name": "CM-17 Butcher",
+   "kind": "armor",
+   "passive": "MED-KIT",
+   "weight": "heavy"
+  },
+  "0x95AC1CFD": {
+   "name": "B-16 Battle-Scarred Veteran",
+   "kind": "helmet"
+  },
+  "0x97CF0A8A": {
+   "name": "CE-81 Juggernaut",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "medium"
+  },
+  "0x97D7668F": {
+   "name": "CE-67 Titan",
+   "kind": "helmet"
+  },
+  "0x98E86082": {
+   "name": "RS-6 Fiend Destroyer",
+   "kind": "armor",
+   "passive": "ROCK-SOLID",
+   "weight": "medium"
+  },
+  "0x9A42A639": {
+   "name": "City Fighter's Resolve",
+   "kind": "cape"
+  },
+  "0x9A864667": {
+   "name": "Drape of Glory",
+   "kind": "cape"
+  },
+  "0x9AD6358E": {
+   "name": "AF-52 Lockdown",
+   "kind": "helmet"
+  },
+  "0x9B5BC520": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0x9BC153C0": {
+   "name": "",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "light"
+  },
+  "0x9C0BBE91": {
+   "name": "CPR-80 Bulwark",
+   "kind": "armor",
+   "passive": "CONCUSSIVE PADDING, REINFORCED",
+   "weight": "heavy"
+  },
+  "0x9CC5CC35": {
+   "name": "Dignity of Toil",
+   "kind": "cape"
+  },
+  "0x9CE65DA7": {
+   "name": "Red Planet's Memory",
+   "kind": "cape"
+  },
+  "0x9DBD09D7": {
+   "name": "Mark of the Crimson Fang",
+   "kind": "cape"
+  },
+  "0x9E29EA2F": {
+   "name": "Bastion of Integrity",
+   "kind": "cape"
+  },
+  "0x9E987D5E": {
+   "name": "SA-7 Headfirst",
+   "kind": "helmet"
+  },
+  "0x9F212504": {
+   "name": "",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "light"
+  },
+  "0x9F3F8A17": {
+   "name": "A-9 Helljumper",
+   "kind": "helmet"
+  },
+  "0x9F73133E": {
+   "name": "TR-117 Alpha Commander",
+   "kind": "armor",
+   "passive": "MED-KIT",
+   "weight": "medium"
+  },
+  "0x9FA96490": {
+   "name": "IE-12 Righteous",
+   "kind": "armor",
+   "passive": "INTEGRATED EXPLOSIVES",
+   "weight": "medium"
+  },
+  "0x9FB9D7B0": {
+   "name": "Seal of General Consensus",
+   "kind": "cape"
+  },
+  "0xA2F4F328": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0xA3A7E93D": {
+   "name": "SA-25 Steel Trooper",
+   "kind": "helmet"
+  },
+  "0xA45385CD": {
+   "name": "TG-122 Demo-Trooper",
+   "kind": "armor",
+   "passive": "TRUE GRIT",
+   "weight": "heavy"
+  },
+  "0xA5574AC2": {
+   "name": "CPR-80 Bulwark",
+   "kind": "helmet"
+  },
+  "0xA574D33D": {
+   "name": "",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0xA57E78BA": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0xA5A700CB": {
+   "name": "Unblemished Allegiance",
+   "kind": "cape"
+  },
+  "0xA67010E7": {
+   "name": "CM-17 Butcher",
+   "kind": "helmet"
+  },
+  "0xA7945016": {
+   "name": "Diagram of the Noblest Payload",
+   "kind": "cape"
+  },
+  "0xA8BF0CCB": {
+   "name": "RE-824 Bearer of the Standard",
+   "kind": "helmet"
+  },
+  "0xA9A71FE7": {
+   "name": "DP-8 Mountain-Scaled",
+   "kind": "armor",
+   "passive": "SIEGE-READY",
+   "weight": "medium"
+  },
+  "0xAA32B384": {
+   "name": "EX-16 Prototype 16",
+   "kind": "armor",
+   "passive": "ELECTRICAL CONDUIT",
+   "weight": "medium"
+  },
+  "0xAB29952A": {
+   "name": "Pinions of Everlasting Glory",
+   "kind": "cape"
+  },
+  "0xAC0ADECD": {
+   "name": "B-24 Enforcer",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "medium"
+  },
+  "0xAC4235B3": {
+   "name": "AC-1 Dutiful",
+   "kind": "armor",
+   "passive": "ACCLIMATED",
+   "weight": "medium"
+  },
+  "0xAC5D49F9": {
+   "name": "CE-27 Ground Breaker",
+   "kind": "helmet"
+  },
+  "0xACEF36F7": {
+   "name": "Defender of the Wall",
+   "kind": "cape"
+  },
+  "0xAE5978B1": {
+   "name": "KDM-500 Outrider",
+   "kind": "armor",
+   "passive": "KINETIC DISPLACEMENT MITIGATION",
+   "weight": "heavy"
+  },
+  "0xAE8F7B4C": {
+   "name": "AC-1 Dutiful",
+   "kind": "helmet"
+  },
+  "0xAED67D10": {
+   "name": "RS-89 Shadow Paragon",
+   "kind": "armor",
+   "passive": "REDUCED SIGNATURE",
+   "weight": "light"
+  },
+  "0xAFFB955B": {
+   "name": "CE-35 Trench Engineer",
+   "kind": "helmet"
+  },
+  "0xB028B970": {
+   "name": "IE-3 Martyr",
+   "kind": "armor",
+   "passive": "INTEGRATED EXPLOSIVES",
+   "weight": "medium"
+  },
+  "0xB08E0939": {
+   "name": "B-16 Battle-Scarred Veteran",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0xB18B6C66": {
+   "name": "CM-10 Clinician",
+   "kind": "helmet"
+  },
+  "0xB19D6C0A": {
+   "name": "DP-8 Mountain-Scaled",
+   "kind": "helmet"
+  },
+  "0xB1D021FF": {
+   "name": "I-09 Heatseeker",
+   "kind": "helmet"
+  },
+  "0xB3550D20": {
+   "name": "UF-50 Bloodhound",
+   "kind": "armor",
+   "passive": "UNFLINCHING",
+   "weight": "medium"
+  },
+  "0xB3DEB5D9": {
+   "name": "CW-9 White Wolf",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "medium"
+  },
+  "0xB4027B70": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0xB407147E": {
+   "name": "A-35 Recon",
+   "kind": "helmet"
+  },
+  "0xB46BA4F4": {
+   "name": "Testament to Attrition",
+   "kind": "cape"
+  },
+  "0xB482B460": {
+   "name": "GS-66 Lawmaker",
+   "kind": "armor",
+   "passive": "GUNSLINGER",
+   "weight": "heavy"
+  },
+  "0xB513FD54": {
+   "name": "DP-40 Hero of the Federation",
+   "kind": "armor",
+   "passive": "DEMOCRACY PROTECTS",
+   "weight": "medium"
+  },
+  "0xB545A9BF": {
+   "name": "Badge of Order",
+   "kind": "cape"
+  },
+  "0xB638F3C4": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0xB64637AB": {
+   "name": "Tyranny's Bane",
+   "kind": "cape"
+  },
+  "0xB661572A": {
+   "name": "UF-16 Inspector",
+   "kind": "armor",
+   "passive": "UNFLINCHING",
+   "weight": "light"
+  },
+  "0xB69DF10D": {
+   "name": "SA-8 Ram",
+   "kind": "armor",
+   "passive": "SUPPLEMENTAL ADRENALINE",
+   "weight": "heavy"
+  },
+  "0xB6A2F46A": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0xB75BD5B9": {
+   "name": "Reckoning's Cheer",
+   "kind": "cape"
+  },
+  "0xB92E1781": {
+   "name": "CW-4 Arctic Ranger",
+   "kind": "armor",
+   "passive": "SCOUT",
+   "weight": "light"
+  },
+  "0xBA9E281B": {
+   "name": "Watchful Compatriot",
+   "kind": "cape"
+  },
+  "0xBC5CF836": {
+   "name": "O-44 Bonded Pilot",
+   "kind": "armor",
+   "passive": "OXYGENATOR",
+   "weight": "medium"
+  },
+  "0xBCA406F6": {
+   "name": "Reaper of Bounties",
+   "kind": "cape"
+  },
+  "0xBD177F77": {
+   "name": "RS-6 Fiend Destroyer",
+   "kind": "helmet"
+  },
+  "0xBD1E5E84": {
+   "name": "CM-21 Trench Paramedic",
+   "kind": "helmet"
+  },
+  "0xBD961A7C": {
+   "name": "Pillars of Freedom",
+   "kind": "cape"
+  },
+  "0xBED85953": {
+   "name": "Vector of Victory",
+   "kind": "cape"
+  },
+  "0xC1105FBC": {
+   "name": "Martyris Rex",
+   "kind": "cape"
+  },
+  "0xC1611AC9": {
+   "name": "TG-122 Demo-Trooper",
+   "kind": "helmet"
+  },
+  "0xC24B74F5": {
+   "name": "Judgment Day",
+   "kind": "cape"
+  },
+  "0xC25ABB74": {
+   "name": "CM-09 Bonesnapper",
+   "kind": "helmet"
+  },
+  "0xC2A2375F": {
+   "name": "",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "light"
+  },
+  "0xC60C706D": {
+   "name": "DS-10 Big Game Hunter",
+   "kind": "armor",
+   "passive": "DESERT STORMER",
+   "weight": "light"
+  },
+  "0xC71DBBA4": {
+   "name": "RE-1861 Parade Commander",
+   "kind": "armor",
+   "passive": "REINFORCED EPAULETTES",
+   "weight": "light"
+  },
+  "0xC7A5782F": {
+   "name": "SA-7 Headfirst",
+   "kind": "armor",
+   "passive": "SUPPLEMENTAL ADRENALINE",
+   "weight": "medium"
+  },
+  "0xC83B625E": {
+   "name": "Drape of Glory",
+   "kind": "cape"
+  },
+  "0xC9D2AD39": {
+   "name": "SA-04 Combat Technician",
+   "kind": "armor",
+   "passive": "SCOUT",
+   "weight": "medium"
+  },
+  "0xCA092176": {
+   "name": "RS-67 Null Cipher",
+   "kind": "armor",
+   "passive": "REDUCED SIGNATURE",
+   "weight": "medium"
+  },
+  "0xCB7E9736": {
+   "name": "B-22 Model Citizen",
+   "kind": "armor",
+   "passive": "DEMOCRACY PROTECTS",
+   "weight": "medium"
+  },
+  "0xCD3D20DC": {
+   "name": "CW-36 Winter Warrior",
+   "kind": "helmet"
+  },
+  "0xD05754CD": {
+   "name": "RS-89 Shadow Paragon",
+   "kind": "helmet"
+  },
+  "0xD0CE5BC7": {
+   "name": "I-44 Salamander",
+   "kind": "helmet"
+  },
+  "0xD11DA85B": {
+   "name": "B-27 Fortified Commando",
+   "kind": "helmet"
+  },
+  "0xD1A64AC3": {
+   "name": "EX-00 Prototype X",
+   "kind": "helmet"
+  },
+  "0xD1C109DE": {
+   "name": "Greatcloak of Rebar Resolve",
+   "kind": "cape"
+  },
+  "0xD270FCCC": {
+   "name": "UF-16 Inspector",
+   "kind": "helmet"
+  },
+  "0xD2A83CA7": {
+   "name": "KDM-500 Outrider",
+   "kind": "helmet"
+  },
+  "0xD2C578E1": {
+   "name": "B-27 Fortified Commando",
+   "kind": "armor",
+   "passive": "EXTRA PADDING",
+   "weight": "heavy"
+  },
+  "0xD3461392": {
+   "name": "FS-55 Devastator",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "heavy"
+  },
+  "0xD3E885CE": {
+   "name": "Gilded Quill",
+   "kind": "cape"
+  },
+  "0xD45F0974": {
+   "name": "Liberty's Herald",
+   "kind": "cape"
+  },
+  "0xD52BB413": {
+   "name": "CM-21 Trench Paramedic",
+   "kind": "armor",
+   "passive": "MED-KIT",
+   "weight": "light"
+  },
+  "0xD59566D5": {
+   "name": "B-01 Tactical",
+   "kind": "armor",
+   "passive": "STANDARD ISSUE",
+   "weight": "medium"
+  },
+  "0xD63FFDD3": {
+   "name": "SR-18 Roadblock",
+   "kind": "armor",
+   "passive": "SIEGE-READY",
+   "weight": "heavy"
+  },
+  "0xD6768531": {
+   "name": "Cloak of Posterity's Gratitude",
+   "kind": "cape"
+  },
+  "0xD79370CB": {
+   "name": "Justice For All",
+   "kind": "cape"
+  },
+  "0xD7B2FD5D": {
+   "name": "EX-00 Prototype X",
+   "kind": "armor",
+   "passive": "ELECTRICAL CONDUIT",
+   "weight": "light"
+  },
+  "0xD879973A": {
+   "name": "A-35 Recon",
+   "kind": "armor",
+   "passive": "FEET FIRST",
+   "weight": "medium"
+  },
+  "0xD915A671": {
+   "name": "FS-05 Marksman",
+   "kind": "helmet"
+  },
+  "0xDA64EE0D": {
+   "name": "FS-38 Eradicator",
+   "kind": "helmet"
+  },
+  "0xDA8BBEAA": {
+   "name": "SC-34 Infiltrator",
+   "kind": "helmet"
+  },
+  "0xDA9EBB65": {
+   "name": "",
+   "kind": "cape"
+  },
+  "0xDAE4A744": {
+   "name": "SA-25 Steel Trooper",
+   "kind": "armor",
+   "passive": "SERVO-ASSISTED",
+   "weight": "medium"
+  },
+  "0xDB7DB6AA": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0xDBC21A99": {
+   "name": "RS-40 Beast of Prey",
+   "kind": "armor",
+   "passive": "ROCK-SOLID",
+   "weight": "heavy"
+  },
+  "0xDBF9CA34": {
+   "name": "Light of Eternal Liberty",
+   "kind": "cape"
+  },
+  "0xDC7304B9": {
+   "name": "SR-18 Roadblock",
+   "kind": "helmet"
+  },
+  "0xDCCE533F": {
+   "name": "AD-26 Bleeding Edge",
+   "kind": "helmet"
+  },
+  "0xDE575EA9": {
+   "name": "AF-50 Noxious Ranger",
+   "kind": "helmet"
+  },
+  "0xDE631A28": {
+   "name": "PH-202 Twigsnapper",
+   "kind": "armor",
+   "passive": "PEAK PHYSIQUE",
+   "weight": "heavy"
+  },
+  "0xDEE800A8": {
+   "name": "CE-101 Guerilla Gorilla",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "heavy"
+  },
+  "0xDF5F7CCB": {
+   "name": "AF-91 Field Chemist",
+   "kind": "helmet"
+  },
+  "0xDF8E4ADA": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0xE1CA6837": {
+   "name": "O-2 Heavy Operator",
+   "kind": "helmet"
+  },
+  "0xE1D53693": {
+   "name": "IE-57 Hell-Bent",
+   "kind": "armor",
+   "passive": "INTEGRATED EXPLOSIVES",
+   "weight": "light"
+  },
+  "0xE207C84A": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0xE3AAA79D": {
+   "name": "DP-11 Champion of the People",
+   "kind": "armor",
+   "passive": "DEMOCRACY PROTECTS",
+   "weight": "medium"
+  },
+  "0xE3CFD2FB": {
+   "name": "Prosperous Green",
+   "kind": "cape"
+  },
+  "0xE406CED0": {
+   "name": "9a7c0da",
+   "kind": "helmet"
+  },
+  "0xE417AE7B": {
+   "name": "FS-05 Marksman",
+   "kind": "helmet"
+  },
+  "0xE4C12748": {
+   "name": "Eye of the Clandestine",
+   "kind": "cape"
+  },
+  "0xE4E2B61B": {
+   "name": "RS-20 Constrictor",
+   "kind": "helmet"
+  },
+  "0xE67E5867": {
+   "name": "The Breach",
+   "kind": "cape"
+  },
+  "0xE7619545": {
+   "name": "Veteran's Banner",
+   "kind": "cape"
+  },
+  "0xE7DFE0A7": {
+   "name": "Message of Morale",
+   "kind": "cape"
+  },
+  "0xE8072038": {
+   "name": "Order of the Venerated Ballot",
+   "kind": "cape"
+  },
+  "0xE9ADD047": {
+   "name": "AF-02 Haz-Master",
+   "kind": "armor",
+   "passive": "ADVANCED FILTRATION",
+   "weight": "medium"
+  },
+  "0xEBB26E73": {
+   "name": "Conductor of Brilliance",
+   "kind": "cape"
+  },
+  "0xEC4638AF": {
+   "name": "RS-20 Constrictor",
+   "kind": "armor",
+   "passive": "ROCK-SOLID",
+   "weight": "light"
+  },
+  "0xEC49526F": {
+   "name": "B-22 Model Citizen",
+   "kind": "helmet"
+  },
+  "0xEC5C680E": {
+   "name": "Proof of Faultless Virtue",
+   "kind": "cape"
+  },
+  "0xECABADBF": {
+   "name": "FS-05 Marksman",
+   "kind": "armor",
+   "passive": "FORTIFIED",
+   "weight": "heavy"
+  },
+  "0xED2350CA": {
+   "name": "RS-40 Beast of Prey",
+   "kind": "helmet"
+  },
+  "0xEDE9D6B7": {
+   "name": "BFM-77 Reformer",
+   "kind": "helmet"
+  },
+  "0xEE2E3EFA": {
+   "name": "DS-42 Federation's Blade",
+   "kind": "helmet"
+  },
+  "0xEE2E8CE0": {
+   "name": "CE-74 Breaker",
+   "kind": "helmet"
+  },
+  "0xEE7019ED": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0xEE755525": {
+   "name": "The Cape of Stars and Suffrage",
+   "kind": "cape"
+  },
+  "0xEEB4C2DE": {
+   "name": "TR-9 Cavalier of Democracy",
+   "kind": "helmet"
+  },
+  "0xEF4FA522": {
+   "name": "Scraps of Sovereignty",
+   "kind": "cape"
+  },
+  "0xEF6D2AD3": {
+   "name": "DP-11 Champion of the People",
+   "kind": "helmet"
+  },
+  "0xF024288E": {
+   "name": "Veridical Ideology",
+   "kind": "cape"
+  },
+  "0xF06AD8D7": {
+   "name": "PH-56 Jaguar",
+   "kind": "helmet"
+  },
+  "0xF2B7D3F5": {
+   "name": "SA-12 Servo-Assisted",
+   "kind": "armor",
+   "passive": "SERVO-ASSISTED",
+   "weight": "medium"
+  },
+  "0xF2DCC254": {
+   "name": "DS-191 Scorpion",
+   "kind": "helmet"
+  },
+  "0xF34064AC": {
+   "name": "CE-67 Titan",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "medium"
+  },
+  "0xF35ECA5B": {
+   "name": "Mark of the Constrictor",
+   "kind": "cape"
+  },
+  "0xF3BCF18E": {
+   "name": "SA-32 Dynamo",
+   "kind": "helmet"
+  },
+  "0xF4598295": {
+   "name": "BP-77 Grand Juror",
+   "kind": "armor",
+   "passive": "BALLISTIC PADDING",
+   "weight": "heavy"
+  },
+  "0xF509B363": {
+   "name": "Agent of Oblivion",
+   "kind": "cape"
+  },
+  "0xF511B688": {
+   "name": "Eternal Corona",
+   "kind": "cape"
+  },
+  "0xF523F265": {
+   "name": "Proud Gold",
+   "kind": "cape"
+  },
+  "0xF57D61CE": {
+   "name": "SC-15 Drone Master",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "medium"
+  },
+  "0xF5CB7633": {
+   "name": "KDM-73 Dragoon",
+   "kind": "helmet"
+  },
+  "0xF5DD3C6F": {
+   "name": "Unblemished Allegiance",
+   "kind": "cape"
+  },
+  "0xF625724C": {
+   "name": "Schema Laid Bare",
+   "kind": "cape"
+  },
+  "0xF6303500": {
+   "name": "AF-52 Lockdown",
+   "kind": "armor",
+   "passive": "ADVANCED FILTRATION",
+   "weight": "heavy"
+  },
+  "0xF646F083": {
+   "name": "GS-17 Frontier Marshal",
+   "kind": "helmet"
+  },
+  "0xF6AE9439": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0xF7E6F127": {
+   "name": "O-3 Free Spirit",
+   "kind": "armor",
+   "passive": "OXYGENATOR",
+   "weight": "light"
+  },
+  "0xF89E3F1E": {
+   "name": "Holder of the Yellow Line",
+   "kind": "cape"
+  },
+  "0xF8B8CF9B": {
+   "name": "BFM-220 Ironclad",
+   "kind": "armor",
+   "passive": "BLUNT-FORCE MITIGATION",
+   "weight": "heavy"
+  },
+  "0xF8C6437F": {
+   "name": "AD-49 Apollonian",
+   "kind": "helmet"
+  },
+  "0xF8EA01AD": {
+   "name": "Blazing Samaritan",
+   "kind": "cape"
+  },
+  "0xF8FADB6C": {
+   "name": "AD-11 Livewire",
+   "kind": "armor",
+   "passive": "ADRENO-DEFIBRILLATOR",
+   "weight": "light"
+  },
+  "0xF9D912A7": {
+   "name": "TR-40 Gold Eagle",
+   "kind": "helmet"
+  },
+  "0xFB4B1254": {
+   "name": "CE-35 Trench Engineer",
+   "kind": "armor",
+   "passive": "ENGINEERING KIT",
+   "weight": "medium"
+  },
+  "0xFC920AE4": {
+   "name": "Patient Zero's Rememberance",
+   "kind": "cape"
+  },
+  "0xFCDE237A": {
+   "name": "CE-81 Juggernaut",
+   "kind": "helmet"
+  },
+  "0xFD428984": {
+   "name": "I-92 Fire Fighter",
+   "kind": "helmet"
+  },
+  "0xFD456DE0": {
+   "name": "DP-53 Savior of the Free",
+   "kind": "armor",
+   "passive": "DEMOCRACY PROTECTS",
+   "weight": "medium"
+  },
+  "0xFDB93622": {
+   "name": "CPG-48 Sapper",
+   "kind": "helmet"
+  },
+  "0xFDBF4741": {
+   "name": "B-01 Tactical",
+   "kind": "helmet"
+  },
+  "0xFDE8F657": {
+   "name": "RE-824 Bearer of the Standard",
+   "kind": "armor",
+   "passive": "REINFORCED EPAULETTES",
+   "weight": "heavy"
+  },
+  "0xFE3437E9": {
+   "name": "",
+   "kind": "helmet"
+  },
+  "0xFF46327A": {
+   "name": "Dissident's Nightmare",
+   "kind": "cape"
+  }
+ }
+}

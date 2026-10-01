@@ -40,15 +40,53 @@ def read_text(path):
     return raw.decode("utf-8")
 
 
+M64 = 0xFFFFFFFFFFFFFFFF
+
+
+def murmur64a(data):
+    """The engine's 64-bit string hash (MurmurHash64A, seed 0), as FileDiver's stingray.Sum."""
+    mix, h = 0xC6A4A7935BD1E995, (len(data) * 0xC6A4A7935BD1E995) & M64
+    full = len(data) - len(data) % 8
+    for i in range(0, full, 8):
+        k = (int.from_bytes(data[i:i + 8], "little") * mix) & M64
+        k = ((k ^ (k >> 47)) * mix) & M64
+        h = ((h ^ k) * mix) & M64
+    tail = data[full:]
+    if tail:
+        h = ((h ^ int.from_bytes(tail, "little")) * mix) & M64
+    h = ((h ^ (h >> 47)) * mix) & M64
+    return h ^ (h >> 47)
+
+
 def norm_id(v):
-    """'0xa9a71fe7' / 2846301159 -> '0xA9A71FE7' (None if it isn't a 32-bit id)"""
+    """'0xa9a71fe7' / 2846301159 -> '0xA9A71FE7'. FileDiver prints the NAME instead of the
+    hex when it knows the id's string (e.g. 'armor_warbond_5_3'): the id is then that
+    string's thin hash, the top 32 bits of its 64-bit hash. None if it isn't an id."""
     if isinstance(v, int):
         n = v
     elif isinstance(v, str) and re.fullmatch(r"0x[0-9a-fA-F]{1,8}", v.strip()):
         n = int(v.strip(), 16)
+    elif isinstance(v, str) and re.fullmatch(r"[a-z0-9_/]+", v.strip()):
+        n = murmur64a(v.strip().encode()) >> 32
     else:
         return None
     return "0x%08X" % n if 0 < n < 2 ** 32 else None
+
+
+def tidy(name):
+    """'BFM-16 TANKER' -> 'BFM-16 Tanker': some names only exist in capitals; model codes
+    (letters with digits) stay as they are, words get a capital first letter."""
+    if not name or not name.isupper():
+        return name
+    words = []
+    for i, w in enumerate(name.split(" ")):
+        if re.search(r"\d", w):
+            words.append(w)                              # BFM-16, CE-07
+        elif i > 0 and w in ("OF", "THE", "AND", "A", "IN"):
+            words.append(w.lower())
+        else:
+            words.append("-".join(p[:1] + p[1:].lower() for p in w.split("-")))
+    return " ".join(words)
 
 
 def majority_weight(kit):
@@ -76,6 +114,7 @@ def convert(dump):
             continue
         if re.fullmatch(r"[0-9a-f]{8}", name):      # FileDiver prints the hash when the name isn't known
             name = ""
+        name = tidy(name)
         entry = {"name": name, "kind": kind}
         passive = ((kit.get("passive") or {}).get("name") or "").strip()
         if kind == "armor" and passive:
