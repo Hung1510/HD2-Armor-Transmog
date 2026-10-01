@@ -48,9 +48,12 @@ stingray = {
     Application = { worlds = function() return WORLDS end, main_world = function() return WORLDS[1] end,
                     can_get = function() return true end },
     IdString64 = { from_hex = function(s) return s end },
-    Mouse = { button = function() return MOUSE_DOWN and 1 or 0 end, button_id = function() return 0 end,
-              pressed = function() return MOUSE_DOWN end, released = function() return false end,
-              axis_id = function(name) return name end, axis = function(id) return { 0, WHEEL, 0 } end },
+    -- the engine's buttons are fed by Windows raw input: nothing while it's unregistered.
+    -- The wheel is assumed to keep working (legacy messages); to be confirmed in game.
+    Mouse = { button = function() return (RAW_MOUSE and MOUSE_DOWN) and 1 or 0 end, button_id = function() return 0 end,
+              pressed = function() return RAW_MOUSE ~= nil and MOUSE_DOWN end, released = function() return false end,
+              axis_id = function(name) return name end,
+              axis = function(id) return { 0, WHEEL, 0 } end },
 }
 PP_TEST_INPUT = {
     focused = function() return true end,
@@ -62,7 +65,17 @@ PP_TEST_INPUT = {
     get_clipboard = function() return CLIP end,
     pad = function() if PAD_ON then return PAD_B, PAD_LX, PAD_LY, PAD_RX, PAD_RY end return nil end,
     set_clipboard = function(text) CLIP = text; return true end,
+    mouse_left = function() return MOUSE_DOWN end,
+    raw_mouse = function() return RAW_MOUSE and { flags = RAW_MOUSE.flags, target = RAW_MOUSE.target } end,
+    raw_mouse_set = function(dev)
+        RAW_CALLS = RAW_CALLS + 1
+        if RAW_FAIL_SET and dev and dev.target ~= nil then return false end   -- e.g. a window on another thread
+        RAW_MOUSE = dev and { flags = dev.flags, target = dev.target } or nil
+        return true
+    end,
+    raw_mouse_ours = function(dev) return not RAW_OTHER_THREAD end,
 }
+RAW_MOUSE, RAW_CALLS, RAW_FAIL_SET, RAW_OTHER_THREAD = { flags = 0x30, target = 'game window' }, 0, false, false
 CLIP = nil
 PAD_ON, PAD_B, PAD_LX, PAD_LY, PAD_RX, PAD_RY = false, 0, 0, 0, 0, 0
 CowboyBingusModLoader = { api = 1 }

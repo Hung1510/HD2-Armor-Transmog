@@ -12,7 +12,7 @@ Full edition:
 
 Tried and dropped: colour schemes from other armors (6.0 test builds). The game unloads the other armor's textures a second or two later and the armor turns black, so it's out.
 
-Under the hood: the equipped loadout is a helmet, cape and armor id stored back to back, found by a 5.7 research build that diffed two full memory scans. A one-time background pass finds it, and after that it's re-read every second. The mouse block swaps the engine's `stingray.Mouse` read functions for "nothing pressed" ones while the cursor is on the panel and puts the originals back when it leaves; the panel reads the originals. Armor names come from FileDiver's armor dump through the new `tools/armor_names.py`. `tests/test_wearing.py` covers all of it. 600+ checks.
+Under the hood: the equipped loadout is a helmet, cape and armor id stored back to back, found by a 5.7 research build that diffed two full memory scans. A one-time background pass finds it, and after that it's re-read every second. The mouse block works at two levels while the cursor is on the panel: the Lua `stingray.Mouse` read functions report "nothing pressed", and the game's Windows raw-input mouse (what its own code reads) is unregistered, then registered again exactly as it was when the cursor leaves, the panel closes or the game loses focus. The panel reads the button and cursor straight from Windows, so it keeps working. Armor names come from FileDiver's armor dump through the new `tools/armor_names.py`. `tests/test_wearing.py` covers all of it. 600+ checks.
 
 ## 5.7 (2026-10-01)
 Full edition:
