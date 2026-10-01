@@ -77,7 +77,9 @@ A mod that edits a live game's data while you play, built and tested like a prod
 - **Memory patching done safely.** Finds the game's armor-passive table in memory in a per-frame time budget. It never overwrites the game's rows: it builds a new modifier array and switches the record to it with one atomic 16-byte pointer+count store, double-buffered and verified by read-back, with automatic rollback. Every original byte can be restored, and records another mod already changed are left alone.
 - **An in-game UI from scratch.** An immediate-mode panel on the engine's raw GUI calls: whole-pixel layout that stays sharp from 720p to 4K, drag, scroll, search, undo, presets, share codes and typed values in plain units. Mouse and keyboard come through the Windows API and controllers through XInput, both over LuaJIT FFI, with spatial focus navigation for the controller.
 - **One format, three implementations, identical output.** The same `.ini` is parsed and compiled by Python (CLI), JavaScript (the web builder) and Lua (in game). A parity test requires Python and JS to produce **byte-identical** mod archives.
-- **Tested without the game.** A fake game runs the real mod code under LuaJIT, with memory laid out like the game's, a GUI, a mouse, a keyboard and an Xbox controller. 530+ checks drive it like a player and verify both the screen and the game's memory. Layout checks use real font metrics at every resolution and size.
+- **Tested without the game.** A fake game runs the real mod code under LuaJIT, with memory laid out like the game's, a GUI, a mouse, a keyboard and an Xbox controller. 560 checks drive it like a player and verify both the screen and the game's memory. Layout checks use real font metrics at every resolution and size.
+- **Research builds, then features.** Armor weight was found the measured way: a research build dumped every armor record (layout from FileDiver's open-source data library), an experiment changed one field, and the result was confirmed in game before any feature code was written. The same method located the equipped-armor loadout (a helmet, cape, armor id triple, found by diffing two full memory scans) and proved live colour-scheme swaps.
+- **Data tooling.** `tools/armor-names/` reproducibly builds FileDiver's armor dumper for Windows in CI, from a pinned commit, with a double-click runner. `tools/armor_names.py` turns its output into the mod's id-to-name table and checks it against what the game had in memory, so a new Warbond's armors show up as a list of missing names.
 - **Two editions from one codebase.** The Nexus build limits itself to one game passive per armor at the game's own values. The engine enforces it, and a test attacks it with a hostile save file.
 - **CI/CD.** Lint, all suites on every push, and tag-to-release: both editions built, release notes from the changelog, zips checked so no script or executable slips in.
 
@@ -163,6 +165,9 @@ tests/test_report_share.py panel off, short share codes, the problem report
 tools/research.lua         research builds only (`picker.py research`): armor kit dump, weight experiment
 tests/test_research.py     the research build, and that no release carries it
 tests/test_weight.py       armor weight: loadout line, panel, undo, save, share codes, Passive Swap untouched
+tools/armor-names/         builds FileDiver's armor dumper for Windows (CI: armor-names-tool.yml) with a double-click runner
+tools/armor_names.py       FileDiver's armor list -> tools/armor-names.json (ids to names), checked against the game's kits
+tests/test_armor_names.py  the name table conversion and game check
 tools/passives.json        plain description + armors per passive (wiki data; corrections welcome)
 tests/run_all.py           runs every suite and prints one summary
 tools/release_notes.py     release notes for a tag, from CHANGELOG.md (release workflow)

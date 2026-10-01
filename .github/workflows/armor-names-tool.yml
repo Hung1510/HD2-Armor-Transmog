@@ -1,0 +1,34 @@
+name: armor names tool
+
+# Builds FileDiver's armor-set-json-dumper for Windows with a double-click runner
+# (tools/armor-names/build.sh) and attaches it to the run as armor-names-tool.zip.
+# Run it from the Actions tab when a game update adds armors.
+on:
+  workflow_dispatch:
+    inputs:
+      filediver_ref:
+        description: FileDiver commit or branch
+        default: 6d66a9c
+  push:
+    paths:
+      - tools/armor-names/**
+      - .github/workflows/armor-names-tool.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Build armor-names-tool.zip
+        env:
+          FILEDIVER_REF: ${{ inputs.filediver_ref || '6d66a9c' }}
+        run: tools/armor-names/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: armor-names-tool
+          path: |
+            tools/armor-names/dist/armor-names-tool.zip
+            tools/armor-names/dist/armor-set-json-dumper.exe.sha256

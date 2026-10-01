@@ -1,0 +1,20 @@
+[
+    {
+        "id": "0xa9a71fe7", "dlc_id": 0, "set_id": 1, "name": "SR-64 Cinderblock", "description": "x", "rarity": "Common",
+        "passive": {"name": "Siege-Ready", "description": ["Increases reload speed"]},
+        "archive": "0x1", "kit_type": "Armor",
+        "body_types": [{"body_type": "slim", "pieces": [
+            {"path": "a", "slot": "torso", "piece_type": "armor", "weight": "heavy", "material_lut": "0x2"},
+            {"path": "b", "slot": "hips", "piece_type": "undergarment", "weight": "medium", "material_lut": "0x3"},
+            {"path": "c", "slot": "left_arm", "piece_type": "armor", "weight": "heavy", "material_lut": "0x4"}]}]
+    },
+    {
+        "id": "0xaed67d10", "name": "RS-89 Shadow Paragon", "passive": {"name": "Reduced Signature", "description": []},
+        "kit_type": "Armor", "body_types": [{"body_type": "stocky", "pieces": [
+            {"slot": "torso", "piece_type": "armor", "weight": "light"}]}]
+    },
+    {"id": "0x2d61f0f9", "name": "Some Helmet", "passive": {"name": "", "description": []}, "kit_type": "Helmet", "body_types": []},
+    {"id": "0x4f079d05", "name": "Some Cape", "passive": {"name": "", "description": []}, "kit_type": "Cape", "body_types": []},
+    {"id": "0x12345678", "name": "12345678", "passive": {"name": "", "description": []}, "kit_type": "Cape", "body_types": []},
+    {"id": "not-an-id", "name": "Broken", "kit_type": "Armor"}
+]

@@ -1,0 +1,167 @@
+#!/usr/bin/env python3
+"""
+Armor names: FileDiver's armor dump -> the mod's name table (tools/armor-names.json).
+
+The game's memory only has armor ids (0xA9A71FE7); the names ("SR-64 Cinderblock") are in
+its language files. tools/armor-names/ builds FileDiver's armor-set-json-dumper, which
+reads a game install and prints every armor, helmet and cape with its id and name. This
+script turns that output into a small, sorted, diff-friendly table the mod and the web
+builder use (Colours tab, per-armor weight), and checks it against what the game had in
+memory (ArmoryForge\\kits-dump.txt), so a new Warbond's armors show up as missing names.
+
+    python tools/armor_names.py armors.json                      # writes tools/armor-names.json
+    python tools/armor_names.py armors.json --check kits-dump.txt
+    python tools/armor_names.py --check kits-dump.txt            # check the current table only
+"""
+import argparse
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+TABLE = os.path.join(HERE, "armor-names.json")
+KINDS = {0: "armor", 1: "helmet", 2: "cape", "Armor": "armor", "Helmet": "helmet", "Cape": "cape"}
+WEIGHTS = {0: "light", 1: "medium", 2: "heavy", "light": "light", "medium": "medium", "heavy": "heavy"}
+
+
+class NamesError(Exception):
+    pass
+
+
+def read_text(path):
+    """armors.json as Run-me.bat writes it (UTF-8), or as PowerShell's `>` does (UTF-16)."""
+    raw = open(path, "rb").read()
+    for bom, enc in ((b"\xff\xfe", "utf-16-le"), (b"\xfe\xff", "utf-16-be"), (b"\xef\xbb\xbf", "utf-8")):
+        if raw.startswith(bom):
+            return raw[len(bom):].decode(enc)
+    if len(raw) > 1 and raw[1:2] == b"\0":
+        return raw.decode("utf-16-le")
+    return raw.decode("utf-8")
+
+
+def norm_id(v):
+    """'0xa9a71fe7' / 2846301159 -> '0xA9A71FE7' (None if it isn't a 32-bit id)"""
+    if isinstance(v, int):
+        n = v
+    elif isinstance(v, str) and re.fullmatch(r"0x[0-9a-fA-F]{1,8}", v.strip()):
+        n = int(v.strip(), 16)
+    else:
+        return None
+    return "0x%08X" % n if 0 < n < 2 ** 32 else None
+
+
+def majority_weight(kit):
+    count = {}
+    for body in kit.get("body_types") or []:
+        for pc in body.get("pieces") or []:
+            if pc.get("piece_type") in (0, "armor"):
+                w = WEIGHTS.get(pc.get("weight"))
+                if w:
+                    count[w] = count.get(w, 0) + 1
+    return max(count, key=count.get) if count else None
+
+
+def convert(dump):
+    """FileDiver armor-set-json-dumper output (a list of kits) -> {id: entry}"""
+    if not isinstance(dump, list) or not dump:
+        raise NamesError("expected FileDiver's armor list (a JSON array of kits)")
+    out, skipped = {}, []
+    for kit in dump:
+        kid = norm_id(kit.get("id"))
+        kind = KINDS.get(kit.get("kit_type"))
+        name = (kit.get("name") or "").strip()
+        if not kid or kind is None:
+            skipped.append(str(kit.get("id")))
+            continue
+        if re.fullmatch(r"[0-9a-f]{8}", name):      # FileDiver prints the hash when the name isn't known
+            name = ""
+        entry = {"name": name, "kind": kind}
+        passive = ((kit.get("passive") or {}).get("name") or "").strip()
+        if kind == "armor" and passive:
+            entry["passive"] = passive
+        w = majority_weight(kit) if kind == "armor" else None
+        if w:
+            entry["weight"] = w
+        if kid in out and out[kid] != entry:
+            raise NamesError("id %s appears twice with different data" % kid)
+        out[kid] = entry
+    return out, skipped
+
+
+def write_table(kits, path=TABLE, source=None):
+    doc = {
+        "about": "Armor, helmet and cape names by id, from FileDiver's armor-set-json-dumper "
+                 "(tools/armor-names/). Regenerate: python tools/armor_names.py armors.json",
+        "source": source or "",
+        "kits": {k: kits[k] for k in sorted(kits)},
+    }
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(doc, f, indent=1, ensure_ascii=False)
+        f.write("\n")
+
+
+def load_table(path=TABLE):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)["kits"]
+
+
+def kits_in_dump(path):
+    """{id: kind} from ArmoryForge\\kits-dump.txt (what the game had in memory)"""
+    out = {}
+    for line in read_text(path).splitlines():
+        m = re.match(r"kit (0x[0-9A-Fa-f]{8}) type (\d)", line)
+        if m:
+            out[norm_id(m.group(1))] = KINDS.get(int(m.group(2)), "?")
+    return out
+
+
+def check(kits, dump_path):
+    """ids the game has that the table doesn't (new armors) and the other way round"""
+    game = kits_in_dump(dump_path)
+    missing = sorted(k for k in game if k not in kits or not kits[k]["name"])
+    extra = sorted(k for k in kits if k not in game)
+    wrong = sorted(k for k in game if k in kits and kits[k]["kind"] != game[k])
+    return missing, extra, wrong
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
+    ap.add_argument("armors", nargs="?", help="armors.json from Run-me.bat (FileDiver output)")
+    ap.add_argument("--check", metavar="KITS_DUMP", help="compare with ArmoryForge\\kits-dump.txt")
+    ap.add_argument("-o", "--output", default=TABLE)
+    args = ap.parse_args(argv)
+    if not args.armors and not args.check:
+        ap.error("give armors.json, --check kits-dump.txt, or both")
+    try:
+        if args.armors:
+            kits, skipped = convert(json.loads(read_text(args.armors)))
+            write_table(kits, args.output, os.path.basename(args.armors))
+            counts = {}
+            for e in kits.values():
+                counts[e["kind"]] = counts.get(e["kind"], 0) + 1
+            unnamed = sum(1 for e in kits.values() if not e["name"])
+            print("wrote %s: %s%s" % (args.output, ", ".join("%d %s" % (n, k) for k, n in sorted(counts.items())),
+                                      ("; %d without a name" % unnamed) if unnamed else ""))
+            if skipped:
+                print("skipped %d entr%s without an id: %s" % (len(skipped), "y" if len(skipped) == 1 else "ies",
+                                                                ", ".join(skipped[:5])))
+        else:
+            kits = load_table(args.output)
+        if args.check:
+            missing, extra, wrong = check(kits, args.check)
+            print("checked against %s: %d in the game without a name, %d named but not in the game, %d kind mismatch"
+                  % (args.check, len(missing), len(extra), len(wrong)))
+            for k in missing[:20]:
+                print("  no name: %s" % k)
+            for k in wrong[:20]:
+                print("  kind differs: %s" % k)
+            return 1 if wrong else 0
+    except (NamesError, ValueError, OSError) as e:
+        print("error: %s" % e, file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
