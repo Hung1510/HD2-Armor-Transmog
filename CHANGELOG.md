@@ -2,7 +2,7 @@
 
 ## 6.0 (2026-10-01)
 Both editions (full and Passive Swap):
-- **The panel no longer lets clicks through:** while the cursor is on the panel, the game ignores the mouse, so you don't shoot, turn the camera or click the armory behind it. Off the panel (or with the panel closed) the mouse works as usual. Thanks anmayvuong9x.
+- **The game ignores your keyboard and mouse while the panel is open:** typing a value no longer moves your Helldiver, clicks don't shoot or press the armory behind the panel, and the mouse doesn't turn the camera. The mouse wheel still scrolls the panel's lists. Close the panel and everything works as before. The Keys tab has *Blocked / Let through* if you'd rather keep the game live. Thanks anmayvuong9x for the idea, and SHODAN Stat Editor, whose *Block game input* showed how the game reads its input.
 - **It knows what you're wearing:** a few seconds after the scan, the mod finds the armor you have equipped and follows it when you change. The panel opens on its passive's tab, and *+ Armor* lists your armor's passive first, marked *YOUR ARMOR*. Thanks Triwxys.
 - **Real armor names** from the game's own data; armors that share a name are numbered (*B-01 Tactical #2*).
 
@@ -12,7 +12,7 @@ Full edition:
 
 Tried and dropped: colour schemes from other armors (6.0 test builds). The game unloads the other armor's textures a second or two later and the armor turns black, so it's out.
 
-Under the hood: the equipped loadout is a helmet, cape and armor id stored back to back, found by a 5.7 research build that diffed two full memory scans. A one-time background pass finds it, and after that it's re-read every second. The mouse block works at two levels while the cursor is on the panel: the Lua `stingray.Mouse` read functions report "nothing pressed", and the game's Windows raw-input mouse (what its own code reads) is unregistered, then registered again exactly as it was when the cursor leaves, the panel closes or the game loses focus. The panel reads the button and cursor straight from Windows, so it keeps working. Armor names come from FileDiver's armor dump through the new `tools/armor_names.py`. `tests/test_wearing.py` covers all of it. 600+ checks.
+Under the hood: the equipped loadout is a helmet, cape and armor id stored back to back, found by a 5.7 research build that diffed two full memory scans. A one-time background pass finds it, and after that it's re-read every second. The game reads mouse movement as Windows raw input and keys, buttons and the wheel as window messages. While the panel is open, its raw mouse and keyboard registrations are taken (once the panel key is let go) and registered again exactly as they were when the panel closes or the game loses focus; a 173-byte window filter (`tools/window_filter.py`, tested on an x64 emulator in `tests/test_window_filter.py`) drops key presses and clicks and keeps the wheel for the panel. Releases always pass, so no key or button sticks. The panel reads keys, buttons and the cursor straight from Windows. Armor names come from FileDiver's armor dump through the new `tools/armor_names.py`. `tests/test_wearing.py` covers all of it. 600+ checks.
 
 ## 5.7 (2026-10-01)
 Full edition:

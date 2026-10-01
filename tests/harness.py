@@ -48,15 +48,15 @@ stingray = {
     Application = { worlds = function() return WORLDS end, main_world = function() return WORLDS[1] end,
                     can_get = function() return true end },
     IdString64 = { from_hex = function(s) return s end },
-    -- the engine's buttons are fed by Windows raw input: nothing while it's unregistered.
-    -- The wheel is assumed to keep working (legacy messages); to be confirmed in game.
-    Mouse = { button = function() return (RAW_MOUSE and MOUSE_DOWN) and 1 or 0 end, button_id = function() return 0 end,
-              pressed = function() return RAW_MOUSE ~= nil and MOUSE_DOWN end, released = function() return false end,
+    -- the engine's mouse: nothing while the panel holds the game's input
+    Mouse = { button = function() return (not GAME_HELD() and MOUSE_DOWN) and 1 or 0 end, button_id = function() return 0 end,
+              pressed = function() return not GAME_HELD() and MOUSE_DOWN end, released = function() return false end,
               axis_id = function(name) return name end,
-              axis = function(id) return { 0, WHEEL, 0 } end },
+              axis = function(id) return { 0, GAME_HELD() and 0 or WHEEL, 0 } end },
 }
 PP_TEST_INPUT = {
     focused = function() return true end,
+    window = function() return 'game window' end,
     key_down = function(vk) return KEYS[vk] == true end,
     cursor = function() return CURSOR[1], CURSOR[2], RES_W, RES_H end,
     show_cursor = function() return 0 end,
@@ -66,16 +66,49 @@ PP_TEST_INPUT = {
     pad = function() if PAD_ON then return PAD_B, PAD_LX, PAD_LY, PAD_RX, PAD_RY end return nil end,
     set_clipboard = function(text) CLIP = text; return true end,
     mouse_left = function() return MOUSE_DOWN end,
-    raw_mouse = function() return RAW_MOUSE and { flags = RAW_MOUSE.flags, target = RAW_MOUSE.target } end,
-    raw_mouse_set = function(dev)
+    -- the game's raw input registrations (mouse 1/2, keyboard 1/6)
+    raw_list = function()
+        local out = {}
+        for _, d in ipairs(RAW) do out[#out + 1] = { page = d.page, usage = d.usage, flags = d.flags, target = d.target } end
+        return out
+    end,
+    raw_register = function(devs)
         RAW_CALLS = RAW_CALLS + 1
-        if RAW_FAIL_SET and dev and dev.target ~= nil then return false end   -- e.g. a window on another thread
-        RAW_MOUSE = dev and { flags = dev.flags, target = dev.target } or nil
+        for _, d in ipairs(devs) do
+            if RAW_FAIL_GIVE and d.flags ~= 1 and d.target ~= nil then return false end   -- e.g. a window on another thread
+        end
+        for _, d in ipairs(devs) do
+            for i = #RAW, 1, -1 do if RAW[i].page == d.page and RAW[i].usage == d.usage then table.remove(RAW, i) end end
+            if d.flags ~= 1 then RAW[#RAW + 1] = { page = d.page, usage = d.usage, flags = d.flags, target = d.target } end
+        end
         return true
     end,
-    raw_mouse_ours = function(dev) return not RAW_OTHER_THREAD end,
+    raw_ours = function(d) return not RAW_OTHER_THREAD end,
+    -- the window filter, as tools/window_filter.py's code treats messages (that code itself
+    -- is run on an x64 emulator in tests/test_window_filter.py)
+    filter_install = function(w) if FILTER_FAIL then return nil, 'test' end; FILTER = FILTER or { flag = 0, wheel = 0, keys = 0, buttons = 0 }; return FILTER end,
+    filter_set = function(on) if FILTER then FILTER.flag = on and 1 or 0 end end,
+    filter_wheel = function() return FILTER and FILTER.wheel or 0 end,
+    filter_stats = function() if FILTER then return FILTER.keys, FILTER.buttons end return 0, 0 end,
 }
-RAW_MOUSE, RAW_CALLS, RAW_FAIL_SET, RAW_OTHER_THREAD = { flags = 0x30, target = 'game window' }, 0, false, false
+RAW = { { page = 1, usage = 2, flags = 0x30, target = 'game window' }, { page = 1, usage = 6, flags = 0x30, target = 'game window' } }
+RAW_CALLS, RAW_FAIL_GIVE, RAW_OTHER_THREAD, FILTER, FILTER_FAIL = 0, false, false, nil, false
+GAME_GOT = {}
+function GAME_HELD()
+    for _, d in ipairs(RAW) do if d.usage == 2 then return false end end
+    return true
+end
+-- a window message to the game window: a key press, a click or a wheel notch
+function GAME_MSG(kind, value)
+    if FILTER and FILTER.flag == 1 then
+        if kind == 'wheel' then FILTER.wheel = FILTER.wheel + value * 120
+        elseif kind == 'key' then FILTER.keys = FILTER.keys + 1
+        else FILTER.buttons = FILTER.buttons + 1 end
+        return false
+    end
+    GAME_GOT[#GAME_GOT + 1] = kind
+    return true
+end
 CLIP = nil
 PAD_ON, PAD_B, PAD_LX, PAD_LY, PAD_RX, PAD_RY = false, 0, 0, 0, 0, 0
 CowboyBingusModLoader = { api = 1 }
@@ -378,6 +411,7 @@ class FakeGame:
         g = self.L.globals()
         self.move_to(x + w / 2, self.res()[1] - (y + h / 2))
         g[b"WHEEL"] = notches
+        g[b"GAME_MSG"](b"wheel", notches)
         self.tick(1)
         g[b"WHEEL"] = 0
         self.tick(2)

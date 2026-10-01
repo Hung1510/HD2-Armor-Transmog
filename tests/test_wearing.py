@@ -10,10 +10,12 @@
    the ARMOR WEIGHT view sets it for the armor you're wearing, it's saved with the
    armor's name as a comment and travels in share codes; names work in the ini.
 3. The Passive Swap edition never changes weight.
-4. While the cursor is on the open panel, the game's mouse reads "nothing pressed":
-   the Lua mouse functions, and the game's Windows raw-input mouse is unregistered. The
-   panel's own clicks still work; off the panel and after closing, the game gets both
-   back exactly as they were, and is never left without a mouse.
+4. While the panel is open the game gets no keyboard or mouse (like SHODAN Stat Editor):
+   its raw mouse and keyboard are taken once the panel key is let go and given back exactly
+   as the game last registered them; the window filter drops key presses and clicks and
+   keeps the wheel for the panel's lists; the panel's own clicks still work. Keys tab:
+   Blocked / Let through. Never touches another thread's registration, and never leaves
+   the game without a mouse and keyboard if giving them back fails.
 """
 import base64
 import os
@@ -143,107 +145,112 @@ sw.key(F7)
 sw.tick(120)
 check(not any(k.startswith("aw:") for k in sw.regions()), "... and its panel has no weight buttons")
 
-# ------------------------------------------------------------------ 4. the game's mouse
+# ------------------------------------------------------------------ 4. the game's input
 gm = FakeGame(build(BASE), appdata=tempfile.mkdtemp())
 gm.tick(420)
-gm.L.execute(b"ORIG_BUTTON = stingray.Mouse.button")
-
-
-def is_orig():
-    return gm.L.eval(b"stingray.Mouse.button == ORIG_BUTTON")
-
-
-def game_sees_button():
-    """what the game's own scripts read for the left button right now"""
-    gm.L.execute(b"MOUSE_DOWN = true")
-    v = gm.L.eval(b"stingray.Mouse.button(stingray.Mouse.button_id('left'))")
-    gm.L.execute(b"MOUSE_DOWN = false")
-    return v
-
-
-check(game_sees_button() == 1, "panel closed: the game reads the mouse as usual")
-gm.key(F7)
-gm.tick(120)
-x, y, w, h, _ = gm.regions()["panel"]
-gm.move_to(x + w / 2, gm.res()[1] - (y + h / 2))
-check(game_sees_button() == 0, "cursor on the panel: the game sees no button pressed")
-check(gm.L.eval(b"stingray.Mouse.pressed(0)") is False, "... no click")
-ax = gm.L.eval(b"stingray.Mouse.axis(stingray.Mouse.axis_id('wheel'))")
-check(ax[1] == 0 and ax[2] == 0, "... and no movement or wheel")
-gm.click("add")
-check(gm.state[b"ui"][b"adding"], "the panel's own clicks still work while the game's are blocked")
-gm.click("addcancel")
-gm.move_to(5, 5)                                                    # top left: off the panel
-check(game_sees_button() == 1 and is_orig(),
-      "cursor off the panel: the game gets its own mouse back")
-gm.move_to(x + w / 2, gm.res()[1] - (y + h / 2))
-check(game_sees_button() == 0, "back on the panel: blocked again")
-gm.key(F7)
-gm.tick(2)
-check(is_orig() and game_sees_button() == 1,
-      "closing the panel gives the game its mouse back")
+G = gm.L.globals()
 
 
 def raw():
-    r = gm.L.eval(b"RAW_MOUSE")
-    return None if r is None else (r[b"flags"], r[b"target"])
+    return sorted((d[b"usage"], d[b"flags"], d[b"target"]) for d in G[b"RAW"].values())
 
 
-ORIG_RAW = (0x30, b"game window")
-check(raw() == ORIG_RAW, "panel closed: the game's raw-input mouse is registered as the game left it")
-gm.key(F7)
-gm.tick(120)
-gm.move_to(x + w / 2, gm.res()[1] - (y + h / 2))
-check(raw() is None, "cursor on the panel: the game's raw-input mouse is unregistered")
+def gi():
+    return gm.state[b"pp"][b"gi"]
+
+
+def msg(kind, value=1):
+    return G[b"GAME_MSG"](kind.encode(), value)
+
+
+GAME_RAW = [(2, 0x30, b"game window"), (6, 0x30, b"game window")]
+check(raw() == GAME_RAW and msg("key") and msg("click"), "panel closed: the game has its raw mouse and keyboard, keys and clicks pass")
+G[b"KEYS"][F7] = True                                                # F7 still held: nothing taken yet
+gm.tick(30)
+check(raw() == GAME_RAW, "the panel waits for its key to be let go before taking the game's input")
+G[b"KEYS"][F7] = None
+gm.tick(60)
+check(raw() == [], "panel open: the game's raw mouse and keyboard are taken away")
+check(not msg("key") and not msg("click"), "... key presses and clicks to the game window are dropped")
+gm.tick(60)
 gm.click("add")
-check(gm.state[b"ui"][b"adding"], "... and the panel still takes clicks (read from Windows)")
+check(gm.state[b"ui"][b"adding"], "the panel's own clicks still work (read from Windows)")
 gm.click("addcancel")
-gm.L.execute(b"RAW_MOUSE = { flags = 0x100, target = 'game window' }")          # the game registers again
+gm.click("sel:%d" % SR)
+G[b"RAW"][1] = gm.L.table_from({b"page": 1, b"usage": 2, b"flags": 0x100, b"target": b"game window"})   # the game registers again
 gm.tick(40)
-check(raw() is None, "the game registering its mouse again while on the panel is undone")
-gm.move_to(5, 5)
-check(raw() == (0x100, b"game window"), "off the panel: given back as the game last registered it")
-gm.move_to(x + w / 2, gm.res()[1] - (y + h / 2))
+check(raw() == [], "the game registering its mouse again while open is undone")
 gm.key(F7)
 gm.tick(2)
-check(raw() == (0x100, b"game window"), "closing the panel gives it back")
+check(raw() == [(2, 0x100, b"game window"), (6, 0x30, b"game window")],
+      "closing the panel gives both back, as the game last registered them")
+check(msg("key") and msg("click") and gm.L.eval(b"FILTER.flag") == 0, "... and keys and clicks pass again")
 
-# a registration on another thread is left alone
-gm.L.execute(b"RAW_OTHER_THREAD = true")
+# the wheel scrolls the panel's lists through the window filter while the game's input is held
+sc = FakeGame(build(BASE), appdata=tempfile.mkdtemp())
+sc.set_resolution(1280, 720)
+sc.tick(420)
+sc.key(F7)
+sc.tick(120)
+sc.click("add")
+top = sc.state[b"ui"][b"scroll"][b"add"] or 0
+sc.scroll_wheel(next(k for k in sc.regions() if k.startswith("addpick:")), -2)
+check((sc.state[b"ui"][b"scroll"][b"add"] or 0) > top, "the wheel still scrolls the panel's lists (from the window filter)")
+
+# Keys tab: Let through
 gm.key(F7)
 gm.tick(120)
-gm.move_to(x + w / 2, gm.res()[1] - (y + h / 2))
-check(raw() == (0x100, b"game window"), "a raw mouse owned by another thread is never touched")
-
-
-def raw_state():
-    return gm.state[b"pp"][b"raw"][b"state"].decode()
-
-
-check("another thread" in raw_state(), "... and the report says why (%s)" % raw_state())
+check(raw() == [] and gi()[b"state"] == b"held", "open again: held")
 gm.click("settings")
-gm.click("report")
-check("raw input" in (gm.clipboard() or "") and "flags 0x100" in (gm.clipboard() or ""),
-      "the problem report shows the raw-input state and the game's registration")
+gm.click("blockin:off")
+check(raw() == [(2, 0x100, b"game window"), (6, 0x30, b"game window")] and msg("key"),
+      "Keys tab, Let through: the game gets its input while the panel is open")
 gm.key(F7)
-gm.tick(2)
-gm.L.execute(b"RAW_OTHER_THREAD = false")
-
-# giving it back fails: the game still gets a mouse, and the block stops for the session
 gm.key(F7)
 gm.tick(120)
-gm.move_to(x + w / 2, gm.res()[1] - (y + h / 2))
-check(raw() is None, "on the panel again: unregistered")
-gm.L.execute(b"RAW_FAIL_SET = true")
-gm.move_to(5, 5)
-check(raw() is not None, "giving it back fails: the game still gets a mouse (registered without a window)")
-check(raw_state() == "broken", "... and the block is marked off")
-gm.L.execute(b"RAW_FAIL_SET = false")
-calls = gm.L.eval(b"RAW_CALLS")
-gm.move_to(x + w / 2, gm.res()[1] - (y + h / 2))
-gm.move_to(5, 5)
-check(gm.L.eval(b"RAW_CALLS") == calls, "... after that the raw-input block stays off for the session")
+check(raw() != [], "... and it stays let through")
+gm.click("settings")
+gm.click("blockin:on")
+gm.tick(40)
+check(raw() == [], "Blocked again")
+gm.click("report")
+rep = gm.clipboard() or ""
+check("game input while open: blocked (held)" in rep and "dropped:" in rep, "the problem report says what the panel holds")
 gm.key(F7)
+
+# a raw registration owned by another thread is never touched
+G[b"RAW_OTHER_THREAD"] = True
+gm.key(F7)
+gm.tick(60)
+check(len(raw()) == 2 and "another thread" in gi()[b"state"].decode(), "raw input owned by another thread is left alone")
+gm.key(F7)
+G[b"RAW_OTHER_THREAD"] = False
+
+# giving it back fails: the game still gets a mouse and keyboard, and blocking stops for the session
+gm.key(F7)
+gm.tick(60)
+check(raw() == [], "held")
+G[b"RAW_FAIL_GIVE"] = True
+gm.key(F7)
+gm.tick(2)
+check([u for u, _, _ in raw()] == [2, 6] and all(t is None for _, _, t in raw()),
+      "giving it back fails: registered again without a window, so the game keeps its input")
+check(gi()[b"broken"], "... and blocking is off for the session")
+G[b"RAW_FAIL_GIVE"] = False
+calls = G[b"RAW_CALLS"]
+gm.key(F7)
+gm.tick(60)
+gm.key(F7)
+check(G[b"RAW_CALLS"] == calls, "... nothing is taken after that")
+
+# no window filter: raw input is still held, and it says why
+gf = FakeGame(build(BASE), appdata=tempfile.mkdtemp())
+gf.L.globals()[b"FILTER_FAIL"] = True
+gf.tick(420)
+gf.key(F7)
+gf.tick(60)
+check(gf.state[b"pp"][b"gi"][b"filter_failed"] is not None and len(list(gf.L.globals()[b"RAW"].values())) == 0,
+      "no window filter: the raw mouse and keyboard are still held, and the log says why")
 
 if failed:
     print("\n%d FAILED" % len(failed))

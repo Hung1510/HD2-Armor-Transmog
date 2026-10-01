@@ -33,6 +33,23 @@ end
 for _, k in ipairs({ { 0x20, ' ', ' ' }, { 0xBD, '-', '_' }, { 0x6D, '-', '-' } }) do NAME_KEYS[#NAME_KEYS + 1] = k end
 
 -- ---------------------------------------------------------------- windows input
+-- the window filter's code and message table (tools/window_filter.py; tests/test_window_filter.py
+-- runs it on an x64 emulator)
+local FILTER_TABLE = { 0x10, 0x20, 0x10, 0x11, 0x21, 0x11, 0x12, 0x22, 0x12, 0x00, 0x13, 0x23, 0x13 }
+local FILTER_CODE = {
+    0x8D, 0x82, 0xFF, 0xFD, 0xFF, 0xFF, 0x83, 0xF8, 0x0C, 0x77, 0x54, 0x45, 0x0F, 0xB6, 0x5C, 0x02,
+    0x30, 0x45, 0x85, 0xDB, 0x74, 0x2A, 0x44, 0x89, 0xD8, 0x41, 0x83, 0xE3, 0x0F, 0xC1, 0xE8, 0x04,
+    0x83, 0xF8, 0x02, 0x74, 0x0D, 0x41, 0x83, 0x3A, 0x00, 0x75, 0x0E, 0x45, 0x0F, 0xAB, 0x5A, 0x20,
+    0xEB, 0x5C, 0x45, 0x0F, 0xB3, 0x5A, 0x20, 0x72, 0x55, 0x41, 0xFF, 0x42, 0x0C, 0x31, 0xC0, 0xC3,
+    0x81, 0xFA, 0x0A, 0x02, 0x00, 0x00, 0x75, 0x46, 0x41, 0x83, 0x3A, 0x00, 0x74, 0x40, 0x4C, 0x89,
+    0xC0, 0x48, 0xC1, 0xE8, 0x10, 0x0F, 0xBF, 0xC0, 0x41, 0x01, 0x42, 0x04, 0x31, 0xC0, 0xC3, 0x41,
+    0x83, 0x3A, 0x00, 0x74, 0x29, 0x81, 0xFA, 0x00, 0x01, 0x00, 0x00, 0x74, 0x1A, 0x81, 0xFA, 0x02,
+    0x01, 0x00, 0x00, 0x74, 0x12, 0x81, 0xFA, 0x03, 0x01, 0x00, 0x00, 0x74, 0x0A, 0x81, 0xFA, 0x09,
+    0x01, 0x00, 0x00, 0x74, 0x02, 0xEB, 0x07, 0x41, 0xFF, 0x42, 0x08, 0x31, 0xC0, 0xC3, 0x48, 0x83,
+    0xEC, 0x38, 0x4C, 0x89, 0x4C, 0x24, 0x20, 0x4D, 0x89, 0xC1, 0x41, 0x89, 0xD0, 0x48, 0x89, 0xCA,
+    0x49, 0x8B, 0x4A, 0x10, 0x41, 0xFF, 0x52, 0x18, 0x48, 0x83, 0xC4, 0x38, 0xC3,
+}
+
 local function build_input()
     for _, declaration in ipairs({
         'void *GetForegroundWindow(void);',
@@ -58,6 +75,13 @@ local function build_input()
         'uint32_t GetRegisteredRawInputDevices(void *devices, uint32_t *count, uint32_t size);',
         'int RegisterRawInputDevices(const void *devices, uint32_t count, uint32_t size);',
         'typedef struct { uint16_t page; uint16_t usage; uint32_t flags; void *target; } AF_RAWDEV;',
+        'void *GetModuleHandleA(const char *name);',
+        'void *GetProcAddress(void *module, const char *name);',
+        'void *VirtualAlloc(void *address, size_t size, uint32_t type, uint32_t protect);',
+        'int FlushInstructionCache(void *process, const void *address, size_t size);',
+        'void *GetCurrentProcess(void);',
+        'intptr_t GetWindowLongPtrW(void *window, int index);',
+        'intptr_t SetWindowLongPtrW(void *window, int index, intptr_t value);',
     }) do pcall(ffi.cdef, declaration) end
     local user = ffi.load('user32')
     local kernel = ffi.load('kernel32')
@@ -77,40 +101,84 @@ local function build_input()
         local swapped = user.GetSystemMetrics(23) ~= 0             -- SM_SWAPBUTTON
         return user.GetAsyncKeyState(swapped and 0x02 or 0x01) < 0
     end
-    -- The game reads the mouse as Windows raw input. raw_mouse() is its registration
-    -- ({ flags, target } or nil), raw_mouse_set(nil) takes it away (no movement, clicks or
-    -- wheel reach the game), raw_mouse_set(saved) gives it back exactly as it was.
+    -- Windows raw input registrations of this process: { page, usage, flags, target }
     local raw_ok, RAWDEV = pcall(ffi.sizeof, 'AF_RAWDEV')
     if raw_ok then
-    function self.raw_mouse()
+    function self.raw_list()
         local count = ffi.new('uint32_t[1]', 0)
         user.GetRegisteredRawInputDevices(nil, count, RAWDEV)
-        if count[0] == 0 then return nil end
-        local list = ffi.new('AF_RAWDEV[?]', count[0] + 4)
+        local out = {}
+        if count[0] == 0 then return out end
         count[0] = count[0] + 4
-        local got = user.GetRegisteredRawInputDevices(list, count, RAWDEV)
-        if got == 0xFFFFFFFF then return nil end
+        local list = ffi.new('AF_RAWDEV[?]', count[0])
+        -- void* casts: another mod in this Lua state may have declared these with its own struct
+        local got = user.GetRegisteredRawInputDevices(ffi.cast('void *', list), count, RAWDEV)
+        if got == 0xFFFFFFFF then return out end
         for i = 0, got - 1 do
-            if list[i].page == 1 and list[i].usage == 2 then
-                return { flags = list[i].flags, target = list[i].target }
-            end
+            out[#out + 1] = { page = list[i].page, usage = list[i].usage, flags = list[i].flags, target = list[i].target }
         end
-        return nil
+        return out
     end
-    function self.raw_mouse_set(dev)
-        local d = ffi.new('AF_RAWDEV[1]')
-        d[0].page, d[0].usage = 1, 2
-        if dev then d[0].flags, d[0].target = dev.flags, dev.target
-        else d[0].flags, d[0].target = 0x1, nil end                -- RIDEV_REMOVE
-        return user.RegisterRawInputDevices(d, 1, RAWDEV) ~= 0
+    function self.raw_register(devices)
+        local d = ffi.new('AF_RAWDEV[?]', #devices)
+        for i, v in ipairs(devices) do
+            d[i - 1].page, d[i - 1].usage, d[i - 1].flags, d[i - 1].target = v.page, v.usage, v.flags, v.target
+        end
+        return user.RegisterRawInputDevices(ffi.cast('void *', d), #devices, RAWDEV) ~= 0
     end
     -- only touch a registration whose window belongs to this (the Lua) thread: giving it
     -- back from another thread could fail and leave the game without a mouse
-    function self.raw_mouse_ours(dev)
+    function self.raw_ours(dev)
         if dev.target == nil then return true end
         return user.GetWindowThreadProcessId(dev.target, nil) == kernel.GetCurrentThreadId()
     end
     end   -- raw_ok
+
+    -- the window filter (tools/window_filter.py): one per install, never removed (another
+    -- mod may have chained its own procedure after it); all share the flag
+    local filters = {}
+    function self.filter_install(window)
+        if window == nil then return nil, 'no game window' end
+        local current = user.GetWindowLongPtrW(window, -4)              -- GWLP_WNDPROC
+        for _, f in ipairs(filters) do
+            if f.window == window and current == f.entry then return f end
+        end
+        local call = kernel.GetProcAddress(kernel.GetModuleHandleA('user32.dll'), 'CallWindowProcW')
+        local block = kernel.VirtualAlloc(nil, 4096, 0x3000, 0x40)      -- commit + reserve, read / write / execute
+        if call == nil or block == nil or current == 0 then return nil, 'no memory for it' end
+        local b, q, u = ffi.cast('uint8_t *', block), ffi.cast('uint64_t *', block), ffi.cast('uint32_t *', block)
+        q[2], q[3] = ffi.cast('uint64_t', current), ffi.cast('uint64_t', ffi.cast('uintptr_t', call))
+        for k, v in ipairs(FILTER_TABLE) do b[47 + k] = v end
+        local held = 0                                                  -- buttons down now: the game saw them pressed
+        for n, vk in ipairs({ 0x01, 0x02, 0x04, 0x05 }) do
+            if user.GetAsyncKeyState(vk) < 0 or (vk == 0x05 and user.GetAsyncKeyState(0x06) < 0) then held = held + 2 ^ (n - 1) end
+        end
+        u[8] = held
+        b[64], b[65] = 0x49, 0xBA                                       -- mov r10, <block>
+        ffi.cast('uint64_t *', b + 66)[0] = ffi.cast('uint64_t', ffi.cast('uintptr_t', block))
+        for k, v in ipairs(FILTER_CODE) do b[73 + k] = v end
+        kernel.FlushInstructionCache(kernel.GetCurrentProcess(), b + 64, 10 + #FILTER_CODE)
+        local entry = ffi.cast('intptr_t', b + 64)
+        local previous = user.SetWindowLongPtrW(window, -4, entry)
+        if previous == 0 then return nil, 'Windows refused it' end
+        if previous ~= current then q[2] = ffi.cast('uint64_t', previous) end
+        local f = { window = window, entry = entry, u = u }
+        filters[#filters + 1] = f
+        return f
+    end
+    function self.filter_set(on)
+        for _, f in ipairs(filters) do f.u[0] = on and 1 or 0 end
+    end
+    function self.filter_wheel()
+        local t = 0
+        for _, f in ipairs(filters) do t = t + ffi.cast('int32_t *', f.u)[1] end
+        return t
+    end
+    function self.filter_stats()
+        local keys, buttons = 0, 0
+        for _, f in ipairs(filters) do keys, buttons = keys + f.u[2], buttons + f.u[3] end
+        return keys, buttons
+    end
     -- cursor in client pixels from the top left, and the client size
     function self.cursor()
         local window = self.window()
@@ -686,15 +754,13 @@ function PP.load_pos()
     local t = read_file(forge_file('panel-position.txt'))
     local x, y = tostring(t or ''):match('x%s*=%s*([%d%.]+)'), tostring(t or ''):match('y%s*=%s*([%d%.]+)')
     ui.pos = (tonumber(x) and tonumber(y)) and { fx = tonumber(x), fy = tonumber(y) } or nil
+    ui.block_input = not tostring(t or ''):match('block_input%s*=%s*off')
 end
 function PP.save_pos()
     local path = forge_file('panel-position.txt')
     if not path then return end
-    if ui.pos then
-        write_file(path, string.format('x = %.4f\ny = %.4f\n', ui.pos.fx, ui.pos.fy))
-    else
-        write_file(path, '')
-    end
+    write_file(path, (ui.pos and string.format('x = %.4f\ny = %.4f\n', ui.pos.fx, ui.pos.fy) or '') ..
+                     (ui.block_input == false and 'block_input = off\n' or ''))
 end
 
 function PP.swap()
@@ -776,9 +842,7 @@ function PP.report()
         'font=' .. tostring(ui.font_said or '(not drawn yet)'),
         'controller=' .. (PP.has_pad and 'connected' or 'not seen') .. ' mouse=' .. (ui.mouse_broken and 'off after an error' or 'ok'),
         'last panel error=' .. tostring(d.last_error or '-'),
-        'game mouse over the panel: lua ' .. (PP.blocked and 'blocked now' or 'not blocked now') ..
-            (rawget(_G, 'Mouse') and rawget(_G, 'Mouse') ~= (sr and rawget(sr, 'Mouse')) and ' (+ global Mouse)' or '') ..
-            ', raw input ' .. tostring(PP.raw.state) .. PP.raw_desc(),
+        PP.input_desc(),
         '--- other mods ---',
         'loader api=' .. tostring(type(loader) == 'table' and loader.api) .. ' fields: ' .. PP.names_of(loader, 12),
         'update bus jobs: ' .. PP.names_of(type(bus) == 'table' and bus.jobs, 20),
@@ -1351,7 +1415,7 @@ local function draw(width, height)
         y = key_grid('hotkey', hotkey(), nil, y + 20, false) + 14
         label('Quick-swap loadouts', IX, y, nil, IW)
         y = key_grid('swap_hotkey', swap_key(), hotkey(), y + 20, true) + 6
-        text('Picking the quick-swap key as the panel key turns quick-swap off.', IX, y, 12, C.DIM, IW)
+        wrap('Picking the quick-swap key as the panel key turns quick-swap off.', IX, y, 12, C.DIM, IW, 2)
 
         head(RX, TOP + 14, 'Settings', 'Panel', RIW)
         local ry = TOP + 70
@@ -1361,7 +1425,11 @@ local function draw(width, height)
         button('zoom:0', 'Reset size and position', bx, ry + 26, nil, 32, ui_scale() ~= 1 or ui.pos ~= nil)
         ry = ry + 84
         text('Move the panel: drag its top strip.', RX, ry, 14, C.TEXT, RIW)
-        ry = ry + 40
+        ry = ry + 30
+        label('Game keyboard and mouse while open', RX, ry, nil, RIW)
+        local gx = RX + button('blockin:on', 'Blocked', RX, ry + 20, nil, 30, true, PP.block_on()) + 8
+        button('blockin:off', 'Let through', gx, ry + 20, nil, 30, true, not PP.block_on())
+        ry = ry + 64
         rect(RX, ry, RIW, 1, C.LINE, 951)
         label('Fixed keys', RX, ry + 14, nil, RIW)
         local fixed = { { 'CTRL+Z', 'Undo' }, { 'CTRL+F', 'Search passives' }, { 'CTRL +/-', 'Panel size' },
@@ -1824,6 +1892,12 @@ local function click(key)
     elseif kind == 'search' then
         if arg == 'clear' then PP.set_search('', false) else PP.set_search(ui.search, true) end
     elseif kind == 'settings' then ui.settings, ui.adding, ui.presets = not ui.settings, false, false
+    elseif kind == 'blockin' then
+        ui.block_input = arg == 'on'
+        pcall(PP.save_pos)
+        if not ui.block_input then pcall(PP.give_input) end
+        say(ui.block_input and 'The game gets no keyboard or mouse while the panel is open'
+            or 'The game gets your keyboard and mouse while the panel is open')
     elseif kind == 'key' then
         local which, k = arg:match('^([%w_]+):(%w+)$')
         PP.set_key(which, k)
@@ -2008,114 +2082,123 @@ local function keyboard(now)
     end
 end
 
--- ---------------------------------------------------------------- the game's mouse
--- While the cursor is over the panel, the game shouldn't shoot, turn or click behind it.
--- Two layers: (1) the Lua mouse (stingray.Mouse, and a separate global Mouse if there is
--- one) reports "no input"; (2) the game's Windows raw-input mouse is unregistered, which
--- is what the game's own code reads, and registered again exactly as it was when the
--- cursor leaves the panel or the panel closes. The panel reads the button from Windows
--- (input.mouse_left) and the cursor with GetCursorPos, so it keeps working.
-PP.MOUSE_FNS = { button = 0, pressed = false, released = false, any_pressed = 'nil', any_released = 'nil', axis = 'zero' }
+-- ---------------------------------------------------------------- the game's input
+-- While the panel is open the game gets no keyboard or mouse input: typing a value doesn't
+-- move your Helldiver, clicks don't shoot or press the armory behind the panel, the mouse
+-- doesn't turn the camera. (Same idea as SHODAN Stat Editor's "Block game input".)
+-- The game reads mouse movement as Windows raw input, and key presses, mouse buttons and the
+-- wheel as window messages. So: (1) its raw mouse and keyboard registrations are taken away
+-- and kept, and registered again exactly as they were when the panel closes; (2) a small
+-- window filter (tools/window_filter.py) in front of the game window drops key presses and
+-- button presses and keeps the wheel for the panel. Key and button releases still pass, so
+-- nothing sticks. The panel reads keys, buttons and the cursor itself (GetAsyncKeyState,
+-- GetCursorPos), which neither touches. Taken once the panel key is let go; checked twice
+-- a second (the game may register again); given back when the panel closes or the game
+-- window loses focus. block_input = off in panel-position.txt (Keys tab) turns it off.
+PP.gi = { state = 'not yet', saved = nil, next_check = 0 }
 
-function PP.mouse_real(name)
-    return (PP.blocked and PP.blocked[name]) or rawget(sr.Mouse, name)
-end
+function PP.block_on() return ui.block_input ~= false end
 
-local function mouse_tables()
-    local out = {}
-    local M = sr and rawget(sr, 'Mouse')
-    if type(M) == 'table' then out[#out + 1] = M end
-    local G = rawget(_G, 'Mouse')
-    if type(G) == 'table' and G ~= M then out[#out + 1] = G end
-    return out
-end
-
-function PP.block_lua_mouse(on)
-    if on and not PP.blocked then
-        PP.blocked, PP.blocked_all = {}, {}
-        for n, M in ipairs(mouse_tables()) do
-            local saved = {}
-            for name, none in pairs(PP.MOUSE_FNS) do
-                local f = rawget(M, name)
-                if type(f) == 'function' then
-                    saved[name] = f
-                    if n == 1 then PP.blocked[name] = f end
-                    if none == 'zero' then M[name] = function() return sr.Vector3(0, 0, 0) end
-                    elseif none == 'nil' then M[name] = function() return nil end
-                    else M[name] = function() return none end end
-                end
-            end
-            PP.blocked_all[#PP.blocked_all + 1] = { M, saved }
+function PP.hold_input(now)
+    local G = PP.gi
+    if not PP.block_on() or G.broken or not (input.raw_list and input.raw_register) then return end
+    if not input.focused() then return PP.give_input() end
+    local hk = VK[hotkey()]
+    if hk and input.key_down(hk) then return end              -- the game sees the panel key let go first
+    if input.filter_install and not G.filter and not G.filter_failed then
+        local ok, f, why = pcall(input.filter_install, input.window and input.window())
+        if ok and f then
+            G.filter, G.wheel_seen = true, input.filter_wheel()
+        else
+            G.filter_failed = tostring(ok and why or f)
+            log('panel: no window filter (key presses and clicks may reach the game): ' .. G.filter_failed)
         end
-    elseif not on and PP.blocked then
-        for _, t in ipairs(PP.blocked_all or {}) do
-            for name, f in pairs(t[2]) do t[1][name] = f end
+    end
+    if G.filter and not G.filtering then input.filter_set(true); G.filtering = true end
+    if now < G.next_check then return end
+    G.next_check = now + 0.5
+    local take, other = {}, false
+    for _, d in ipairs(input.raw_list()) do
+        if d.page == 1 and (d.usage == 2 or d.usage == 6) then
+            if input.raw_ours(d) then take[#take + 1] = d else other = true end
         end
-        PP.blocked, PP.blocked_all = nil, nil
+    end
+    if other then G.other = true end
+    if #take == 0 then
+        if not G.saved then G.state = other and 'raw input on another thread: left alone' or 'game has no raw input' end
+        return
+    end
+    local remove = {}
+    for _, d in ipairs(take) do remove[#remove + 1] = { page = 1, usage = d.usage, flags = 0x1, target = nil } end
+    if input.raw_register(remove) then
+        G.saved = G.saved or {}
+        for _, d in ipairs(take) do G.saved[d.usage] = d end   -- the game's latest registration
+        G.takes = (G.takes or 0) + 1
+        G.state = 'held'
+    else
+        G.state, G.broken = 'could not take it', true
+        log('panel: could not take the game\'s raw input; it keeps it')
     end
 end
 
--- raw input: PP.raw = { saved = registration, off = true while taken away }
-function PP.raw_desc()
-    local ok, cur = pcall(function() return input and input.raw_mouse and input.raw_mouse() end)
-    local d = ok and cur or PP.raw.saved
-    if not d then return ' (no registration seen)' end
-    return string.format(' (flags 0x%X, window %s)', tonumber(d.flags) or 0, d.target == nil and 'none' or 'set')
-end
-PP.raw = { state = 'not tried' }
-function PP.block_raw_mouse(on, now)
-    local R = PP.raw
-    if not (input and input.raw_mouse and input.raw_mouse_set) or R.state == 'broken' then return end
-    if on then
-        -- also catches the game registering its mouse again while we hold it
-        if R.off and now and now < (R.check_at or 0) then return end
-        R.check_at = (now or 0) + 0.5
-        local cur = input.raw_mouse()
-        if not cur then
-            if not R.off then R.state = 'game has no raw mouse' end
-            return
+function PP.give_input()
+    local G = PP.gi
+    if G.filtering then pcall(input.filter_set, false); G.filtering = false end
+    G.next_check = 0
+    if not G.saved then return end
+    local list = {}
+    for _, d in pairs(G.saved) do list[#list + 1] = d end
+    table.sort(list, function(a, b) return a.usage < b.usage end)
+    G.saved = nil
+    if input.raw_register(list) then G.state = 'given back'; return end
+    -- never leave the game without a mouse and keyboard: again without a window (flags that
+    -- need one cleared), else plain
+    local plain = {}
+    for _, d in ipairs(list) do
+        local f = tonumber(d.flags) or 0
+        for _, m in ipairs({ 0x100, 0x1000, 0x2000 }) do                -- INPUTSINK, EXINPUTSINK, DEVNOTIFY need a window
+            if math.floor(f / m) % 2 == 1 then f = f - m end
         end
-        if not input.raw_mouse_ours(cur) then R.state = 'raw mouse on another thread: left alone'; return end
-        R.saved = cur
-        if input.raw_mouse_set(nil) then
-            R.off, R.state = true, 'off over the panel'
-        else
-            R.state = 'could not unregister'
-        end
-    elseif R.off then
-        local ok = input.raw_mouse_set(R.saved)
-        local back = ok and input.raw_mouse()
-        if not back then                                   -- never leave the game without a mouse
-            ok = input.raw_mouse_set({ flags = R.saved.flags, target = nil }) or input.raw_mouse_set({ flags = 0, target = nil })
-            R.state = 'broken'
-            log('panel: could not give the game its raw mouse back as it was; registered it again without a window ('
-                .. tostring(ok) .. '); the mouse block is off for this session')
-        else
-            R.state = 'given back'
-        end
-        R.off = false
+        plain[#plain + 1] = { page = 1, usage = d.usage, flags = f, target = nil }
     end
-end
-
-function PP.block_mouse(on, now)
-    PP.block_lua_mouse(on)
-    local ok, why = pcall(PP.block_raw_mouse, on, now)
+    local ok = input.raw_register(plain)
     if not ok then
-        PP.raw.state, PP.raw.off = 'broken', false
-        log('panel: raw mouse block off for this session: ' .. tostring(why))
+        for _, d in ipairs(plain) do d.flags = 0 end
+        ok = input.raw_register(plain)
     end
+    G.state, G.broken = 'broken', true
+    log('panel: could not give the game its raw input back as it was; registered it again without a window (' ..
+        tostring(ok) .. '); game input blocking is off for this session')
 end
 
--- is this screen point (pixels from the top left) on the panel?
-function PP.over_panel(sx, sy)
-    local h = select(2, sr.Gui.resolution())
-    for _, r in ipairs(ui.regions or {}) do
-        if r.key == 'panel' then
-            local by = h - sy
-            return sx >= r.x and sx <= r.x + r.w and by >= r.y and by <= r.y + r.h
-        end
+-- wheel notches turned over the window since the last call, from the window filter
+function PP.filter_wheel()
+    local G = PP.gi
+    if not G.filtering then return nil end
+    local total = input.filter_wheel()
+    local turned = total - (G.wheel_seen or total)
+    G.wheel_seen = total
+    G.wheel_rest = (G.wheel_rest or 0) + turned
+    local n = G.wheel_rest >= 0 and math.floor(G.wheel_rest / 120) or -math.floor(-G.wheel_rest / 120)
+    G.wheel_rest = G.wheel_rest - n * 120
+    return n
+end
+
+function PP.input_desc()
+    local G = PP.gi
+    local parts = { 'game input while open: ' .. (PP.block_on() and 'blocked' or 'not blocked') .. ' (' .. tostring(G.state) .. ')' }
+    if G.filter_failed then parts[#parts + 1] = 'no window filter: ' .. G.filter_failed end
+    if input and input.filter_stats then
+        local ok, keys, buttons = pcall(input.filter_stats)
+        if ok and keys then parts[#parts + 1] = 'dropped: ' .. keys .. ' key presses, ' .. buttons .. ' clicks' end
     end
-    return false
+    local ok, list = pcall(function() return input.raw_list and input.raw_list() or {} end)
+    local seen = {}
+    for _, d in ipairs(ok and list or {}) do
+        seen[#seen + 1] = string.format('%d/%d flags 0x%X %s', d.page, d.usage, tonumber(d.flags) or 0, d.target == nil and 'no window' or 'window')
+    end
+    parts[#parts + 1] = 'raw input now: ' .. (#seen > 0 and table.concat(seen, ', ') or 'none')
+    return table.concat(parts, '; ')
 end
 
 -- mouse wheel movement this frame (+ = away from you), 0 if the engine won't say
@@ -2129,7 +2212,7 @@ local function wheel()
             if ok and v ~= nil then id = v break end
         end
     end
-    local axis = PP.mouse_real('axis')
+    local axis = rawget(M, 'axis')
     if id == nil or type(axis) ~= 'function' then return 0 end
     local ok, v = pcall(axis, id)
     if not ok or v == nil then return 0 end
@@ -2148,12 +2231,11 @@ local function mouse()
         ui.version = ui.version + 1
     end
     PP.last_cur = { x, y }
-    PP.over = PP.over_panel(sx, sy)
     local down
     if input.mouse_left then
         down = input.mouse_left()
     else
-        local value = PP.mouse_real('button')(sr.Mouse.button_id('left'))
+        local value = sr.Mouse.button(sr.Mouse.button_id('left'))
         down = value == true or (type(value) == 'number' and value > 0)
     end
     -- dragging the panel by its top strip: follows the cursor until the button is let go
@@ -2178,12 +2260,18 @@ local function mouse()
         mouse_was_down = down
         return
     end
+    -- the wheel: notches from the window filter while the game's input is held, else the engine's
+    local notches = PP.filter_wheel()
     if x < 0 or y < 0 or x >= cw or y >= ch then return end
     ui.hover = hit(sx, height - sy, true)
     local sc = ui.scrolling
     if sc and sx >= sc.x and sx < sc.x + sc.w and height - sy >= sc.y and height - sy < sc.y + sc.h then
-        local dy = wheel()
-        if dy ~= 0 then PP.scroll(dy > 0 and -3 or 3) end
+        if notches then
+            if notches ~= 0 then PP.scroll(-3 * notches) end
+        else
+            local dy = wheel()
+            if dy ~= 0 then PP.scroll(dy > 0 and -3 or 3) end
+        end
     end
     if mouse_was_down ~= nil then
         if down and not mouse_was_down and ui.hover == 'drag' and ui.origin then
@@ -2424,6 +2512,12 @@ end
 
 local function panel_frame(now)
     pcall(keep_cursor)
+    local held, why = pcall(PP.hold_input, now)
+    if not held then
+        PP.gi.broken = true
+        log('panel: game input blocking off for this session: ' .. tostring(why))
+        pcall(PP.give_input)
+    end
     local main = sr.Application.main_world()
     local worlds = sr.Application.worlds() or {}
     if not same_worlds(worlds, ui.worlds) or main ~= ui.main then
@@ -2441,7 +2535,6 @@ local function panel_frame(now)
     end
 
     ui.hover = nil
-    PP.over = false
     if input.focused() and not ui.mouse_broken then
         local ok, why = pcall(mouse)
         if not ok then
@@ -2457,7 +2550,6 @@ local function panel_frame(now)
         if not ui.open then return end         -- B closed the panel: draw nothing more this frame
     end
     if ui.pad_mode then ui.hover = ui.focus end
-    PP.block_mouse((PP.over or ui.drag ~= nil) and input.focused() and true or false, now)
 
     local width, height = sr.Gui.resolution()
     if ui.message and now >= ui.message.till then ui.message = nil end
@@ -2568,8 +2660,7 @@ local function open_panel(open)
     else
         if ui.value then finish_value(true) end
         if ui.naming then finish_naming(true) end
-        pcall(PP.block_mouse, false)
-        PP.over = false
+        pcall(PP.give_input)
         pcall(release_cursor)
         clear_gui()
         ui.worlds = nil
@@ -2639,6 +2730,7 @@ panel_tick = function(now)
             end
         end
     else
+        if PP.gi.saved or PP.gi.filtering then pcall(PP.give_input) end   -- closed: the game has its input
         local ok, why = pcall(toast_frame, now)
         if not ok then log('toast: ' .. tostring(why)); pcall(clear_toast); toast.text = nil end
     end

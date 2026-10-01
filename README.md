@@ -54,7 +54,7 @@ Then:
 - **Lots of armors:** when the tabs don't fit, `<` `>` scroll the row; LB / RB reach every tab.
 - **Weight for one armor:** under *Armor weight*, *Only the armor you're wearing* sets just that armor (full edition). Saved as `[armor: <name or id>]` with `weight = light`.
 - **It knows what you wear:** the panel opens on your armor's tab, and *+ Armor* lists your armor's passive first.
-- **No clicks through the panel:** while the cursor is on the panel, the game ignores the mouse (no shooting or turning behind it).
+- **The game ignores your keyboard and mouse while the panel is open** (no moving, shooting, turning or clicking the armory behind it); the wheel still scrolls the panel. Keys tab: *Blocked / Let through*.
 - **Confirmed or not:** each value says *UNTESTED* or *CONFIRMED IN GAME* (from [TESTING.md](TESTING.md)).
 - **When two passives change the same thing:** *Stack all* or *Strongest only*.
 - Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a web-builder build starts fresh from that build; the release zip always keeps what you made.
@@ -167,7 +167,8 @@ tests/test_passive_info.py passive descriptions, armor lists, stack summary, Rem
 tests/test_report_share.py panel off, short share codes, the problem report
 tools/research.lua         research builds only (`picker.py research`): armor kit dump, weight experiment
 tests/test_research.py     the research build, and that no release carries it
-tests/test_wearing.py      what you wear, one armor's weight, the game's mouse behind the panel
+tests/test_wearing.py      what you wear, one armor's weight, the game's input while the panel is open
+tests/test_window_filter.py the game-window input filter's machine code, run on an x64 emulator
 tests/test_weight.py       armor weight: loadout line, panel, undo, save, share codes, Passive Swap untouched
 tools/armor-names/         builds FileDiver's armor dumper for Windows (CI: armor-names-tool.yml) with a double-click runner
 tools/armor_names.py       FileDiver's armor list -> tools/armor-names.json (ids to names), checked against the game's kits

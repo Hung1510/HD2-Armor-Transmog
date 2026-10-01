@@ -43,8 +43,9 @@ Status: ✅ confirmed · ⚠️ works but name/meaning wrong · ❌ no effect ·
 | Colours: another armor's colour texture on an armor | ❌ | dropped in 6.0: shows for 1-2 s, then the game unloads the texture and the armor turns black |
 | The equipped armor is found (WEARING) and followed | ✅ | 5.7 research build: helmet, cape, armor ids back to back; v6.0 offline test passes |
 | Weight for only the worn armor, saved and reloaded | ❔ | v6.0; offline test passes |
-| Cursor on the panel: no shooting, turning or armory clicks behind it | ❔ | v6.0 test 3 (raw input); test 2's Lua-only block didn't stop it in the armory |
-| Mouse wheel still scrolls the panel's lists while the game's mouse is blocked | ❔ | v6.0 test 3; PgUp / PgDn and the scrollbar work either way |
+| Panel open: no moving, shooting, turning, typing into the game or armory clicks behind it | ❔ | v6.0 test 4 (raw input + window filter); test 2's Lua-only block didn't stop it in the armory |
+| Mouse wheel scrolls the panel's lists while the game's input is held | ❔ | v6.0 test 4 (from the window filter); PgUp / PgDn and the scrollbar work either way |
+| Closing the panel: keys, mouse, aiming all normal; nothing stuck | ❔ | v6.0 test 4 |
 | Works alongside SHODAN Stat Editor (F8) | ❔ | if SHODAN changes the same passive first, Armory Forge leaves that passive alone |
 
 ## Effects
