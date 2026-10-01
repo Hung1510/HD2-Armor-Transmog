@@ -24,6 +24,7 @@ import picker  # noqa: E402
 TYPE_PASSIVE = 0x63CE0FEB
 TYPE_KIT = 0xD9A55AA0
 GAME_BASE = 0x10000000
+LOADOUT_BASE = 0x31000000
 
 MOCK = r"""
 DRAW, WORLDS, KEYS, CURSOR, MOUSE_DOWN, WHEEL = {}, { {}, {} }, {}, { 0, 0 }, false, 0
@@ -204,29 +205,52 @@ class FakeGame:
             self.records[pid] = rec
             off += (24 + len(body) + 64 + 15) & ~15
         # armor kit records (HelldiverCustomizationKit), like the game's: one armor per
-        # passive (weight light/medium/heavy by passive id), each with an armor torso, an
-        # armor arm and an undergarment hips piece; plus a helmet kit, which has no weight
-        self.kits = {}
+        # passive (id 0x7000 + n, weight light/medium/heavy by passive id), each with an
+        # armor torso, an armor arm and an undergarment hips piece, every piece with its own
+        # colour texture (a 64-bit hash, see lut()); plus a helmet and a cape kit
+        self.kits, self.kit_ids, self.kit_pieces = {}, {}, {}
         off = (off + 0x1000) & ~0xFFF
-        for n, pid in enumerate(list(perks) + [None]):
+        for n, pid in enumerate(list(perks) + ["helmet", "cape"]):
             rec = GAME_BASE + off + 24
-            pieces = [(2, 0, pid % 3), (6, 0, pid % 3), (3, 1, 1)] if pid is not None else [(0, 0, 2)]
+            armor = isinstance(pid, int)
+            kid = 0x7000 + n
+            pieces = [(2, 0, pid % 3), (6, 0, pid % 3), (3, 1, 1)] if armor else [(0, 0, 2)]
             body = bytearray(64)
-            struct.pack_into("<IIIIIIII", body, 0, 0x7000 + n, 0, 0x5E7, 0, 0, 0, 0, pid or 0)
-            struct.pack_into("<QII", body, 32, 0xA0C1100000000000 + n, 0 if pid is not None else 1, 0)
+            struct.pack_into("<IIIIIIII", body, 0, kid, 0, 0x5E7, 0, 0, 0, 0, pid if armor else 0)
+            struct.pack_into("<QII", body, 32, 0xA0C1100000000000 + n, 0 if armor else (1 if pid == "helmet" else 2), 0)
             struct.pack_into("<qq", body, 48, rec + 64, 1)
             body += struct.pack("<IIqq", 1, 0, rec + 64 + 24, len(pieces))
-            weights = []
+            weights, at = [], []
             for slot, ptype, weight in pieces:
                 p = bytearray(96)
-                struct.pack_into("<QIIII", p, 0, 0x9A7B000000000000 + n * 16 + slot, slot, ptype, weight, 0)
+                struct.pack_into("<QIIIIQ", p, 0, 0x9A7B000000000000 + n * 16 + slot, slot, ptype, weight, 0,
+                                 self.lut(kid, slot))
                 weights.append((rec + len(body) + 16, ptype, weight))
+                at.append(rec + len(body))
                 body += p
             hdr = b"LDLD" + struct.pack("<III", 1, TYPE_KIT, len(body)) + b"\0" * 8
             game[off:off + 24 + len(body)] = hdr + body
-            self.kits[pid] = weights
+            self.kits[pid if armor else None if pid == "helmet" else "cape"] = weights
+            self.kit_ids[pid] = kid
+            self.kit_pieces[kid] = at
             off += (24 + len(body) + 64 + 15) & ~15
         self.pristine = bytes(game)
+        # the equipped loadout: helmet, cape, armor ids back to back (see wear())
+        self.mem[LOADOUT_BASE] = bytearray(0x1000)
+
+    @staticmethod
+    def lut(kid, slot):
+        """the colour texture hash of a fake kit's piece: too big for a Lua number"""
+        return 0xFC00000000000001 + (kid << 20) + (slot << 4)
+
+    def kit_luts(self, kid):
+        """[colour texture hash of each piece] of a kit, as it is in memory now"""
+        return [struct.unpack("<Q", self._read(a + 24, 8))[0] for a in self.kit_pieces[kid]]
+
+    def wear(self, pid, spot=0x100):
+        """the player equips the armor with this passive (with the test helmet and cape)"""
+        struct.pack_into("<III", self.mem[LOADOUT_BASE], spot, self.kit_ids["helmet"], self.kit_ids["cape"],
+                         self.kit_ids[pid])
 
     def kit_weights(self, pid):
         """[weight of each piece] of the armor kit with this passive (armor pieces, then the undergarment)"""

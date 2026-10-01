@@ -49,6 +49,10 @@ local function tick()
 
     if save_at and now >= save_at then pcall(save_now) end
     if research and research.tick and state.phase == 'ready' then pcall(research.tick, now) end
+    if state.phase == 'ready' then
+        local okw, why = pcall(KITS.wear_tick, now)
+        if not okw then log('wearing: ' .. tostring(why)); KITS.wear.state, KITS.wear.tries = 'off', 99 end
+    end
     if not MOD.no_panel then
         local ok, why = pcall(panel_tick, now)
         if not ok then log('panel: ' .. tostring(why)) end
@@ -87,6 +91,7 @@ state.loadout = function() return LOADOUT end
 state.resolve = resolve_profile
 state.serialize = function() return serialize(LOADOUT, DEFAULT_KEY) end
 state.changed = loadout_changed
+state.kits = KITS
 
 set_status('starting', 'waiting for the game to settle; ' .. state.loadout_source .. ' loadout')
 

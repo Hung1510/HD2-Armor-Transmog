@@ -26,6 +26,16 @@
     return { data, byId, byName, list: data.catalog };
   }
 
+  // an armor in a loadout: its id (0xA9A71FE7) or its name (tools/picker.py find_armor)
+  function findArmor(cat, text, where) {
+    const t = text.trim();
+    if (/^0x[0-9A-Fa-f]{1,8}$/.test(t)) return parseInt(t, 16);
+    const want = norm(t);
+    const hit = (cat.data.armors || []).find((a) => norm(a.name) === want);   // sorted by id: the lower id
+    if (!hit) throw new ConfigError(`${where}: unknown armor '${t}' (use its name, e.g. SR-64 Cinderblock, or its id 0x...)`);
+    return hit.id;
+  }
+
   function norm(s) {
     return s.toLowerCase().replace(/[^a-z0-9]/g, "");
   }
@@ -153,7 +163,7 @@
   // ------------------------------------------------------------------ config -> profiles
   function loadConfigText(cat, text) {
     const sections = parseIni(text);
-    const settings = { retire: true, name: null, hotkey: null, swap_hotkey: null, panel_scale: null, panel: true };
+    const settings = { retire: true, name: null, hotkey: null, swap_hotkey: null, panel_scale: null, panel: true, armors: new Map() };
     const profiles = [];
     for (const sec of sections) {
       if (sec.name === "settings") {
@@ -185,13 +195,31 @@
         }
         continue;
       }
+      const a = sec.name.match(/^\s*armor\s*:\s*(.+?)\s*$/i);
+      if (a) {
+        const where = `[${sec.name}]`;
+        const kid = findArmor(cat, a[1], where);
+        if (settings.armors.has(kid)) throw new ConfigError(`${where}: this armor has two sections`);
+        const entry = {};
+        for (const [k, v] of sec.items) {
+          const lk = k.trim().toLowerCase();
+          if (lk === "colours" || lk === "colors") {
+            if (!["original", "game", ""].includes(v.trim().toLowerCase())) entry.colours = findArmor(cat, v, where + " colours");
+          } else if (lk === "weight") {
+            const w = parseWeight(v, where);
+            if (w !== null) entry.weight = w;
+          } else throw new ConfigError(`${where}: unknown key '${k}' (colours, weight)`);
+        }
+        if (Object.keys(entry).length) settings.armors.set(kid, entry);
+        continue;
+      }
       const m = sec.name.match(/^\s*profile\s*:\s*(.+?)\s*$/i);
-      if (!m) throw new ConfigError(`[${sec.name}]: sections must be [settings] or [profile: <passive>]`);
+      if (!m) throw new ConfigError(`[${sec.name}]: sections must be [settings], [profile: <passive>] or [armor: <armor>]`);
       profiles.push(buildProfile(cat, m[1], sec.items, `[${sec.name}]`));
     }
     if (settings.swap_hotkey && settings.swap_hotkey === (settings.hotkey || "F7"))
       throw new ConfigError("[settings]: swap_hotkey and hotkey must be different keys");
-    if (!profiles.length) throw new ConfigError("no [profile: <passive>] section found");
+    if (!profiles.length && !settings.armors.size) throw new ConfigError("no [profile: <passive>] section found");
     const seen = new Set();
     for (const p of profiles) {
       if (seen.has(p.perk)) throw new ConfigError(`two profiles use the same trigger passive: ${p.name}`);
@@ -405,6 +433,18 @@
     L.push(`    swap_hotkey = '${settings.swap_hotkey || data.default_swap_hotkey}',`);
     L.push(`    panel_scale = ${(settings.panel_scale || data.default_panel_scale || 1).toFixed(1)},`);
     if (settings.panel === false) L.push("    no_panel = true,   -- panel = off: no panel, no hotkeys, no controller polling");
+    if (settings.armors && settings.armors.size) {
+      L.push("    -- [armor: ...] sections: one armor's own colours / weight");
+      L.push("    armors = {");
+      for (const kid of [...settings.armors.keys()].sort((x, y) => x - y)) {
+        const a = settings.armors.get(kid);
+        const parts = [`id = ${hex8(kid)}`];
+        if (a.colours !== undefined && a.colours !== null) parts.push(`colours = ${hex8(a.colours)}`);
+        if (a.weight !== undefined && a.weight !== null) parts.push(`weight = ${a.weight}`);
+        L.push(`        { ${parts.join(", ")} },`);
+      }
+      L.push("    },");
+    }
     L.push("    type_passive = 0x63CE0FEB,   -- HelldiverCustomizationPassiveBonusSettings");
     L.push("    type_kit     = 0xD9A55AA0,   -- HelldiverCustomizationKit");
     L.push("    -- the loadout this build starts with; the in-game panel starts from it");
@@ -567,7 +607,25 @@
         L.push(`${(cat.byId.get(parseInt(pidS, 10)).name + "." + key).padEnd(34)} = ${pyRepr(v)}`);
       }
     }
+    for (const [kid, a] of armorEntries(state)) {
+      L.push("");
+      L.push(`[armor: ${hex8(kid)}]${armorName(cat, kid) ? "   ; " + armorName(cat, kid) : ""}`);
+      if (a.colours != null) L.push(`colours = ${hex8(a.colours)}${armorName(cat, a.colours) ? "   ; " + armorName(cat, a.colours) : ""}`);
+      if (a.weight != null) L.push(`weight  = ${WEIGHT_NAMES[a.weight]}`);
+    }
     return L.join("\n") + "\n";
+  }
+
+  // GUI state.armors {id: {colours, weight}} -> [[id, entry]] by id, set ones only
+  function armorEntries(state) {
+    return Object.entries(state.armors || {})
+      .map(([k, a]) => [parseInt(k, 10), a])
+      .filter(([, a]) => a && (a.colours != null || a.weight != null))
+      .sort((x, y) => x[0] - y[0]);
+  }
+  function armorName(cat, kid) {
+    const a = (cat.data.armors || []).find((x) => x.id === kid);
+    return a ? a.name : "";
   }
 
   // share links: the loadout in as few bytes as every loadout reader accepts (the in-game
@@ -589,6 +647,11 @@
       if (p.raw) L.push(`raw=${p.raw.trim().replace(/\s*\n\s*/g, ", ")}`);
       if (p.raw_stats) L.push(`raw_stats=${p.raw_stats.trim().replace(/\s*\n\s*/g, ", ")}`);
     }
+    for (const [kid, a] of armorEntries(state)) {
+      L.push(`[armor: ${hex8(kid)}]`);
+      if (a.colours != null) L.push(`colours=${hex8(a.colours)}`);
+      if (a.weight != null) L.push(`weight=${WEIGHT_NAMES[a.weight]}`);
+    }
     return L.join("\n") + "\n";
   }
 
@@ -598,7 +661,8 @@
     const parsed = loadConfigText(cat, text); // validates
     const state = { name: parsed.settings.name || "My Armory Build", retire: parsed.settings.retire,
       hotkey: parsed.settings.hotkey || "F7", swap_hotkey: parsed.settings.swap_hotkey || "F9",
-      panel_scale: parsed.settings.panel_scale || 1, panel: parsed.settings.panel !== false, profiles: [] };
+      panel_scale: parsed.settings.panel_scale || 1, panel: parsed.settings.panel !== false, profiles: [], armors: {} };
+    for (const [kid, a] of parsed.settings.armors) state.armors[kid] = Object.assign({}, a);
     for (const sec of sections) {
       const m = sec.name.match(/^\s*profile\s*:\s*(.+?)\s*$/i);
       if (!m) continue;

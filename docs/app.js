@@ -40,13 +40,13 @@
   }
 
   function blankProfile(perk) { return { perk, conflicts: "stack", enabled: [], tweaks: {} }; }
-  function blankState() { return { name: "My Armory Build", retire: true, hotkey: "F7", swap_hotkey: "F9", panel_scale: 1, panel: true, profiles: [blankProfile(7)] }; }
+  function blankState() { return { name: "My Armory Build", retire: true, hotkey: "F7", swap_hotkey: "F9", panel_scale: 1, panel: true, armors: {}, profiles: [blankProfile(7)] }; }
 
   // tweaks on passives that are off are kept in state (so toggling back restores them)
   // but left out of the ini so they don't produce "ignored" notes
   function effectiveState() {
     return {
-      name: state.name, retire: state.retire, hotkey: state.hotkey, swap_hotkey: state.swap_hotkey, panel_scale: state.panel_scale, panel: state.panel,
+      name: state.name, retire: state.retire, hotkey: state.hotkey, swap_hotkey: state.swap_hotkey, panel_scale: state.panel_scale, panel: state.panel, armors: state.armors || {},
       profiles: state.profiles.map((p) => {
         const tw = {};
         for (const [k, v] of Object.entries(p.tweaks)) {
@@ -219,8 +219,54 @@
     $("scaleSel").value = (state.panel_scale || 1).toFixed(1);
     $("panelSel").value = state.panel === false ? "off" : "on";
     for (const id of ["hotkeySel", "swapSel", "scaleSel"]) $(id).disabled = state.panel === false;
+    renderColours();
     renderTabs();
     renderProfile();
+    compile();
+  }
+
+  // ---------------------------------------------------------------- colours (per armor)
+  // armor names numbered when several share one (variants), like the in-game Colours tab
+  let armorLabels = null, colourSel = null;
+  function labels() {
+    if (armorLabels) return armorLabels;
+    const list = [...(data.armors || [])].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : a.id - b.id));
+    const count = {}, nth = {};
+    for (const a of list) count[a.name] = (count[a.name] || 0) + 1;
+    armorLabels = list.map((a) => {
+      nth[a.name] = (nth[a.name] || 0) + 1;
+      return { id: a.id, weight: a.weight, label: count[a.name] > 1 ? `${a.name} #${nth[a.name]}` : a.name };
+    });
+    return armorLabels;
+  }
+  const labelOf = (id) => (labels().find((a) => a.id === id) || { label: "0x" + id.toString(16).toUpperCase() }).label;
+
+  function renderColours() {
+    const list = labels();
+    if (!list.length) { $("coloursCard").hidden = true; return; }
+    state.armors = state.armors || {};
+    if (colourSel === null || !list.some((a) => a.id === colourSel)) colourSel = list[0].id;
+    $("carmSel").innerHTML = list.map((a) =>
+      `<option value="${a.id}"${a.id === colourSel ? " selected" : ""}>${esc(a.label)}${a.weight ? " (" + a.weight + ")" : ""}${state.armors[a.id] ? "  *" : ""}</option>`).join("");
+    const mine = state.armors[colourSel] || {};
+    $("csrcSel").innerHTML = `<option value="">Original</option>` + list.filter((a) => a.id !== colourSel).map((a) =>
+      `<option value="${a.id}"${a.id === mine.colours ? " selected" : ""}>${esc(a.label)}</option>`).join("");
+    $("cwSel").value = mine.weight != null ? String(mine.weight) : "";
+    const set = Object.entries(state.armors).filter(([, a]) => a && (a.colours != null || a.weight != null));
+    $("colourList").innerHTML = set.length ? set.map(([id, a]) => {
+      const bits = [];
+      if (a.colours != null) bits.push("colours of " + esc(labelOf(a.colours)));
+      if (a.weight != null) bits.push(["light", "medium", "heavy"][a.weight]);
+      return `<li><span><b>${esc(labelOf(+id))}</b>: ${bits.join(", ")}</span><button class="btn small" type="button" data-unarmor="${id}">Remove</button></li>`;
+    }).join("") : `<li><span class="hint">No armor changed yet.</span></li>`;
+  }
+
+  function setArmor(field, value) {
+    state.armors = state.armors || {};
+    const a = Object.assign({}, state.armors[colourSel] || {});
+    if (value === null) delete a[field]; else a[field] = value;
+    if (a.colours == null && a.weight == null) delete state.armors[colourSel]; else state.armors[colourSel] = a;
+    renderColours();
     compile();
   }
 
@@ -231,6 +277,13 @@
     $("swapSel").addEventListener("change", (e) => { state.swap_hotkey = e.target.value; compile(); });
     $("scaleSel").addEventListener("change", (e) => { state.panel_scale = parseFloat(e.target.value); compile(); });
     $("panelSel").addEventListener("change", (e) => { state.panel = e.target.value !== "off"; render(); });
+    $("carmSel").addEventListener("change", (e) => { colourSel = +e.target.value; renderColours(); });
+    $("csrcSel").addEventListener("change", (e) => setArmor("colours", e.target.value ? +e.target.value : null));
+    $("cwSel").addEventListener("change", (e) => setArmor("weight", e.target.value === "" ? null : +e.target.value));
+    $("colourList").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-unarmor]");
+      if (b) { delete state.armors[b.dataset.unarmor]; renderColours(); compile(); }
+    });
 
     $("presetSel").addEventListener("change", (e) => {
       const p = data.presets.find((x) => x.file === e.target.value);
@@ -417,6 +470,7 @@
   function loadIni(text, msg) {
     try {
       state = core.stateFromText(cat, text);
+      if (!state.profiles.length) state.profiles.push(blankProfile(7));
       active = 0; open.clear(); search = "";
       render();
       if (msg) toast(msg);
@@ -493,7 +547,7 @@
     const h = location.hash.match(/^#ini=(.+)$/);
     const saved = store.get("pp4-ini");
     if (h) {
-      try { state = core.stateFromText(cat, unb64url(h[1])); toast("Loaded shared build"); }
+      try { state = core.stateFromText(cat, unb64url(h[1])); if (!state.profiles.length) state.profiles.push(blankProfile(7)); toast("Loaded shared build"); }
       catch (e) { toast("Shared link is invalid: " + e.message); }
     } else if (saved) {
       try { state = core.stateFromText(cat, saved); } catch (e) { state = blankState(); }

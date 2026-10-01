@@ -250,11 +250,18 @@ check(len(live(g6, 7)[0]) > 2, "stacking still works on a patched game")
 
 # ------------------------------------------------------------------ 5. boot cost
 g7 = FakeGame(path, junk_mb=64)
-g7.tick(420)
+for _ in range(420):
+    g7.tick()
+    if g7.phase() == "ready":
+        break
 mb = g7.bytes_read / 1048576
 check(g7.phase() == "ready" and matches(g7, 7, profiles[0]),
       "with 64 MB of other memory: finds the table and applies")
 check(mb < 8, "stops once the table is found: read %.1f MB of 64+ MB" % mb)
+# then one background pass looks for the loadout you're wearing, and only one
+g7.tick(600)
+after = g7.bytes_read / 1048576
+check(after - mb < 70, "the 'what you wear' search reads memory once (%.0f MB more)" % (after - mb))
 g8 = FakeGame(path, junk_mb=16, perks=[p for p in picker.CATALOG if p != 5])
 g8.tick(420)
 check(g8.phase() == "ready" and g8.state[b"rounds"] == 1,

@@ -120,6 +120,8 @@ check(any("Undone" in t for t in g.texts()), "X undoes")
 g.pad("RB")
 check(ui(g, "adding"), "RB goes to the next tab (+ Armor)")
 g.pad("RB")
+check(ui(g, "colours"), "RB again: Colours")
+g.pad("RB")
 check(ui(g, "presets"), "RB again: Presets")
 g.pad("RB")
 check(ui(g, "settings"), "RB again: Keys")
@@ -158,7 +160,8 @@ check(g2.rows(pid_of("Med-Kit")) == g2.rows(pid_of("Siege-Ready")), "swap editio
 
 g2.pad("RB")
 g2.pad("RB")
-g2.pad("RB")                                   # + Armor, Presets, Keys
+g2.pad("RB")
+g2.pad("RB")                                   # + Armor, Colours, Presets, Keys
 check(ui(g2, "settings"), "RB reaches the Keys tab")
 check(steer(g2, "key:hotkey:F6"), "the D-pad reaches F6 in the key grid")
 g2.pad("A")
@@ -188,10 +191,12 @@ for res, scale in (((3840, 2160), "1.0"), ((2560, 1440), "1.5")):
     g4.pad("BACK", "START")
     g4.tick(120)
     seen = []
-    for _ in range(4):
+    for _ in range(5):
         g4.pad("RB")
-        seen.append("keys" if ui(g4, "settings") else "presets" if ui(g4, "presets") else "add" if ui(g4, "adding") else "armor")
-    check(seen == ["add", "presets", "keys", "armor"], "%dx%d at %s: RB cycles + Armor, Presets, Keys, armor (%s)" % (res[0], res[1], scale, seen))
+        seen.append("keys" if ui(g4, "settings") else "presets" if ui(g4, "presets") else "add" if ui(g4, "adding")
+                    else "colours" if ui(g4, "colours") else "armor")
+    check(seen == ["add", "colours", "presets", "keys", "armor"],
+          "%dx%d at %s: RB cycles + Armor, Colours, Presets, Keys, armor (%s)" % (res[0], res[1], scale, seen))
 
 # reopening with the controller after the mouse moved keeps controller mode
 g5 = FakeGame(build(sink), appdata=tempfile.mkdtemp())

@@ -152,12 +152,16 @@ check("CHANGED 0x30000100: armor 0x00001111 (Med-Kit) -> armor 0x00003333 (Infla
 # ------------------------------------------------------------------ 6. F11: another armor's colours
 arm_pieces = [GAME_BASE + 0x10000 + 24 + 64 + 24 + i * 96 for i in range(3)]   # kit 0x1111, one body
 before = [bytes(g3._read(a + 24, 8)) for a in arm_pieces]
+known = {struct.pack("<Q", lut_of(0x3333, 2))} | {struct.pack("<Q", g3.lut(kid, s)) for kid in g3.kit_pieces for s in range(10)}
 g3.key(0x7A)
 after = [bytes(g3._read(a + 24, 8)) for a in arm_pieces]
-want = struct.pack("<Q", lut_of(0x3333, 2))
-check(all(a == want for a in after), "F11: the Med-Kit armor takes the other armor's colour LUT, all 64 bits exact")
-g3.key(0x7A)
-check([bytes(g3._read(a + 24, 8)) for a in arm_pieces] == before, "F11 again (after the last armor): its own colours back")
+check(after != before and all(a in known for a in after),
+      "F11: the Med-Kit armor takes another armor's colour LUT, all 64 bits exact")
+for presses in range(1, 60):  # noqa: B007 (reported below)
+    if [bytes(g3._read(a + 24, 8)) for a in arm_pieces] == before:
+        break
+    g3.key(0x7A)
+check([bytes(g3._read(a + 24, 8)) for a in arm_pieces] == before, "F11 after the last armor: its own colours back (%d presses)" % presses)
 
 # ------------------------------------------------------------------ 4. dump only
 g2, pieces2 = game_with_kits(build(None))

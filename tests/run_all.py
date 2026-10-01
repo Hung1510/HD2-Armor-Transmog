@@ -30,6 +30,7 @@ SUITES = [
     ("test_controller.py", "controller: open, navigate, tabs, back"),
     ("test_passive_info.py", "passive info, stack summary, Remove armor"),
     ("test_report_share.py", "panel off, short share codes, problem report"),
+    ("test_colours.py", "what you wear, Colours tab, per-armor weight"),
     ("test_weight.py", "armor weight: speed / stamina / armor class, any look"),
     ("test_armor_names.py", "armor names: FileDiver dump -> name table, game check"),
     ("test_research.py", "research build: armor kit dump, weight experiment"),

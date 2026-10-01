@@ -406,7 +406,38 @@ function PP.compact(l)
         for _, r in ipairs(p.raw_stats or {}) do raw[#raw + 1] = string.format('%d %s %s', r[1], fmt_num(r[2]), fmt_num(r[3])) end
         if #raw > 0 then L[#L + 1] = 'raw_stats=' .. table.concat(raw, ', ') end
     end
+    local ids = {}
+    for id, a in pairs(l.armors or {}) do if a.colours or a.weight then ids[#ids + 1] = id end end
+    table.sort(ids)
+    for _, id in ipairs(ids) do
+        local a = l.armors[id]
+        L[#L + 1] = string.format('[armor: 0x%08X]', id)
+        if a.colours then L[#L + 1] = string.format('colours=0x%08X', a.colours) end
+        if a.weight and not MOD.swap_only then L[#L + 1] = 'weight=' .. WEIGHTS[a.weight] end
+    end
     return table.concat(L, '\n') .. '\n'
+end
+
+-- Colours tab: start on the armor you're wearing (or the last one picked), on the page
+-- that shows its current scheme
+function PP.colours_open()
+    if ui.colours then
+        ui.csel = ui.csel or KITS.worn
+        ui.cpage = PP.colours_page(ui.csel)
+    end
+end
+
+function PP.colours_page(id)
+    local a = id and LOADOUT and LOADOUT.armors and LOADOUT.armors[id]
+    if not (a and a.colours) then return 1 end
+    local n = 0
+    for _, x in ipairs(KITS.armors()) do
+        if x.id ~= id and x.name then
+            n = n + 1
+            if x.id == a.colours then return math.floor((n - 1) / (PP.cper or 15)) + 1 end
+        end
+    end
+    return 1
 end
 
 function PP.copy_code()
@@ -838,7 +869,7 @@ local function draw(width, height)
     local regions = {}
     ui.tab_order = {}                        -- tab keys left to right (LB / RB), drawn or not
     for n = 1, #(LOADOUT and LOADOUT.profiles or {}) do ui.tab_order[n] = 'tab:' .. n end
-    for _, k in ipairs({ 'add', 'presets', 'settings' }) do ui.tab_order[#ui.tab_order + 1] = k end
+    for _, k in ipairs({ 'add', 'colours', 'presets', 'settings' }) do ui.tab_order[#ui.tab_order + 1] = k end
     local ink_font, ink_material = font.font, font.material
     local up = string.upper
 
@@ -900,6 +931,12 @@ local function draw(width, height)
         Gui.text(gui, value, ink_font, sz, ink_material,
                  Vector3(px(ox + tx * s), px(height - oy - top * s - sz * 0.8), 954), c or C.TEXT)
         return w
+    end
+    -- a long name cut to fit at a readable size: "KDM-728 KINETIC DISPLACEMENT M.."
+    local function cut(value, size, limit)
+        if measure(value, size) <= limit then return value end
+        while #value > 3 and measure(value .. '..', size) > limit do value = value:sub(1, -2) end
+        return (value:gsub('[%s,%-]+$', '')) .. '..'
     end
     local function border(x, y, w, h, c, z)
         rect(x, y, w, 1, c, z or 952); rect(x, y + h - 1, w, 1, c, z or 952)
@@ -1014,7 +1051,7 @@ local function draw(width, height)
         rect(0, by0, W, 1, C.LINE, 952)
         local x = 22
         local hints = ui.pad_mode and { { 'A', 'Select' }, { 'B', 'Back' }, { 'LB/RB', 'Tabs' }, { 'X', 'Undo' },
-                                        not ui.adding and not ui.presets and not ui.settings and { 'Y', 'Tick' } or false }
+                                        not ui.adding and not ui.presets and not ui.settings and not ui.colours and { 'Y', 'Tick' } or false }
                       or { { hotkey(), 'Close' }, swap_key() ~= 'OFF' and { swap_key(), 'Swap loadout' } or false,
                            { 'CTRL+Z', 'Undo' } }
         for _, p in ipairs(hints) do
@@ -1046,7 +1083,7 @@ local function draw(width, height)
     local x = 22
     -- armor tabs share what the other tabs and "Remove this stack" leave; long names are cut
     local fixed = 0
-    for _, c in ipairs({ '+ Armor', 'Presets', 'Keys' }) do fixed = fixed + math.min(230, measure(up(c), 15) + 30) + 6 end
+    for _, c in ipairs({ '+ Armor', 'Colours', 'Presets', 'Keys' }) do fixed = fixed + math.min(230, measure(up(c), 15) + 30) + 6 end
     local room = W - 22 - (measure('CLICK AGAIN TO REMOVE', 13) + 28 + 12) - 22 - fixed
     local count = #LOADOUT.profiles
     local each_tab = math.max(60, math.min(230, room / math.max(1, count) - 6))
@@ -1071,19 +1108,20 @@ local function draw(width, height)
         end
         arrow('tabs:prev', '<', first > 0)
         for n = first + 1, first + shown do
-            x = x + tab('tab:' .. n, CAT[LOADOUT.profiles[n].perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings, nil, n, each_tab) + 6
+            x = x + tab('tab:' .. n, CAT[LOADOUT.profiles[n].perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings and not ui.colours, nil, n, each_tab) + 6
         end
         arrow('tabs:next', '>', first + shown < count)
     else
         ui.tab_first = 0
         for n, prof in ipairs(LOADOUT.profiles) do
-            x = x + tab('tab:' .. n, CAT[prof.perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings, nil, n, each_tab) + 6
+            x = x + tab('tab:' .. n, CAT[prof.perk].name, x, n == ui.tab and not ui.adding and not ui.presets and not ui.settings and not ui.colours, nil, n, each_tab) + 6
         end
     end
     x = x + tab('add', '+ Armor', x, ui.adding, C.YELLOW) + 6
+    x = x + tab('colours', 'Colours', x, ui.colours, C.YELLOW) + 6
     x = x + tab('presets', 'Presets', x, ui.presets, C.YELLOW) + 6
     tab('settings', 'Keys', x, ui.settings, C.MUTED)
-    if p and not ui.adding and not ui.presets and not ui.settings then
+    if p and not ui.adding and not ui.presets and not ui.settings and not ui.colours then
         -- a real button (players missed the old small text): click, then click again to confirm
         local sure = ui.confirm and ui.confirm.kind == 'remove'
         local cap = sure and 'Click again to remove' or 'Remove armor'
@@ -1144,12 +1182,12 @@ local function draw(width, height)
         return off, fit
     end
     -- the search field above a passive list (click it or Ctrl+F, then type; Esc clears)
-    local function search_box(y)
+    local function search_box(y, hint)
         local on, q = ui.search_on, ui.search or ''
         rect(IX, y, IW, 26, C.FIELD, 951)
         border(IX, y, IW, 26, on and C.YELLOW or (ui.hover == 'search' and C.TEXT or C.LINE2), 952)
         local cw = q ~= '' and (measure('CLEAR', 10) + 16) or 0
-        text(q ~= '' and (up(q) .. (on and '_' or '')) or (on and '_' or 'SEARCH PASSIVES OR EFFECTS  (CTRL+F)'),
+        text(q ~= '' and (up(q) .. (on and '_' or '')) or (on and '_' or hint or 'SEARCH PASSIVES OR EFFECTS  (CTRL+F)'),
              IX + 10, y + 7, 12, q ~= '' and C.TEXT or C.DIM, IW - 20 - cw)
         region('search', IX, y, IW - cw, 26)
         if q ~= '' then
@@ -1314,6 +1352,101 @@ local function draw(width, height)
         text('Copy a report and paste it in your bug report on the mod page.', RX, BOT - 68, 12, C.DIM, RIW)
         button('report', 'Copy problem report', RX, BOT - 44, nil, 32, true)
 
+    -- ============================================================ Colours
+    elseif ui.colours then
+        local all = KITS.armors()
+        local q = (ui.search or ''):lower()
+        local list = {}
+        if KITS.worn then                         -- the armor you're wearing first
+            for _, a in ipairs(all) do if a.id == KITS.worn then list[1] = a end end
+        end
+        for _, a in ipairs(all) do
+            if a.id ~= KITS.worn and (q == '' or (a.name or ''):lower():find(q, 1, true)
+                                       or (CAT[a.passive] and CAT[a.passive].name:lower():find(q, 1, true))) then
+                list[#list + 1] = a
+            end
+        end
+        head(IX, TOP + 14, 'Colours', 'Choose armor', IW)
+        local y = search_box(TOP + 58, 'SEARCH ARMORS OR PASSIVES  (CTRL+F)')
+        if #all == 0 then
+            text('The armor records were not found yet.', IX + 4, y + 4, 13, C.DIM, IW - 8)
+        end
+        local first, fit = scroller('colours', y, BOT - 6, #list)
+        for k = first + 1, math.min(#list, first + fit) do
+            local a = list[k]
+            local key = 'carm:' .. a.id
+            local mine = LOADOUT.armors and LOADOUT.armors[a.id]
+            local chosen = ui.csel == a.id
+            local label_text = up(a.label)
+            local tagw = 0
+            if a.id == KITS.worn then
+                tagw = measure('WEARING', 10) + 10
+                border(IX + 2, y + 5, tagw, 14, C.YELLOW, 952)
+                text('WEARING', IX + 2 + tagw / 2, y + 7, 10, C.YELLOW, nil, 'center')
+                tagw = tagw + 8
+            end
+            list_row(key, y, '', chosen)
+            text(cut(label_text, 14, IW - 22 - tagw - bar.w), IX + 4 + tagw, y + 5, 14,
+                 mine and mine.colours and C.YELLOW or (chosen and C.TEXT or C.MUTED), IW - 20 - tagw - bar.w)
+            if mine and (mine.colours or (mine.weight and not MOD.swap_only)) then rect(IX + IW - 6 - bar.w, y + 9, 6, 6, C.YELLOW, 952) end
+            y = y + RH
+        end
+        bar.w = 0
+
+        local sel
+        for _, a in ipairs(all) do if a.id == ui.csel then sel = a end end
+        if not sel then
+            head(RX, TOP + 14, 'Colours', 'Pick an armor', RIW)
+            local y2 = wrap('Give any armor the colours of another armor. Pick the armor on the left, then a colour scheme. Only you see it.', RX, TOP + 70, 14, C.MUTED, RIW, 3)
+            if not KITS.worn then wrap('Your current armor shows at the top as WEARING once it is found (a few seconds after the scan).', RX, y2 + 8, 12, C.DIM, RIW, 2) end
+        else
+            local mine = LOADOUT.armors and LOADOUT.armors[sel.id] or {}
+            head(RX, TOP + 14, sel.id == KITS.worn and 'Colours  -  wearing' or 'Colours', sel.label, RIW)
+            text((CAT[sel.passive] and CAT[sel.passive].name or 'no passive') .. '  -  ' .. (WEIGHTS[sel.weight] or '?') .. ' armor',
+                 RX, TOP + 52, 13, C.MUTED, RIW)
+            local y2 = TOP + 76
+            if not MOD.swap_only then             -- this armor's own weight (beats its passive's)
+                label('Weight, this armor only', RX, y2, nil, RIW)
+                local each = (RIW - 3 * 8) / 4
+                local bx = RX
+                for _, w in ipairs({ { 'game', 'Game' }, { 'light', 'Light' }, { 'medium', 'Medium' }, { 'heavy', 'Heavy' } }) do
+                    local on = (mine.weight == WEIGHTS[w[1]]) or (w[1] == 'game' and mine.weight == nil)
+                    bx = bx + button('cw:' .. w[1], w[2], bx, y2 + 18, each, 30, true, on) + 8
+                end
+                y2 = y2 + 60
+            end
+            label('Colour scheme', RX, y2, nil, RIW)
+            text(mine.colours and cut('FROM ' .. up(KITS.name(mine.colours)), 11, RIW - 130) or 'ORIGINAL', RX + RIW, y2, 11,
+                 mine.colours and C.YELLOW or C.DIM, RIW - 120, 'right')
+            y2 = y2 + 18
+            -- every other named armor's scheme, two columns, paged
+            local src = {}
+            for _, a in ipairs(all) do if a.id ~= sel.id and a.name then src[#src + 1] = a end end
+            local colw, rh = (RIW - 8) / 2, 30
+            local rows = math.max(2, math.floor((BOT - 132 - y2 - 38) / rh))
+            local per = rows * 2 - 1                    -- the first cell is Original
+            PP.cper = per
+            local pages = math.max(1, math.ceil(#src / per))
+            ui.cpage = math.max(1, math.min(pages, ui.cpage or 1))
+            local cells = { { id = 0, name = 'Original' } }
+            for k = (ui.cpage - 1) * per + 1, math.min(#src, ui.cpage * per) do cells[#cells + 1] = src[k] end
+            for k, c in ipairs(cells) do
+                local col, row = (k - 1) % 2, math.floor((k - 1) / 2)
+                local on = (c.id == 0 and not mine.colours) or c.id == mine.colours
+                button('csrc:' .. c.id, cut(up(c.label or c.name), 13, colw - 18), RX + col * (colw + 8), y2 + row * rh, colw, rh - 4, true, on)
+            end
+            local py = y2 + rows * rh + 4
+            button('cpage:-', '<', RX, py, 40, 28, ui.cpage > 1)
+            text('PAGE ' .. ui.cpage .. ' / ' .. pages .. '  -  ' .. #src .. ' SCHEMES', RX + RIW / 2, py + 8, 11, C.DIM, RIW - 100, 'center')
+            button('cpage:+', '>', RX + RIW - 40, py, 40, 28, ui.cpage < pages)
+            local ny = BOT - 94
+            rect(RX, ny - 10, RIW, 1, C.LINE, 951)
+            text('The game shows it when it next builds the armor: re-select it in the armory, or re-equip it.', RX, ny, 12, C.TEXT, RIW)
+            text('Only you see the new colours. Some schemes suit other models better than others.', RX, ny + 20, 12, C.DIM, RIW)
+            local ax = RX
+            button('undo', #ui.history > 0 and ('Undo (' .. #ui.history .. ')') or 'Undo', ax, BOT - 26 - 14, 120, 30, #ui.history > 0)
+        end
+
     -- ============================================================ + Armor
     elseif ui.adding then
         head(IX, TOP + 14, MOD.swap_only and 'New swap' or 'New stack', 'Choose armor passive', IW)
@@ -1321,12 +1454,19 @@ local function draw(width, height)
         for _, prof in ipairs(LOADOUT.profiles) do used[prof.perk] = true end
         local y = search_box(TOP + 58)
         local free = {}
-        for _, c in ipairs(CAT_LIST) do if not used[c.id] and PP.match(c) then free[#free + 1] = c end end
+        local wk = KITS.worn and KITS.source(KITS.worn)
+        for _, c in ipairs(CAT_LIST) do
+            if not used[c.id] and PP.match(c) then
+                if wk and wk.passive == c.id then table.insert(free, 1, c) else free[#free + 1] = c end   -- yours first
+            end
+        end
         no_match(y, #free)
         local first, fit = scroller('add', y, BOT - 54, #free)
         for k = first + 1, math.min(#free, first + fit) do
             local c = free[k]
-            list_row('addpick:' .. c.id, y, up(c.name), ui.hover == 'addpick:' .. c.id)
+            local worn = KITS.worn and KITS.source(KITS.worn)
+            list_row('addpick:' .. c.id, y, up(c.name) .. ((worn and worn.passive == c.id) and '  -  YOUR ARMOR' or ''),
+                     ui.hover == 'addpick:' .. c.id, (worn and worn.passive == c.id) and C.YELLOW or nil)
             y = y + RH
         end
         bar.w = 0
@@ -1731,13 +1871,14 @@ local function click(key)
     if ui.search_on and kind ~= 'search' then ui.search_on = false end
     local p = current()
     local n = tonumber(arg)
-    if kind == 'tab' and n then ui.tab, ui.sel, ui.adding, ui.presets, ui.settings = n, nil, false, false, false
-    elseif kind == 'add' then ui.adding, ui.presets, ui.settings = not ui.adding, false, false
+    if kind == 'tab' and n then ui.tab, ui.sel, ui.adding, ui.presets, ui.settings, ui.colours = n, nil, false, false, false, false
+    elseif kind == 'add' then ui.adding, ui.presets, ui.settings, ui.colours = not ui.adding, false, false, false
+    elseif kind == 'colours' then ui.colours, ui.adding, ui.presets, ui.settings = not ui.colours, false, false, false; PP.colours_open()
     elseif kind == 'addcancel' then ui.adding = false
-    elseif kind == 'presets' then ui.presets, ui.adding, ui.settings = not ui.presets, false, false; PP.load_user()
+    elseif kind == 'presets' then ui.presets, ui.adding, ui.settings, ui.colours = not ui.presets, false, false, false; PP.load_user()
     elseif kind == 'search' then
         if arg == 'clear' then PP.set_search('', false) else PP.set_search(ui.search, true) end
-    elseif kind == 'settings' then ui.settings, ui.adding, ui.presets = not ui.settings, false, false
+    elseif kind == 'settings' then ui.settings, ui.adding, ui.presets, ui.colours = not ui.settings, false, false, false
     elseif kind == 'key' then
         local which, k = arg:match('^([%w_]+):(%w+)$')
         PP.set_key(which, k)
@@ -1772,6 +1913,26 @@ local function click(key)
     elseif kind == 'drag' then return             -- a click on the handle without moving
     elseif kind == 'undo' then PP.undo()
     elseif kind == 'report' then PP.copy_report()
+    elseif kind == 'carm' and n then ui.csel, ui.cpage = n, PP.colours_page(n)
+    elseif kind == 'cpage' then ui.cpage = (ui.cpage or 1) + (arg == '-' and -1 or 1)
+    elseif (kind == 'csrc' and n) or (kind == 'cw' and not MOD.swap_only) then
+        local id = ui.csel
+        if id then
+            LOADOUT.armors = LOADOUT.armors or {}
+            local a = LOADOUT.armors[id] or {}
+            local name = KITS.name(id)
+            if kind == 'csrc' then
+                a.colours = (n ~= 0 and n ~= id) and n or nil
+                LOADOUT.armors[id] = a
+                if not a.colours and not a.weight then LOADOUT.armors[id] = nil end
+                changed(nil, a.colours and (name .. ': colours of ' .. KITS.name(n)) or (name .. ': its own colours'))
+            else
+                a.weight = WEIGHTS[arg]
+                LOADOUT.armors[id] = a
+                if not a.colours and not a.weight then LOADOUT.armors[id] = nil end
+                changed(nil, name .. ': ' .. (a.weight and (arg .. ' weight') or 'its own weight'))
+            end
+        end
     elseif kind == 'tabs' then ui.tab_first = (ui.tab_first or 0) + (arg == 'prev' and -1 or 1)
     elseif kind == 'weight' and p and not MOD.swap_only then
         local w = WEIGHTS[arg]
@@ -2099,7 +2260,7 @@ end
 function PP.tab_step(step)
     local tabs = ui.tab_order or {}
     if #tabs == 0 then return end
-    local active = ui.settings and 'settings' or ui.presets and 'presets' or ui.adding and 'add' or ('tab:' .. ui.tab)
+    local active = ui.settings and 'settings' or ui.presets and 'presets' or ui.adding and 'add' or ui.colours and 'colours' or ('tab:' .. ui.tab)
     local at = 1
     for i, k in ipairs(tabs) do if k == active then at = i end end
     local k = tabs[(at - 1 + step) % #tabs + 1]
@@ -2130,8 +2291,8 @@ local function pad_panel(now)
         if ui.search_on or (ui.search or '') ~= '' then PP.set_search('', false)
         elseif ui.value then finish_value(false)
         elseif ui.naming then finish_naming(false)
-        elseif ui.adding or ui.presets or ui.settings then
-            ui.adding, ui.presets, ui.settings, ui.focus = false, false, false, nil
+        elseif ui.adding or ui.presets or ui.settings or ui.colours then
+            ui.adding, ui.presets, ui.settings, ui.colours, ui.focus = false, false, false, false, nil
             ui.version = ui.version + 1
         else PP.open_panel(false) end
     elseif PP.pad_edge(P.LB) then PP.tab_step(-1)
@@ -2340,6 +2501,16 @@ local function open_panel(open)
         if not ui.last_text and LOADOUT then ui.last_text = snapshot() end
         PP.load_user()
         pcall(PP.load_pos)
+        -- you put on another armor since last time: open on its passive's tab
+        if KITS.worn and KITS.worn ~= ui.worn_seen and LOADOUT then
+            ui.worn_seen = KITS.worn
+            local kit = KITS.source(KITS.worn)
+            for i, prof in ipairs(LOADOUT.profiles) do
+                if kit and prof.perk == kit.passive and not (ui.adding or ui.presets or ui.settings or ui.colours) then
+                    ui.tab, ui.sel = i, nil
+                end
+            end
+        end
         PP.note('opened')
         log('panel opened')
         local ok, why = pcall(take_cursor)
@@ -2353,7 +2524,7 @@ local function open_panel(open)
         held, mouse_was_down, armed = {}, nil, nil
         if ui.drag then ui.drag = nil; pcall(PP.save_pos) end
         ui.search_on = false
-        ui.confirm, ui.adding, ui.settings = nil, false, false
+        ui.confirm, ui.adding, ui.settings, ui.colours = nil, false, false, false
         if save_at then pcall(save_now) end
     end
 end
