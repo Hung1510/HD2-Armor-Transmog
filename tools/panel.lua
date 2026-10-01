@@ -755,12 +755,14 @@ function PP.load_pos()
     local x, y = tostring(t or ''):match('x%s*=%s*([%d%.]+)'), tostring(t or ''):match('y%s*=%s*([%d%.]+)')
     ui.pos = (tonumber(x) and tonumber(y)) and { fx = tonumber(x), fy = tonumber(y) } or nil
     ui.block_input = not tostring(t or ''):match('block_input%s*=%s*off')
+    ui.lang = tostring(t or ''):match('lang%s*=%s*(%a%a)') or 'en'
 end
 function PP.save_pos()
     local path = forge_file('panel-position.txt')
     if not path then return end
     write_file(path, (ui.pos and string.format('x = %.4f\ny = %.4f\n', ui.pos.fx, ui.pos.fy) or '') ..
-                     (ui.block_input == false and 'block_input = off\n' or ''))
+                     (ui.block_input == false and 'block_input = off\n' or '') ..
+                     ((ui.lang and ui.lang ~= 'en') and ('lang = ' .. ui.lang .. '\n') or ''))
 end
 
 -- what you're wearing, for the header: { kind = 'look' | 'unknown' | 'none' | 'empty' | 'ok',
@@ -865,6 +867,7 @@ function PP.report()
         'controller=' .. (PP.has_pad and 'connected' or 'not seen') .. ' mouse=' .. (ui.mouse_broken and 'off after an error' or 'ok'),
         'last panel error=' .. tostring(d.last_error or '-'),
         PP.input_desc(),
+        'language=' .. tostring(ui.lang or 'en') .. '; font test: ' .. tostring(PP.font_result or 'not run'),
         '--- other mods ---',
         'loader api=' .. tostring(type(loader) == 'table' and loader.api) .. ' fields: ' .. PP.names_of(loader, 12),
         'update bus jobs: ' .. PP.names_of(type(bus) == 'table' and bus.jobs, 20),
@@ -1547,6 +1550,12 @@ local function draw(width, height)
         local gx = RX + button('blockin:on', 'Blocked', RX, ry + 20, nil, 30, true, PP.block_on()) + 8
         button('blockin:off', 'Let through', gx, ry + 20, nil, 30, true, not PP.block_on())
         ry = ry + 64
+        label('Language  /  语言  /  言語', RX, ry, nil, RIW)
+        local lx = RX
+        for _, l in ipairs(PP.LANGS) do
+            lx = lx + button('lang:' .. l[1], l[2], lx, ry + 20, nil, 30, true, (ui.lang or 'en') == l[1]) + 8
+        end
+        ry = ry + 64
         rect(RX, ry, RIW, 1, C.LINE, 951)
         label('Fixed keys', RX, ry + 14, nil, RIW)
         local fixed = { { 'CTRL+Z', 'Undo' }, { 'CTRL+F', 'Search passives' }, { 'CTRL +/-', 'Panel size' },
@@ -2021,6 +2030,10 @@ local function click(key)
             ui.tab, ui.sel, ui.adding, ui.presets, ui.settings = #LOADOUT.profiles, nil, false, false, false
             changed(wr.perk, 'Added ' .. CAT[wr.perk].name .. ' (your armor)')
         end
+    elseif kind == 'lang' then
+        ui.lang = arg
+        pcall(PP.save_pos)
+        say(arg == 'zh' and '简体中文：测试版（6.2 起完整翻译）' or arg == 'ja' and '日本語：テスト版（6.2 で完全翻訳）' or 'English')
     elseif kind == 'blockin' then
         ui.block_input = arg == 'on'
         pcall(PP.save_pos)
@@ -2227,6 +2240,25 @@ end
 PP.gi = { state = 'not yet', saved = nil, next_check = 0 }
 
 function PP.block_on() return ui.block_input ~= false end
+
+-- Chinese / Japanese (6.2): can the game's UI font draw them? Measures the same number of
+-- Latin, Chinese and Japanese characters; a font without those glyphs gives ~0 width.
+PP.LANGS = { { 'en', 'English' }, { 'zh', '简体中文' }, { 'ja', '日本語' } }
+function PP.font_test(gui)
+    local te = sr.Gui and rawget(sr.Gui, 'text_extents')
+    if type(te) ~= 'function' or not font or not font.font then PP.font_result = 'no measuring'; return end
+    local function width(s)
+        local ok, a, b = pcall(te, gui, s, font.font, 20)
+        if not ok or not a or not b then return -1 end
+        local okx, x0 = pcall(sr.Vector3.x, a)
+        local okx2, x1 = pcall(sr.Vector3.x, b)
+        if not (okx and okx2) then x0, x1 = a[1], b[1] end
+        return math.floor(((tonumber(x1) or 0) - (tonumber(x0) or 0)) + 0.5)
+    end
+    PP.font_result = string.format('latin %d, chinese %d, japanese %d (px for 4 characters at 20)',
+                                   width('ABCD'), width('简体中文'), width('日本語テ'))
+    log('panel font test: ' .. PP.font_result .. ' with ' .. tostring(font.text))
+end
 
 function PP.hold_input(now)
     local G = PP.gi
@@ -2727,6 +2759,7 @@ local function panel_frame(now)
         if said ~= ui.font_said then
             ui.font_said = said
             log('panel font: ' .. said)
+            pcall(PP.font_test, ui.gui)
         end
         ui.signature = signature
         ui.regions = draw(width, height)

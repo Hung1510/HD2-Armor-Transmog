@@ -12,6 +12,11 @@ memory (ArmoryForge\\kits-dump.txt), so a new Warbond's armors show up as missin
     python tools/armor_names.py armors.json                      # writes tools/armor-names.json
     python tools/armor_names.py armors.json --check kits-dump.txt
     python tools/armor_names.py --check kits-dump.txt            # check the current table only
+    python tools/armor_names.py armors.json --lang ja armors-ja.json --lang zh armors-zh.json
+
+With --lang, each armor also gets its name in that language ("names": {"ja": ...}), and
+tools/passive-text.json gets every armor passive's name and description in each language,
+straight from the game's own text (matched to the English name through the kit ids).
 """
 import argparse
 import json
@@ -21,6 +26,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TABLE = os.path.join(HERE, "armor-names.json")
+PASSIVE_TEXT = os.path.join(HERE, "passive-text.json")
+LANGS = ("ja", "zh")
 KINDS = {0: "armor", 1: "helmet", 2: "cape", "Armor": "armor", "Helmet": "helmet", "Cape": "cape"}
 WEIGHTS = {0: "light", 1: "medium", 2: "heavy", "light": "light", "medium": "medium", "heavy": "heavy"}
 
@@ -128,6 +135,45 @@ def convert(dump):
     return out, skipped
 
 
+def description(passive):
+    d = passive.get("description") or ""
+    return " ".join(x.strip() for x in d if x and x.strip()) if isinstance(d, list) else str(d).strip()
+
+
+def localize(kits, english, other, code):
+    """adds names[code] to kits from another language's dump (same ids); returns
+    {english passive name: {"name": ..., "desc": ...}} for that language"""
+    en = {norm_id(k.get("id")): k for k in english if isinstance(k, dict)}
+    passives = {}
+    for kit in other:
+        if not isinstance(kit, dict):
+            continue
+        kid = norm_id(kit.get("id"))
+        name = (kit.get("name") or "").strip()
+        if kid in kits and name and not re.fullmatch(r"[0-9a-f]{8}", name):
+            kits[kid].setdefault("names", {})[code] = tidy(name)
+        base = en.get(kid)
+        lp = kit.get("passive") or {}
+        ep = (base or {}).get("passive") or {}
+        if base and ep.get("name") and lp.get("name"):
+            passives.setdefault(ep["name"].strip(), {"name": lp["name"].strip(), "desc": description(lp)})
+    return passives
+
+
+def passive_text(english, others):
+    """{english passive name: {"en": {"desc"}, "ja": {"name", "desc"}, ...}}"""
+    out = {}
+    for kit in english:
+        p = (kit or {}).get("passive") or {}
+        if isinstance(kit, dict) and p.get("name") and KINDS.get(kit.get("kit_type")) == "armor":
+            out.setdefault(p["name"].strip(), {"en": {"desc": description(p)}})
+    for code, table in others.items():
+        for name, t in table.items():
+            if name in out:
+                out[name][code] = t
+    return {k: out[k] for k in sorted(out)}
+
+
 def write_table(kits, path=TABLE, source=None):
     doc = {
         "about": "Armor, helmet and cape names by id, from FileDiver's armor-set-json-dumper "
@@ -169,13 +215,31 @@ def main(argv=None):
     ap.add_argument("armors", nargs="?", help="armors.json from Run-me.bat (FileDiver output)")
     ap.add_argument("--check", metavar="KITS_DUMP", help="compare with ArmoryForge\\kits-dump.txt")
     ap.add_argument("-o", "--output", default=TABLE)
+    ap.add_argument("--lang", nargs=2, action="append", metavar=("CODE", "FILE"), default=[],
+                    help="another language's dump (%s), e.g. --lang ja armors-ja.json" % ", ".join(LANGS))
+    ap.add_argument("--passive-text", default=PASSIVE_TEXT)
     args = ap.parse_args(argv)
     if not args.armors and not args.check:
         ap.error("give armors.json, --check kits-dump.txt, or both")
     try:
         if args.armors:
-            kits, skipped = convert(json.loads(read_text(args.armors)))
+            english = json.loads(read_text(args.armors))
+            kits, skipped = convert(english)
+            others = {}
+            for code, path in args.lang:
+                if code not in LANGS:
+                    raise NamesError("--lang %s: use one of %s" % (code, ", ".join(LANGS)))
+                others[code] = localize(kits, english, json.loads(read_text(path)), code)
+                print("%s: %d armor names, %d passives" % (code, sum(1 for e in kits.values() if code in e.get("names", {})),
+                                                          len(others[code])))
             write_table(kits, args.output, os.path.basename(args.armors))
+            if args.lang:
+                with open(args.passive_text, "w", encoding="utf-8", newline="\n") as f:
+                    json.dump({"about": "Armor passive names and descriptions in the game's own languages, from FileDiver's "
+                                        "armor dump (tools/armor_names.py --lang).",
+                               "passives": passive_text(english, others)}, f, indent=1, ensure_ascii=False)
+                    f.write("\n")
+                print("wrote %s" % args.passive_text)
             counts = {}
             for e in kits.values():
                 counts[e["kind"]] = counts.get(e["kind"], 0) + 1

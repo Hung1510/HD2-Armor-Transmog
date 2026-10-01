@@ -8,8 +8,10 @@
 #   MIRRORS=1 tools/armor-names/build.sh    # no proxy.golang.org: golang.org/x from GitHub mirrors
 #
 # The dumper itself is FileDiver's (https://github.com/xypwn/filediver, BSD-3-Clause,
-# by xypwn and contributors), built unmodified. It reads the game install (read-only)
-# and prints every armor, helmet and cape with its id and English name.
+# by xypwn and contributors), with one change: the text language comes from the
+# ARMOR_NAMES_LANG environment variable (default English (US)) instead of always English,
+# so the same exe also writes the Japanese and Chinese names and passive text. It reads
+# the game install (read-only) and prints every armor, helmet and cape with its id and name.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -39,6 +41,23 @@ if [ "${MIRRORS:-0}" = "1" ]; then
     sed -i -E 's/^go 1\.(2[5-9])(\.[0-9]+)?$/go 1.24/; /^toolchain/d' go.mod
     export GOTOOLCHAIN=local GOPROXY=direct GOSUMDB=off GOFLAGS=-mod=mod
 fi
+
+# the one change: language from ARMOR_NAMES_LANG (FileDiver's friendly names, e.g. "Japanese")
+MAIN=cmd/tools/components/armor-set-json-dumper/main.go
+grep -q 'LanguageFriendlyNameToHash\["English (US)"\]' "$MAIN"
+sed -i 's/LanguageFriendlyNameToHash\["English (US)"\]/LanguageFriendlyNameToHash[armorNamesLang()]/' "$MAIN"
+cat >> "$MAIN" <<'GO'
+
+// Super Earth Armory Forge: the text language, from ARMOR_NAMES_LANG (default English (US))
+func armorNamesLang() string {
+	if l := os.Getenv("ARMOR_NAMES_LANG"); l != "" {
+		if _, ok := stingray_strings.LanguageFriendlyNameToHash[l]; ok {
+			return l
+		}
+	}
+	return "English (US)"
+}
+GO
 
 mkdir -p "$WORK/pkg" "$OUT"
 go build -trimpath -o "$WORK/pkg/armor-set-json-dumper.exe" ./cmd/tools/components/armor-set-json-dumper

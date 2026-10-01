@@ -86,6 +86,19 @@ check(armor_names.main(["--check", dump, "-o", out]) == 1, "... and fails on a k
 check(not any("armor" in f for f in picker.RELEASE_TOOLS), "the names tool is not in the release allow-list")
 check(os.path.exists(os.path.join(ROOT, "tools", "armor-names", "build.sh")), "the dumper build script is in the repo")
 
+# ------------------------------------------------------------------ 5. other languages
+# (the Japanese fixture's text is made up for the test; real text comes from the game)
+out = tempfile.mkdtemp()
+rc = armor_names.main([SAMPLE, "-o", os.path.join(out, "names.json"), "--passive-text", os.path.join(out, "pt.json"),
+                       "--lang", "ja", os.path.join(HERE, "fixtures", "armors-sample-ja.json")])
+names = json.load(open(os.path.join(out, "names.json"), encoding="utf-8"))["kits"]
+pt = json.load(open(os.path.join(out, "pt.json"), encoding="utf-8"))["passives"]
+check(rc == 0 and names["0xA9A71FE7"].get("names") == {"ja": "SR-64 シンダーブロック"},
+      "--lang ja: each armor gets its Japanese name (matched by id)")
+check(pt["Siege-Ready"]["ja"] == {"name": "攻城準備", "desc": "リロード速度が上昇"} and pt["Siege-Ready"]["en"]["desc"] == "Increases reload speed",
+      "... and passive-text.json has each passive's name and description per language")
+check(armor_names.main([SAMPLE, "-o", os.path.join(out, "n2.json"), "--lang", "xx", SAMPLE]) == 2, "an unknown language code is refused")
+
 if failed:
     print("\n%d FAILED" % len(failed))
     sys.exit(1)
