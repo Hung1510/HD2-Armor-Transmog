@@ -480,6 +480,7 @@
       return;
     }
     cat = core.makeCatalog(data);
+    $("verTag").textContent = "v" + data.version;      // the mod version this page builds
     for (const p of data.presets) {
       const o = document.createElement("option");
       o.value = p.file;

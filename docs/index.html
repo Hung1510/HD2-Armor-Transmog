@@ -66,6 +66,8 @@ button, input, select { font: inherit; color: inherit; }
 .title .mark img { width: 40px; height: 40px; }
 .title h1 { margin: 0; font: 700 44px/1 var(--ui); font-stretch: 75%; letter-spacing: .03em; text-transform: uppercase; }
 .title h1 span { color: var(--yellow); }
+.title .ver { align-self: flex-end; margin-bottom: 4px; padding: 2px 8px; border: 1px solid var(--line-2); color: var(--muted); font: 600 13px/1.4 var(--ui); letter-spacing: .06em; text-decoration: none; }
+.title .ver:hover { color: var(--yellow); border-color: var(--yellow); }
 .lede { margin: 10px 0 22px 70px; max-width: 720px; color: var(--muted); }
 .lede b { color: var(--text); font-weight: 600; }
 .key { display: inline-grid; place-items: center; min-width: 26px; height: 24px; padding: 0 6px; border: 1.5px solid var(--text); border-radius: 3px;
@@ -263,6 +265,7 @@ footer a { color: var(--muted); }
   <div class="title">
     <div class="mark"><img src="icon.png" alt=""></div>
     <h1>Armory <span>Forge</span></h1>
+    <a class="ver" id="verTag" href="https://github.com/Hung1510/Super-Earth-Armory-Forge/blob/main/CHANGELOG.md" title="What's new">v…</a>
   </div>
   <p class="lede">Plan an armor passive stack and download it as a ready-to-install mod. <b>This page is optional</b>: the mod has the same editor in game. Install it and press <span class="key">F7</span>.</p>
 
