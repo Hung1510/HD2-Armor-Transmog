@@ -31,6 +31,7 @@ SUITES = [
     ("test_passive_info.py", "passive info, stack summary, Remove armor"),
     ("test_report_share.py", "panel off, short share codes, problem report"),
     ("test_wearing.py", "what you wear, one armor's weight, the game's input while open"),
+    ("test_every_armor.py", "the Every armor stack: a setup that stays whatever armor you wear"),
     ("test_lang.py", "the panel in Simplified Chinese; data stays English; fonts without Chinese"),
     ("test_window_filter.py", "game-window input filter machine code, on an x64 emulator"),
     ("test_weight.py", "armor weight: speed / stamina / armor class, any look"),

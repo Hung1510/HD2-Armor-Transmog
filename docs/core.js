@@ -15,6 +15,7 @@
   const FALSE = new Set(["off", "no", "false", "0", "n", ""]);
 
   class ConfigError extends Error {}
+  const EVERY = 999;
 
   // ------------------------------------------------------------------ catalog
   function makeCatalog(data) {
@@ -23,6 +24,9 @@
     const byName = new Map();
     for (const p of data.catalog) byName.set(norm(p.name), p.id);
     for (const [k, v] of Object.entries(data.aliases)) byName.set(k, v);
+    // "Every armor" (tools/picker.py EVERY): one stack for every armor without its own tab
+    byId.set(EVERY, { id: EVERY, name: "Every armor", rows: [], stats: [] });
+    for (const n of ["everyarmor", "every", "allarmors", "anyarmor"]) byName.set(n, EVERY);
     return { data, byId, byName, list: data.catalog };
   }
 
@@ -182,8 +186,8 @@
             const t = v.trim(), pct = t.endsWith("%");
             const sc = parseFloat(pct ? t.slice(0, -1) : t) / (pct ? 100 : 1);
             if (!/^\s*[0-9.]+%?\s*$/.test(t) || !isFinite(sc))
-              throw new ConfigError(`[settings]: panel_scale must be a number from 0.8 to 1.5, got '${t}'`);
-            if (sc < 0.8 - 1e-9 || sc > 1.5 + 1e-9) throw new ConfigError(`[settings]: panel_scale must be from 0.8 to 1.5, got '${t}'`);
+              throw new ConfigError(`[settings]: panel_scale must be a number from 0.8 to 2.0, got '${t}'`);
+            if (sc < 0.8 - 1e-9 || sc > 2.0 + 1e-9) throw new ConfigError(`[settings]: panel_scale must be from 0.8 to 2.0, got '${t}'`);
             settings.panel_scale = Math.round(sc * 10) / 10;
           } else if (k === "panel") {
             const pv = v.trim().toLowerCase();
@@ -246,6 +250,7 @@
     const trigger = findPerk(cat, triggerText, where);
     let policy = "stack";
     let weight = null;
+    let own = true;           // own_passive = off: the armors' own passive is turned off
     const enabled = [];
     const tweaks = new Map(); // "pid|key" -> value, insertion ordered
     let rawRows = [], rawStats = [];
@@ -259,7 +264,12 @@
         if (policy !== "stack" && policy !== "strongest")
           throw new ConfigError(`${where}: conflicts must be 'stack' or 'strongest'`);
       } else if (lk === "weight") weight = parseWeight(v, where);
-      else if (lk === "raw") rawRows = rawRows.concat(parseRaw(v, where + " raw", false));
+      else if (lk === "own_passive") {
+        const val = v.trim().toLowerCase();
+        if (TRUE.has(val)) own = true;
+        else if (FALSE.has(val)) own = false;
+        else throw new ConfigError(`${where}: own_passive must be on or off`);
+      } else if (lk === "raw") rawRows = rawRows.concat(parseRaw(v, where + " raw", false));
       else if (lk === "raw_stats") rawStats = rawStats.concat(parseRaw(v, where + " raw_stats", true));
       else if (k.includes(".")) {
         const dot = k.lastIndexOf(".");
@@ -267,10 +277,11 @@
         const ekey = k.slice(dot + 1).trim();
         const keys = effectsOf(cat, pid).map((e) => e.key);
         if (!keys.includes(ekey))
-          throw new ConfigError(`${where}: ${nameOf(pid)} has no effect '${ekey}'. It has: ${keys.join(", ")}`);
+          throw new ConfigError(`${where}: ${nameOf(pid)} has no effect '${ekey}'. It has: ${keys.join(", ") || "none"}`);
         tweaks.set(pid + "|" + ekey, num(v, `${where} ${k}`));
       } else {
         const pid = findPerk(cat, k, where);
+        if (pid === EVERY) throw new ConfigError(`${where}: '${k}' is a tab ([profile: Every armor]), not a passive to tick`);
         const val = v.trim().toLowerCase();
         if (TRUE.has(val)) {
           if (pid === trigger)
@@ -332,7 +343,7 @@
       raw: rawRows, raw_stats: rawStats,
     };
     return {
-      perk: trigger, name: tname, policy, weight, rows, stats, state,
+      perk: trigger, name: tname, policy, weight, own, rows, stats, state,
       enabled: sortedEnabled.map(nameOf),
       overrides, stat_overrides: statOverrides,
       notes: notes.concat(rr.report, sr.report),
@@ -452,6 +463,7 @@
       L.push("        {");
       L.push(`            perk = ${p.perk}, name = ${luaStr(p.name)}, conflicts = '${p.policy}',`);
       if (p.weight !== null && p.weight !== undefined) L.push(`            weight = ${p.weight},   -- ${WEIGHT_NAMES[p.weight]}`);
+      if (p.own === false) L.push("            own = false,   -- own_passive = off");
       L.push(`            enabled = { ${st.enabled.join(", ")} },`);
       L.push("            tweaks = {");
       for (const [pid, key, val] of st.tweaks) L.push(`                { ${pid}, '${key}', ${luaNum(val)} },`);
@@ -592,6 +604,7 @@
       L.push(`[profile: ${tname}]`);
       L.push(`conflicts = ${p.conflicts}`);
       if (p.weight !== null && p.weight !== undefined) L.push(`weight    = ${WEIGHT_NAMES[p.weight]}`);
+      if (p.own === false) L.push("own_passive = off");
       for (const c of cat.list) {
         if (c.id === p.perk) continue;
         L.push(`${c.name.padEnd(34)} = ${p.enabled.includes(c.id) ? "on" : "off"}`);
@@ -634,6 +647,7 @@
       L.push(`[profile: ${p.perk}]`);
       if (p.conflicts === "strongest") L.push("conflicts=strongest");
       if (p.weight !== null && p.weight !== undefined) L.push(`weight=${WEIGHT_NAMES[p.weight]}`);
+      if (p.own === false) L.push("own_passive=off");
       for (const pid of [...p.enabled].filter((x) => x !== p.perk).sort((a, b) => a - b)) L.push(`${pid}=on`);
       const keys = Object.keys(p.tweaks || {}).filter((k) => {
         const pid = parseInt(k.split(".")[0], 10);
@@ -668,6 +682,7 @@
         const lk = k.trim().toLowerCase();
         if (lk === "conflicts") prof.conflicts = v.trim().toLowerCase();
         else if (lk === "weight") prof.weight = parseWeight(v, sec.name);
+        else if (lk === "own_passive") { if (FALSE.has(v.trim().toLowerCase())) prof.own = false; }
         else if (lk === "raw" || lk === "raw_stats") prof[lk] = v;
         else if (k.includes(".")) {
           const dot = k.lastIndexOf(".");
@@ -687,7 +702,7 @@
   }
 
   return {
-    ConfigError, TYPE_NAMES, WEIGHT_NAMES, ARCHIVE_NAME, makeCatalog, effectsOf, findPerk, parseIni,
+    ConfigError, TYPE_NAMES, WEIGHT_NAMES, ARCHIVE_NAME, EVERY, makeCatalog, effectsOf, findPerk, parseIni,
     loadConfigText, generateLua, archiveFor, resourceHash, describeProfiles, manifestFor,
     serializeIni, stateFromText, pyRepr, fmtG, luaNum, howToEdit, compactIni,
   };

@@ -113,6 +113,7 @@ LANGS.zh = {
         ['+ Bigger']                   = '+ 放大',
         ['Reset size and position']    = '重置大小与位置',
         ['Move the panel: drag its top strip.'] = '移动面板：拖动顶部条即可。',
+        ['Taller than the screen: turn the wheel outside a list to scroll it.'] = '面板比屏幕高：在列表外滚动鼠标滚轮即可上下移动。',
         ['Fixed keys']                 = '固定快捷键',
         ['Search passives']            = '搜索被动',
         ['Panel size']                 = '面板尺寸',
@@ -139,6 +140,22 @@ LANGS.zh = {
         ['STACK SUMMARY']              = '堆叠摘要',
         ['SUM']                        = '合计',
         ['WGT']                        = '重量',
+        -- 6.2.1: Every armor (Armory Forge's own wording)
+        ['OWN']                        = '自带',
+        ['Any armor you wear']         = '你穿的任何护甲',
+        ["The armor's own passive"]    = '护甲自带被动',
+        ['Keep it']                    = '保留',
+        ['Turn it off']                = '关闭',
+        ['On every armor.']            = '作用于所有护甲。',
+        ['Off: only the passives you tick count, whatever armor you wear.'] = '关闭：不管穿什么护甲，只有你勾选的被动生效。',
+        ['Kept: each armor keeps its own passive, and your stack goes on top.'] = '保留：每件护甲保留自带被动，你的堆叠叠加在上面。',
+        ["Tick passives on the left; a passive's own tab (e.g. Med-Kit) still wins for its armors."] = '在左边勾选被动；某个被动自己的标签页（例如医疗包）对它的护甲优先。',
+        ['No armor records found yet. Load into your ship or a mission.'] = '还没找到护甲记录。请进入飞船或任务。',
+        ['Added an Every armor stack: it stays whatever armor you wear'] = '已添加所有护甲堆叠：不管穿什么护甲都保持不变',
+        ["The armors' own passives are off: only your picks count"] = '护甲自带被动已关闭：只有你选的被动生效',
+        ['The armors keep their own passives'] = '护甲保留自带被动',
+        ['One stack for every armor you wear: pick passives and a weight once, then change armor as often as you like and the stack stays.'] = '一套堆叠适用于你穿的所有护甲：只需选一次被动和重量，之后随便换护甲，堆叠都不变。',
+        ["It goes on every armor whose passive has no tab of its own. You can also turn the armors' own passives off, so only your picks count."] = '它会加到所有被动没有自己标签页的护甲上。你也可以关闭护甲自带被动，只让你选的被动生效。',
         ['Nothing stacked yet: tick passives on the left.'] = '还没有叠加被动：在左边勾选即可。',
         -- 被动替换版（Passive Swap edition，Nexus 版）
         ["Passive Swap: give any armor another passive, at the game's values."] = '被动替换：给任意护甲换上另一个被动，数值沿用游戏原值。',
@@ -238,6 +255,23 @@ LANGS.zh = {
     -- { Lua pattern, 替换 }；^...$ 锚定整句。面板会把标签转成大写，所以同一句会同时
     -- 登记原文和全大写两份。
     pat = {
+        -- 6.2.1: Every armor
+        { '^(.+)  %-  ANY ARMOR YOU WEAR$',                  '%1  -  你穿的任何护甲' },
+        { '^(.+)  %-  YOUR ARMOR$',                          '%1  -  你的护甲' },
+        { "^ARMOR'S OWN PASSIVE: KEEP$",                     '护甲自带被动：保留' },
+        { "^ARMOR'S OWN PASSIVE: OFF$",                      '护甲自带被动：关闭' },
+        { '^This stack goes on every armor whose passive has no tab of its own %((%d+) passive%(s%) now%)%. Change armor as often as you like: the stack and its weight stay%.$',
+          '这套堆叠会加到所有被动没有自己标签页的护甲上（当前 %1 个被动）。随便换护甲：堆叠和重量都不变。' },
+        { '^Applies to all (%d+) armor%(s%) with no tab of their own%. Passives on the armor add to it %(e%.g%. Extra Padding %+50 armor%)%.$',
+          '对所有 %1 件没有自己标签页的护甲生效。护甲上的被动会额外加成（例如额外垫料 +50 护甲值）。' },
+        { '^(%d+) passive%(s%) stacked on (%d+) armor passive%(s%) without their own tab, own passives off$',
+          '已堆叠 %1 个被动，作用于 %2 个没有自己标签页的护甲被动，自带被动已关闭' },
+        { '^(%d+) passive%(s%) stacked on (%d+) armor passive%(s%) without their own tab$',
+          '已堆叠 %1 个被动，作用于 %2 个没有自己标签页的护甲被动' },
+        { '^(.+): Every armor stack, (%d+) passive%(s%), own passive off %(tab (%d+)%)$', '%1：所有护甲堆叠，%2 个被动，自带被动已关闭（标签页 %3）' },
+        { '^(.+): Every armor stack, (%d+) passive%(s%), own passive off$', '%1：所有护甲堆叠，%2 个被动，自带被动已关闭' },
+        { '^(.+): Every armor stack, (%d+) passive%(s%) %(tab (%d+)%)$', '%1：所有护甲堆叠，%2 个被动（标签页 %3）' },
+        { '^(.+): Every armor stack, (%d+) passive%(s%)$',   '%1：所有护甲堆叠，%2 个被动' },
         -- 6.2 (added with the port; Armory Forge's own wording, not hd2modpj's)
         { '^(.+): (%d+) passive%(s%) stacked %(tab (%d+)%)$', '%1：%2 个被动已堆叠（标签页 %3）' },
         { '^(.+): tab (%d+), nothing ticked yet %(tab (%d+)%)$', '%1：标签页 %2，还没有勾选' },
@@ -392,6 +426,7 @@ LANGS.zh = {
         ['Blunt-Force Mitigation']             = '钝击创伤缓和',
         ['True Grit']                          = '坚韧不拔',
         ['Standard Issue']                     = '标准配发',
+        ['Every armor']                        = '所有护甲',
     },
 
     -- ---------------------------------------------------------------- 6. 效果名

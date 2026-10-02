@@ -99,6 +99,19 @@ weight = heavy
 [profile: Siege-Ready]
 weight = heavy
 `,
+  "edge: every armor, own passive off": `
+[settings]
+name = Any Armor
+[profile: Every armor]
+own_passive = off
+conflicts = strongest
+weight = medium
+Fortified = on
+Scout = on
+Fortified.explosive_damage_taken = 0.4
+[profile: Siege-Ready]
+Med-Kit = on
+`,
   "edge: panel off": `
 [settings]
 name = Quiet

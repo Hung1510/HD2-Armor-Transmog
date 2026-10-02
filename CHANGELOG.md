@@ -1,7 +1,13 @@
 # Changelog
 
-## Next
-- **The version is in every file name now:** `Super-Earth-Armory-Forge-v6.3.zip`, and the mod manager lists it as *Super Earth Armory Forge v6.3*, so you can see which one you have. Thanks TheCrimsonFücker.
+## 6.2.1 (2026-10-02)
+Both editions (full and Passive Swap):
+- **Bigger panel on small screens:** the panel size now goes up to 200%. Up to 150% it always fits the screen as before; above that, on a 720p or 900p screen, the panel gets taller than the screen so its text is bigger, and the mouse wheel outside a list scrolls it up and down. Keys tab → *Size*, Ctrl +, or `[+]` at the top. Thanks NicoNirva.
+- **The version is in every file name now:** `Super-Earth-Armory-Forge-v6.2.1.zip`, and the mod manager lists it as *Super Earth Armory Forge v6.2.1*, so you can see which one you have. Thanks TheCrimsonFücker.
+
+Full edition:
+- **Every armor:** a stack that follows you to any armor you wear. *+ Armor* → *Every armor*, tick your passives, set a weight, and change armor as often as you like: the setup stays. *The armor's own passive* can be kept (your picks go on top) or turned off (only your picks count). A passive that has its own tab still uses that tab. In the loadout it's `[profile: Every armor]` with `own_passive = off`; the web builder has it in the passive list too. Thanks lukasactual.
+- **New stacks start on *Strongest only*:** overlapping effects keep the biggest one instead of multiplying. Stacks you already have keep their setting. Thanks lukasactual.
 
 ## 6.2 (2026-10-01)
 Both editions (full and Passive Swap):

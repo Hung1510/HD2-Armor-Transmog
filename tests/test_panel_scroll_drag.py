@@ -71,7 +71,7 @@ for res, scale in (((1280, 720), "1.0"), ((1920, 1080), "1.5"), ((3440, 1440), "
             break
         g.scroll_wheel("addpick:%d" % next(iter(int(k.split(':')[1]) for k in keys_like(g, "addpick:"))), -1)
         seen |= {int(k.split(":")[1]) for k in keys_like(g, "addpick:")}
-    check(seen == ALL - {medkit}, "%s: the mouse wheel reaches every armor passive in + Armor (%d/%d)" % (tag, len(seen), len(ALL) - 1))
+    check(seen - {picker.EVERY} == ALL - {medkit} and picker.EVERY in seen, "%s: the mouse wheel reaches every armor passive in + Armor (%d/%d, plus Every armor)" % (tag, len(seen - {picker.EVERY}), len(ALL) - 1))
     if "addpick:%d" % true_grit in g.regions():
         g.click("addpick:%d" % true_grit)
         check(any("True Grit" in t or "TRUE GRIT" in t for t in g.texts()), "%s: True Grit can be picked as a base armor" % tag)

@@ -34,7 +34,7 @@ ENGINE_FILES = [os.path.join(HERE, f) for f in ("engine.lua", "lang_zh.lua", "pa
 MOD_ID = "mods/community/passive_picker_v4"
 GLOBAL = "ArmoryForge"
 TITLE = "Super Earth Armory Forge"
-VERSION = "6.2"
+VERSION = "6.2.1"
 # The only tool files that go in the player zip: plain-text sources of the mod and the
 # builder. Dev scripts (badge updaters, PowerShell) stay out; mod sites quarantine
 # archives that carry scripts or executables.
@@ -42,7 +42,7 @@ RELEASE_TOOLS = ["picker.py", "engine.lua", "lang_zh.lua", "panel.lua", "main.lu
 RELEASE_ALLOWED_EXT = (".json", ".png", ".patch_0", ".stream", ".gpu_resources", ".md", ".txt", ".ini", ".py", ".lua")
 AUTHOR = "mostlycloudy (original v3), Hung1510 (v4 edit)"
 DEFAULT_HOTKEY = "F7"
-DEFAULT_PANEL_SCALE = 1.0      # F7 panel size, 0.8 .. 1.5
+DEFAULT_PANEL_SCALE = 1.0      # F7 panel size, 0.8 .. 2.0 (over 1.5: bigger than a small screen, it scrolls)
 DEFAULT_SWAP_HOTKEY = "F9"     # F6 = Refresh Operations, F8 = SHODAN Stat Editor
 
 # --------------------------------------------------------------------------- catalog
@@ -159,8 +159,21 @@ PERK_BY_NAME = {norm(n): pid for pid, (n, _, _) in CATALOG.items()}
 PERK_BY_NAME.update(ALIASES)
 
 
+# "Every armor" (6.2.1): one stack for every armor whose passive has no tab of its own.
+# A pseudo passive id, not in CATALOG; no effects of its own.
+EVERY = 999
+EVERY_NAME = "Every armor"
+EVERY_NAMES = {"everyarmor", "every", "allarmors", "anyarmor", str(EVERY)}
+
+
+def perk_name(pid):
+    return EVERY_NAME if pid == EVERY else CATALOG[pid][0]
+
+
 def find_perk(text: str, where: str) -> int:
     t = text.strip()
+    if norm(t) in EVERY_NAMES or t == str(EVERY):
+        return EVERY
     if t.isdigit() and int(t) in CATALOG:
         return int(t)
     pid = PERK_BY_NAME.get(norm(t))
@@ -174,6 +187,8 @@ def find_perk(text: str, where: str) -> int:
 
 def effects_of(pid):
     """[(key, kind, ident, default, hint)] for one passive; kind 'row' or 'stat'."""
+    if pid == EVERY:
+        return []
     name, rows, stats = CATALOG[pid]
     out = []
     for mid, typ, val in rows:
@@ -244,9 +259,9 @@ def load_config_text(text, source="<loadout>"):
                 try:
                     sc = float(v.strip().rstrip("%")) / (100.0 if v.strip().endswith("%") else 1.0)
                 except ValueError:
-                    raise ConfigError("[settings]: panel_scale must be a number from 0.8 to 1.5, got '%s'" % v.strip()) from None
-                if not (0.8 - 1e-9 <= sc <= 1.5 + 1e-9):
-                    raise ConfigError("[settings]: panel_scale must be from 0.8 to 1.5, got '%s'" % v.strip())
+                    raise ConfigError("[settings]: panel_scale must be a number from 0.8 to 2.0, got '%s'" % v.strip()) from None
+                if not (0.8 - 1e-9 <= sc <= 2.0 + 1e-9):
+                    raise ConfigError("[settings]: panel_scale must be from 0.8 to 2.0, got '%s'" % v.strip())
                 settings["panel_scale"] = math.floor(sc * 10 + 0.5) / 10.0     # half up, like the web builder and the game
             elif k == "panel":
                 pv = v.strip().lower()
@@ -334,6 +349,7 @@ def build_profile(trigger_text, sec, where):
     trigger = find_perk(trigger_text, where)
     policy = "stack"
     weight = None
+    own = True           # own_passive = off: the armors' own passive is turned off
     enabled = []
     tweaks = {}          # (pid, key) -> value
     raw_rows, raw_stats = [], []
@@ -347,6 +363,14 @@ def build_profile(trigger_text, sec, where):
                 raise ConfigError("%s: conflicts must be 'stack' or 'strongest'" % where)
         elif lk == "weight":
             weight = parse_weight(v, where)
+        elif lk == "own_passive":
+            val = v.strip().lower()
+            if val in TRUE:
+                own = True
+            elif val in FALSE:
+                own = False
+            else:
+                raise ConfigError("%s: own_passive must be on or off" % where)
         elif lk == "raw":
             raw_rows += parse_raw(v, where + " raw", stat=False)
         elif lk == "raw_stats":
@@ -357,10 +381,12 @@ def build_profile(trigger_text, sec, where):
             keys = {e[0]: e for e in effects_of(pid)}
             if ekey.strip() not in keys:
                 raise ConfigError("%s: %s has no effect '%s'. It has: %s"
-                                  % (where, CATALOG[pid][0], ekey.strip(), ", ".join(keys)))
+                                  % (where, perk_name(pid), ekey.strip(), ", ".join(keys) or "none"))
             tweaks[(pid, ekey.strip())] = num(v, "%s %s" % (where, k))
         else:
             pid = find_perk(k, where)
+            if pid == EVERY:
+                raise ConfigError("%s: '%s' is a tab ([profile: Every armor]), not a passive to tick" % (where, k))
             val = v.strip().lower()
             if val in TRUE:
                 if pid == trigger:
@@ -392,7 +418,7 @@ def build_profile(trigger_text, sec, where):
 
     # trigger's own effects -> overrides when tweaked
     overrides, stat_overrides = [], []
-    tname = CATALOG[trigger][0]
+    tname = perk_name(trigger)
     base_rows = {}
     for key, kind, ident, default, _ in effects_of(trigger):
         val = tweaks.get((trigger, key), default)
@@ -421,7 +447,7 @@ def build_profile(trigger_text, sec, where):
         enabled=sorted(enabled),
         tweaks=[(pid, key, val) for (pid, key), val in tweaks.items() if pid == trigger or pid in enabled],
         raw=raw_rows, raw_stats=raw_stats)
-    return dict(perk=trigger, name=tname, policy=policy, weight=weight, rows=rows, stats=stats, state=state,
+    return dict(perk=trigger, name=tname, policy=policy, weight=weight, own=own, rows=rows, stats=stats, state=state,
                 enabled=[CATALOG[pid][0] for pid in sorted(enabled)],
                 tweaked=sorted("%s.%s" % (CATALOG[pid][0], key) for (pid, key) in tweaks),
                 overrides=overrides, stat_overrides=stat_overrides,
@@ -656,6 +682,8 @@ def generate_lua(settings, profiles, blank=False, swap_only=False):
         L.append("            perk = %d, name = %s, conflicts = '%s'," % (p["perk"], lua_str(p["name"]), p["policy"]))
         if p.get("weight") is not None:
             L.append("            weight = %d,   -- %s" % (p["weight"], WEIGHT_NAMES[p["weight"]]))
+        if p.get("own") is False:
+            L.append("            own = false,   -- own_passive = off")
         L.append("            enabled = { %s }," % ", ".join(str(x) for x in st["enabled"]))
         L.append("            tweaks = {")
         for pid, key, val in st["tweaks"]:
@@ -1261,7 +1289,7 @@ def cmd_init(args):
     L.append("retire = true               ; true: patch once. false: re-check every 5s")
     L.append("hotkey = F7                 ; opens the in-game panel (F1..F12)")
     L.append("swap_hotkey = F9            ; cycles your presets in game (F1..F12 or off)")
-    L.append("panel_scale = 1.0           ; F7 panel size, 0.8 .. 1.5 (Ctrl +/- in game)")
+    L.append("panel_scale = 1.0           ; F7 panel size, 0.8 .. 2.0 (Ctrl +/- in game)")
     L.append("panel = on                  ; off: no in-game panel, hotkeys or controller (this file only)")
     L.append("")
     L.append("; One [profile: <passive>] per armour passive you want to boost.")

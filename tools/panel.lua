@@ -388,10 +388,13 @@ local function swap_key()
     k = PP.fkey(k) or 'F9'
     return k ~= hotkey() and k or 'OFF'
 end
--- panel size the player chose (0.8 .. 1.5), Ctrl +/- in the panel
+-- panel size the player chose (0.8 .. 2.0), Ctrl +/- in the panel. Up to 150% the panel
+-- always fits the screen; over 150% it is allowed to be taller than a small screen
+-- (720p, 900p) so its text gets bigger, and it scrolls: the wheel outside a list, or drag
+local SCALE_MAX, SCALE_FIT = 2.0, 1.5
 local function ui_scale()
     local v = tonumber((LOADOUT and LOADOUT.panel_scale) or MOD.panel_scale) or 1
-    return math.max(0.8, math.min(1.5, v))
+    return math.max(0.8, math.min(SCALE_MAX, v))
 end
 local function now_s() return api.now() end
 
@@ -611,6 +614,7 @@ function PP.compact(l)
         L[#L + 1] = '[profile: ' .. p.perk .. ']'
         if p.conflicts == 'strongest' then L[#L + 1] = 'conflicts=strongest' end
         if WEIGHTS[p.weight] then L[#L + 1] = 'weight=' .. WEIGHTS[p.weight] end
+        if p.own == false then L[#L + 1] = 'own_passive=off' end
         for _, pid in ipairs(sorted_enabled(p)) do L[#L + 1] = pid .. '=on' end
         local keys = {}
         for k, v in pairs(p.tweaks) do
@@ -836,7 +840,7 @@ end
 function PP.zoom(step)
     if not LOADOUT then return end
     local v = step == 0 and 1 or math.floor((ui_scale() + step * 0.1) * 10 + 0.5) / 10
-    v = math.max(0.8, math.min(1.5, v))
+    v = math.max(0.8, math.min(SCALE_MAX, v))
     if step == 0 and ui.pos then                 -- Ctrl 0 also puts the panel back in place
         ui.pos = nil
         PP.save_pos()
@@ -848,6 +852,18 @@ function PP.zoom(step)
     ui.last_text = snapshot()          -- a size change is not an undo step
     loadout_changed({})
     say(string.format('Panel size %d%%', v * 100 + 0.5), 1.5)
+end
+
+-- a panel taller than the screen (over 150% on a small screen): move it up or down by px
+function PP.pan(dy)
+    local t, o = ui.tall, ui.origin
+    if not (t and o) then return end
+    local y = math.max(t.lo, math.min(0, o.y + dy))
+    if y == o.y then return end
+    ui.pos = { fx = o.x / o.w, fy = y / o.h }
+    o.y = y
+    ui.version = ui.version + 1
+    pcall(PP.save_pos)
 end
 
 -- scroll the list that is too long for its box (wheel, PageUp/PageDown, its bar)
@@ -883,8 +899,15 @@ function PP.wearing()
     local kit = KITS.source(KITS.worn)
     local w = { name = KITS.name(KITS.worn), perk = kit and kit.passive }
     if not w.perk or not CAT[w.perk] then w.kind = 'unknown'; return w end
+    local every_tab = nil
     for i, prof in ipairs(LOADOUT and LOADOUT.profiles or {}) do
         if prof.perk == w.perk then w.tab, w.prof = i, prof end
+        if prof.perk == EVERY then every_tab = i end
+    end
+    if not w.tab and every_tab and not MOD.swap_only then          -- the Every armor stack covers it
+        w.tab, w.prof, w.kind, w.count = every_tab, LOADOUT.profiles[every_tab], 'every', 0
+        for pid in pairs(w.prof.enabled or {}) do if pid ~= EVERY then w.count = w.count + 1 end end
+        return w
     end
     if not w.tab then w.kind = 'none'; return w end
     if MOD.swap_only then
@@ -1084,13 +1107,18 @@ local function draw(width, height)
     -- panel units -> screen pixels at the screen's own resolution, never bigger than
     -- the screen; every edge and font size is rounded to a whole pixel so text and
     -- lines stay sharp at 1440p / 4K (fractional positions are what made them soft)
-    local s = math.min(height / 1080 * 0.8 * ui_scale(), height * 0.96 / H, (width - 60) / W)
+    local want = height / 1080 * 0.8 * ui_scale()
+    local fit = height * 0.96 / H
+    local s = math.min(want, ui_scale() > SCALE_FIT + 1e-6 and math.max(want, fit) or fit, (width - 60) / W)
     local function px(v) return math.floor(v + 0.5) end
-    local ox, oy = px(30 * s), px((height - H * s) / 2)     -- left edge: SHODAN Stat Editor uses the right
-    if ui.pos then                                           -- dragged somewhere else; always on screen
+    local tall = H * s > height                              -- over 150% on a small screen: it scrolls
+    local ox, oy = px(30 * s), tall and 0 or px((height - H * s) / 2)  -- left edge: SHODAN Stat Editor uses the right
+    local ylo, yhi = math.min(0, height - H * s), math.max(0, height - H * s)
+    if ui.pos then                                           -- dragged somewhere else; always covers the screen
         ox = px(math.max(0, math.min(width - W * s, ui.pos.fx * width)))
-        oy = px(math.max(0, math.min(height - H * s, ui.pos.fy * height)))
+        oy = px(math.max(ylo, math.min(yhi, ui.pos.fy * height)))
     end
+    ui.tall = tall and { lo = ylo, height = height } or nil
     ui.origin = { x = ox, y = oy, w = width, h = height }
     ui.scrolling = nil
     local gui = ui.gui
@@ -1304,6 +1332,9 @@ local function draw(width, height)
             if wr.kind == 'unknown' then line, c = 'Passive not known to the mod', C.DIM
             elseif wr.kind == 'none' then
                 line, c = pn .. ': ' .. (MOD.swap_only and 'no swap yet' or 'nothing stacked') .. '. Click to add its tab', C.YELLOW
+            elseif wr.kind == 'every' then
+                line, c = pn .. ': Every armor stack, ' .. wr.count .. ' passive(s)' .. (wr.prof.own == false and ', own passive off' or ''), C.GOOD
+                if not here then line = line .. ' (tab ' .. wr.tab .. ')' end
             elseif MOD.swap_only then
                 line = wr.kind == 'ok' and (pn .. ' -> ' .. CAT[wr.prof.swap].name) or (pn .. ': keeps its own passive')
                 c = wr.kind == 'ok' and C.GOOD or C.YELLOW
@@ -1686,10 +1717,11 @@ local function draw(width, height)
         local ry = TOP + 70
         text('Size: ' .. string.format('%d%%', ui_scale() * 100 + 0.5) .. '  (Ctrl + / Ctrl -, or [-] [+] at the top)', RX, ry, 14, C.TEXT, RIW)
         local bx = RX + button('zoom:-', '- Smaller', RX, ry + 26, nil, 32, ui_scale() > 0.8) + 8
-        bx = bx + button('zoom:+', '+ Bigger', bx, ry + 26, nil, 32, ui_scale() < 1.5) + 8
+        bx = bx + button('zoom:+', '+ Bigger', bx, ry + 26, nil, 32, ui_scale() < SCALE_MAX - 1e-6) + 8
         button('zoom:0', 'Reset size and position', bx, ry + 26, nil, 32, ui_scale() ~= 1 or ui.pos ~= nil)
         ry = ry + 84
-        text('Move the panel: drag its top strip.', RX, ry, 14, C.TEXT, RIW)
+        text(ui.tall and 'Taller than the screen: turn the wheel outside a list to scroll it.'
+             or 'Move the panel: drag its top strip.', RX, ry, 14, ui.tall and C.YELLOW or C.TEXT, RIW)
         ry = ry + 30
         label('Game keyboard and mouse while open', RX, ry, nil, RIW)
         local gx = RX + button('blockin:on', 'Blocked', RX, ry + 20, nil, 30, true, PP.block_on()) + 8
@@ -1736,22 +1768,32 @@ local function draw(width, height)
                 if wk and wk.passive == c.id then table.insert(free, 1, c) else free[#free + 1] = c end   -- yours first
             end
         end
+        if not MOD.swap_only and not used[EVERY] and PP.match(CAT[EVERY]) then        -- after your armor's passive
+            table.insert(free, (wk and free[1] and free[1].id == wk.passive) and 2 or 1, CAT[EVERY])
+        end
         no_match(y, #free)
         local first, fit = scroller('add', y, BOT - 54, #free)
         for k = first + 1, math.min(#free, first + fit) do
             local c = free[k]
             local worn = KITS.worn and KITS.source(KITS.worn)
             local mine = worn and worn.passive == c.id
-            local tag = '  -  YOUR ARMOR'
+            local tag = c.id == EVERY and '  -  ANY ARMOR YOU WEAR' or '  -  YOUR ARMOR'
+            if c.id == EVERY then mine = true end
             list_row('addpick:' .. c.id, y, mine and (cut(up(c.name), 14, IW - 16 - bar.w - measure(tag, 14)) .. tag) or up(c.name),
-                     ui.hover == 'addpick:' .. c.id, (worn and worn.passive == c.id) and C.YELLOW or nil)
+                     ui.hover == 'addpick:' .. c.id, ((worn and worn.passive == c.id) or c.id == EVERY) and C.YELLOW or nil)
             y = y + RH
         end
         bar.w = 0
         button('addcancel', 'Cancel', IX, BOT - 44, nil, 32, true)
         local hov = ui.hover and tonumber(ui.hover:match('^addpick:(%d+)$'))
         local hinf = hov and PP.info(hov)
-        if hinf then
+        if hov == EVERY then
+            head(RX, TOP + 14, 'New stack', 'Every armor', RIW)
+            local hy = wrap('One stack for every armor you wear: pick passives and a weight once, then change armor as often as you like and the stack stays.',
+                            RX, TOP + 70, 14, C.TEXT, RIW, 3) + 8
+            hy = wrap('It goes on every armor whose passive has no tab of its own. You can also turn the armors\' own passives off, so only your picks count.',
+                      RX, hy, 13, C.MUTED, RIW, 3)
+        elseif hinf then
             head(RX, TOP + 14, MOD.swap_only and 'New swap' or 'New stack', CAT[hov].name, RIW)
             local hy = wrap(hinf.desc, RX, TOP + 70, 14, C.TEXT, RIW, 3) + 10
             label('Armors with this passive', RX, hy, nil, RIW)
@@ -1774,7 +1816,7 @@ local function draw(width, height)
         text('then wear any armor that has that passive to get the stack.', RX, TOP + 92, 14, C.MUTED, RIW)
         text('Example: Med-Kit armor for a tank build, Siege-Ready armor for a gunner build.', RX, TOP + 122, 13, C.DIM, RIW)
         end
-        if not hinf then
+        if not hinf and hov ~= EVERY then
             text('Point at a passive to see what it does and which armors have it.', RX, TOP + 160, 13, C.DIM, RIW)
             text('Picked the wrong one? Open its tab and press REMOVE ARMOR.', RX, TOP + 184, 13, C.DIM, RIW)
         end
@@ -1889,10 +1931,13 @@ local function draw(width, height)
         local base_key = 'sel:' .. p.perk
         if ui.sel == p.perk then rect(LX + 1, y, LW - 2, RH, C.ROW_HI, 951); rect(LX + 1, y, 3, RH, C.YELLOW, 952)
         elseif ui.hover == base_key then rect(LX + 1, y, LW - 2, RH, C.ROW, 951) end
-        local bw = measure('BASE', 10) + 10
-        rect(IX + 2, y + 5, bw, 14, C.YELLOW, 952)
-        text('BASE', IX + 2 + bw / 2, y + 7, 10, C.INK, nil, 'center')
-        text(up(CAT[p.perk].name), IX + bw + 12, y + 5, 14, C.TEXT, IW - bw - 16)
+        local every = p.perk == EVERY
+        local badge = every and 'OWN' or 'BASE'
+        local bw = math.max(measure('BASE', 10), measure(badge, 10)) + 10
+        rect(IX + 2, y + 5, bw, 14, (every and p.own == false) and C.MUTED or C.YELLOW, 952)
+        text(badge, IX + 2 + bw / 2, y + 7, 10, C.INK, nil, 'center')
+        text(every and ("ARMOR'S OWN PASSIVE: " .. (p.own == false and 'OFF' or 'KEEP')) or up(CAT[p.perk].name),
+             IX + bw + 12, y + 5, 14, C.TEXT, IW - bw - 16)
         region(base_key, LX + 1, y, LW - 2, RH)
         y = y + RH + 4
         local rest = {}
@@ -1918,7 +1963,18 @@ local function draw(width, height)
 
         if not ui.sel then ui.sel = p.perk end
         local sel = CAT[ui.sel]
-        if sel then
+        if sel and sel.id == EVERY then
+            head(RX, TOP + 14, 'Every armor', 'Any armor you wear', RIW)
+            local covered = select(1, every_covers())
+            local y2 = wrap('This stack goes on every armor whose passive has no tab of its own (' .. covered ..
+                            ' passive(s) now). Change armor as often as you like: the stack and its weight stay.', RX, TOP + 58, 13, C.TEXT, RIW, 3) + 8
+            label("The armor's own passive", RX, y2, nil, RIW)
+            local ox = RX + button('own:keep', 'Keep it', RX, y2 + 20, nil, 32, true, p.own ~= false) + 8
+            button('own:off', 'Turn it off', ox, y2 + 20, nil, 32, true, p.own == false)
+            y2 = wrap(p.own == false and 'Off: only the passives you tick count, whatever armor you wear.'
+                      or 'Kept: each armor keeps its own passive, and your stack goes on top.', RX, y2 + 64, 12, C.MUTED, RIW, 2) + 6
+            wrap('Tick passives on the left; a passive\'s own tab (e.g. Med-Kit) still wins for its armors.', RX, y2, 12, C.DIM, RIW, 2)
+        elseif sel then
             local is_base = sel.id == p.perk
             local on = is_base or p.enabled[sel.id] == true
             local cap = on and (is_base and 'Remove from stack' or 'Remove from stack') or 'Add to stack'
@@ -1930,7 +1986,7 @@ local function draw(width, height)
             border(RX, TOP + 50, sw, 18, is_base and C.YELLOW or on and C.GOOD or C.DIM, 952)
             text(st, RX + sw / 2, TOP + 54, 11, is_base and C.YELLOW or on and C.GOOD or C.DIM, nil, 'center')
             text(is_base and 'Your armor\'s own passive. Values here replace its own.'
-                 or on and ('On ' .. CAT[p.perk].name .. ' armor.') or 'Values you set are kept for when you add it.',
+                 or on and (p.perk == EVERY and 'On every armor.' or ('On ' .. CAT[p.perk].name .. ' armor.')) or 'Values you set are kept for when you add it.',
                  RX + sw + 10, TOP + 53, 12, C.MUTED, RIW - sw - 12)
             -- value cards: label | value field | -- - + ++ | R
             local fw, bw2, gap, rw = 104, 36, 4, 26
@@ -1988,7 +2044,7 @@ local function draw(width, height)
             text(rcap, RX, y2 + 8, 11, ui.hover == rp and C.YELLOW or C.DIM, RIW)
             region(rp, RX - 4, y2 + 2, rpw + 8, 22)
         elseif ui.sel == 'weight' then
-            head(RX, TOP + 14, 'Armor weight', CAT[p.perk].name .. ' armor', RIW)
+            head(RX, TOP + 14, 'Armor weight', p.perk == EVERY and 'Every armor' or (CAT[p.perk].name .. ' armor'), RIW)
             local y2 = wrap('An armor\'s weight class sets its speed, stamina regen and base armor rating. Pick one and the armor keeps its look.',
                             RX, TOP + 58, 13, C.MUTED, RIW, 2) + 6
             local each = (RIW - 3 * 8) / 4
@@ -2010,11 +2066,13 @@ local function draw(width, height)
             end
             y2 = y2 + 8
             local found = KITS.count(p.perk)
-            if found == 0 then
+            if found == 0 and p.perk == EVERY then
+                y2 = wrap('No armor records found yet. Load into your ship or a mission.', RX, y2, 13, C.BAD, RIW, 2)
+            elseif found == 0 then
                 y2 = wrap('The armor records for ' .. CAT[p.perk].name .. ' were not found yet, so the weight can\'t apply. Load into your ship or a mission.',
                           RX, y2, 13, C.BAD, RIW, 2)
             else
-                y2 = wrap('Applies to all ' .. found .. ' armor(s) with ' .. CAT[p.perk].name .. '. Passives on the armor add to it (e.g. Extra Padding +50 armor).',
+                y2 = wrap('Applies to all ' .. found .. ' armor(s) with ' .. (p.perk == EVERY and 'no tab of their own' or CAT[p.perk].name) .. '. Passives on the armor add to it (e.g. Extra Padding +50 armor).',
                           RX, y2, 13, C.TEXT, RIW, 2)
             end
             local inf = PP.info(p.perk)
@@ -2023,7 +2081,7 @@ local function draw(width, height)
             end
             -- the armor you're wearing on its own (beats the setting above)
             local wk = KITS.worn and KITS.source(KITS.worn)
-            if wk and wk.passive == p.perk then
+            if wk and KITS.covers(p.perk, wk.passive) then
                 local mine = LOADOUT.armors and LOADOUT.armors[wk.id] or {}
                 y2 = y2 + 10
                 rect(RX, y2, RIW, 1, C.LINE, 951)
@@ -2077,7 +2135,14 @@ local function draw(width, height)
         end
         local last = last_result[p.perk]
         local res = last and last.res
-        if not sites_by_perk[p.perk] then
+        if p.perk == EVERY then
+            local n, records = every_covers()
+            res = res or resolve_profile(p)
+            rect(RX, by + 65, 7, 7, n > 0 and C.GOOD or C.DIM, 952)
+            text(#res.enabled .. ' passive(s) stacked on ' .. n .. ' armor passive(s) without their own tab' ..
+                 (p.own == false and ', own passives off' or ''), RX + 14, by + 62, 13, C.TEXT, RIW - 14)
+            if last and last.error then text(last.error, RX, by + 80, 12, C.BAD, RIW) end
+        elseif not sites_by_perk[p.perk] then
             text('This armor passive was not found in the game\'s data yet.', RX, by + 62, 13, C.BAD, RIW)
         elseif sites_by_perk[p.perk][1].foreign then
             text('Another mod already changed this passive\'s data; Armory Forge leaves it alone.', RX, by + 62, 13, C.BAD, RIW)
@@ -2175,7 +2240,7 @@ local function click(key)
         if wr.tab then
             ui.tab, ui.sel, ui.adding, ui.presets, ui.settings = wr.tab, nil, false, false, false
         elseif wr.kind == 'none' then
-            LOADOUT.profiles[#LOADOUT.profiles + 1] = { perk = wr.perk, conflicts = 'stack', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
+            LOADOUT.profiles[#LOADOUT.profiles + 1] = { perk = wr.perk, conflicts = 'strongest', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
             ui.tab, ui.sel, ui.adding, ui.presets, ui.settings = #LOADOUT.profiles, nil, false, false, false
             changed(wr.perk, 'Added ' .. CAT[wr.perk].name .. ' (your armor)')
         end
@@ -2193,9 +2258,10 @@ local function click(key)
         local which, k = arg:match('^([%w_]+):(%w+)$')
         PP.set_key(which, k)
     elseif kind == 'addpick' and n then
-        LOADOUT.profiles[#LOADOUT.profiles + 1] = { perk = n, conflicts = 'stack', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
+        LOADOUT.profiles[#LOADOUT.profiles + 1] = { perk = n, conflicts = 'strongest', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
         ui.tab, ui.sel, ui.adding = #LOADOUT.profiles, nil, false
-        changed(n, (MOD.swap_only and 'Added ' or 'Added a stack for ') .. CAT[n].name .. ' armor')
+        changed(n, n == EVERY and 'Added an Every armor stack: it stays whatever armor you wear'
+                   or ((MOD.swap_only and 'Added ' or 'Added a stack for ') .. CAT[n].name .. ' armor'))
     elseif kind == 'remove' and p then
         if confirm('remove') then
             table.remove(LOADOUT.profiles, ui.tab)
@@ -2206,6 +2272,10 @@ local function click(key)
     elseif kind == 'sel' and n then ui.sel = n; ui.value = nil
     elseif kind == 'tick' and n and p then toggle(p, n)
     elseif kind == 'policy' and p then p.conflicts = arg; changed(p.perk)
+    elseif kind == 'own' and p and p.perk == EVERY then
+        if arg == 'off' then p.own = false else p.own = nil end
+        changed(p.perk, arg == 'off' and "The armors' own passives are off: only your picks count"
+                        or "The armors keep their own passives")
     elseif kind == 'swap' and n and p and MOD.swap_only then
         local pick = (n ~= 0 and n ~= p.perk and CAT[n]) and n or nil
         if pick ~= p.swap then
@@ -2581,7 +2651,7 @@ local function mouse()
         ui.hover = 'drag'
         if down then
             local fx = math.max(0, d.x + sx - d.cx) / width
-            local fy = math.max(0, d.y + sy - d.cy) / height
+            local fy = (d.y + sy - d.cy) / height             -- the draw keeps it on (or covering) the screen
             if not ui.pos or math.abs(fx - ui.pos.fx) > 1e-6 or math.abs(fy - ui.pos.fy) > 1e-6 then
                 ui.pos = { fx = fx, fy = fy }
                 ui.version = ui.version + 1
@@ -2609,6 +2679,10 @@ local function mouse()
             local dy = wheel()
             if dy ~= 0 then PP.scroll(dy > 0 and -3 or 3) end
         end
+    elseif ui.tall and ui.origin then                        -- a panel taller than the screen: move it
+        local n = notches
+        if not n then local dy = wheel(); n = dy > 0 and 1 or dy < 0 and -1 or 0 end
+        if n ~= 0 then PP.pan(n * 80) end
     end
     if mouse_was_down ~= nil then
         if down and not mouse_was_down and ui.hover == 'drag' and ui.origin then

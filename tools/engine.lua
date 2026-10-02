@@ -413,6 +413,14 @@ for _, c in ipairs(CATALOG) do
 end
 for k, v in pairs(ALIASES) do BY_NAME[k] = v end
 
+-- "Every armor" (6.2.1, full edition): one stack for every armor whose passive has no tab
+-- of its own, so the stack stays whatever armor you put on. A pseudo passive with no
+-- effects of its own, kept out of CAT_LIST (the lists of real passives). Its profile can
+-- also turn the armors' own passives off (own = false).
+local EVERY = 999
+CAT[EVERY] = { id = EVERY, name = 'Every armor', rows = {}, stats = {}, effects = {}, by_key = {}, every = true }
+for _, n in ipairs({ 'Every armor', 'Every', 'All armors', 'Any armor' }) do BY_NAME[norm(n)] = EVERY end
+
 local function find_perk(text)
     local t = text:match('^%s*(.-)%s*$')
     if t:match('^%d+$') and CAT[tonumber(t)] then return tonumber(t) end
@@ -425,7 +433,7 @@ end
 --              tweaks = { ['pid.key'] = value }, raw = { {id,type,value} }, raw_stats = { {stat,u1,u2} } }
 local function copy_profile(p)
     local out = { perk = p.perk, conflicts = p.conflicts or 'stack', enabled = {}, tweaks = {},
-                  raw = {}, raw_stats = {}, swap = p.swap, weight = p.weight }
+                  raw = {}, raw_stats = {}, swap = p.swap, weight = p.weight, own = p.own }
     for k, v in pairs(p.enabled or {}) do out.enabled[k] = v end
     for k, v in pairs(p.tweaks or {}) do out.tweaks[k] = v end
     for _, r in ipairs(p.raw or {}) do out.raw[#out.raw + 1] = { r[1], r[2], r[3] } end
@@ -440,7 +448,7 @@ local function default_loadout()
     for _, a in ipairs(MOD.armors or {}) do l.armors[a.id] = { weight = a.weight } end
     for _, d in ipairs(MOD.default or {}) do
         local p = { perk = d.perk, conflicts = d.conflicts, enabled = {}, tweaks = {},
-                    raw = d.raw, raw_stats = d.raw_stats, weight = d.weight }
+                    raw = d.raw, raw_stats = d.raw_stats, weight = d.weight, own = d.own }
         for _, pid in ipairs(d.enabled or {}) do p.enabled[pid] = true end
         for _, t in ipairs(d.tweaks or {}) do p.tweaks[t[1] .. '.' .. t[2]] = t[3] end
         l.profiles[#l.profiles + 1] = copy_profile(p)
@@ -542,7 +550,7 @@ local function resolve_profile(p)
     rows, c1 = collapse(rows, p.conflicts, function(r) return r[1] .. '|' .. r[2] end, function(r) return r[2] end)
     stats, c2 = collapse(stats, p.conflicts, function(r) return tostring(r[1]) end, function() return 2 end)
     return { rows = rows, stats = stats, overrides = overrides, stat_overrides = stat_overrides,
-             enabled = enabled, conflicts = c1 + c2 }
+             enabled = enabled, conflicts = c1 + c2, drop_own = p.own == false }
 end
 
 local LOADOUT = nil          -- the live loadout
@@ -564,6 +572,13 @@ local function profile_for(perk)
     if not LOADOUT then return nil end
     for _, p in ipairs(LOADOUT.profiles) do if p.perk == perk then return p end end
     return nil
+end
+
+-- the profile that applies to armors with this passive: its own tab, else Every armor
+local function profile_applying(perk)
+    local own = profile_for(perk)
+    if own or MOD.swap_only then return own end
+    return profile_for(EVERY)
 end
 
 -- ---------------------------------------------------------------- loadout file (ini)
@@ -596,6 +611,7 @@ local function serialize(l, base_key)
         else
         L[#L + 1] = 'conflicts = ' .. (p.conflicts or 'stack')
         if WEIGHTS[p.weight] then L[#L + 1] = 'weight    = ' .. WEIGHTS[p.weight] end
+        if p.own == false then L[#L + 1] = 'own_passive = off' end
         for _, e in ipairs(CAT_LIST) do
             if e.id ~= p.perk then
                 L[#L + 1] = string.format('%-34s = %s', e.name, p.enabled[e.id] and 'on' or 'off')
@@ -660,7 +676,9 @@ local function parse_loadout(text)
                 local name = head:match('^%s*[Pp][Rr][Oo][Ff][Ii][Ll][Ee]%s*:%s*(.-)%s*$')
                 if name then
                     local perk = find_perk(name)
-                    if perk then
+                    if perk == EVERY and MOD.swap_only then
+                        log('loadout: [' .. head .. '] is for the full edition, skipped')
+                    elseif perk then
                         prof = { perk = perk, conflicts = 'stack', enabled = {}, tweaks = {}, raw = {}, raw_stats = {} }
                         l.profiles[#l.profiles + 1] = prof
                     else
@@ -684,7 +702,7 @@ local function parse_loadout(text)
                     elseif k == 'panel_scale' then
                         local sc = tonumber((val:gsub('%%$', '')))
                         if sc and val:find('%%$') then sc = sc / 100 end
-                        if sc then l.panel_scale = math.max(0.8, math.min(1.5, math.floor(sc * 10 + 0.5) / 10)) end
+                        if sc then l.panel_scale = math.max(0.8, math.min(2.0, math.floor(sc * 10 + 0.5) / 10)) end
                     elseif k == 'base' then l.base = val end
                 elseif k and prof then
                     local lk = k:lower()
@@ -695,6 +713,9 @@ local function parse_loadout(text)
                         prof.conflicts = (val:lower() == 'strongest') and 'strongest' or 'stack'
                     elseif lk == 'weight' then
                         prof.weight = WEIGHTS[val:lower()]      -- game / anything else: the armor's own
+                    elseif lk == 'own_passive' then
+                        local lv = val:lower()
+                        if lv == 'off' or lv == 'false' or lv == 'no' or lv == '0' then prof.own = false else prof.own = nil end
                     elseif lk == 'raw' or lk == 'raw_stats' then
                         for chunk in val:gmatch('[^,]+') do
                             local a, b, c = chunk:match('^%s*(%S+)%s+(%S+)%s+(%S+)%s*$')
@@ -823,6 +844,7 @@ local function desired(site, res, inline_pm, inline_sm)
         end
         return inline_pm, inline_sm
     end
+    if res.drop_own then inline_pm, inline_sm = '', '' end      -- the armor's own passive off
     local omap, smap = {}, {}
     for _, r in ipairs(res.overrides) do omap[u32_bytes(r[1]) .. u32_bytes(r[2])] = f32(r[3]) end
     for _, r in ipairs(res.stat_overrides) do smap[u32_bytes(r[1])] = f32(r[2]) .. f32(r[3]) end
@@ -860,6 +882,12 @@ local function set_array(site, which, blob, inline)
             site[which .. '_bufs'] = bufs
         end
         local count = u64_bytes(#blob / row_bytes)
+        if #blob == 0 then                       -- no rows at all (own passive off, nothing ticked)
+            want = u64_bytes(bufs[1]) .. count
+            if now == want then return 'same' end
+            if not api.write(at, want) then return 'descriptor write failed' end
+            return 'applied'
+        end
         -- already showing exactly this? nothing to do
         for _, buf in ipairs(bufs) do
             if now == u64_bytes(buf) .. count and api.read(buf, #blob) == blob then return 'same' end
@@ -908,9 +936,14 @@ local last_result = {}       -- perk -> { res = resolved, text = status }
 
 local function apply_perk(perk, quiet)
     if KITS.apply then pcall(KITS.apply, perk) end
+    if perk == EVERY then                    -- the Every armor stack: every passive it covers
+        local any = false
+        for pk in pairs(sites_by_perk) do if apply_perk(pk, quiet) then any = true end end
+        return any
+    end
     local list = sites_by_perk[perk]
     if not list then return nil end
-    local prof = profile_for(perk)
+    local prof = profile_applying(perk)
     local res = prof and resolve_profile(prof) or nil
     local worst, changed = nil, false
     for _, site in ipairs(list) do
@@ -919,6 +952,7 @@ local function apply_perk(perk, quiet)
         elseif r ~= 'same' then worst = r end
     end
     last_result[perk] = { res = res, error = worst }
+    if prof and prof.perk == EVERY then last_result[EVERY] = { res = res, error = worst } end
     if changed then
         state.applied = state.applied + 1
         if not quiet then log('applied ' .. CAT[perk].name .. (res and (': ' .. #res.enabled .. ' passive(s)') or ': restored')) end
@@ -1030,7 +1064,7 @@ end
 function KITS.wanted(kit)
     if MOD.swap_only then return nil end
     local a = LOADOUT and LOADOUT.armors and LOADOUT.armors[kit.id]
-    local prof = profile_for(kit.passive)
+    local prof = profile_applying(kit.passive)
     return (a and a.weight) or (prof and prof.weight)
 end
 
@@ -1095,9 +1129,14 @@ function KITS.enforce()
 end
 
 -- how many armors have this passive (for the panel)
+-- does this tab's stack go on armors with this passive? (Every armor: those without a tab)
+function KITS.covers(perk, passive)
+    return passive == perk or (perk == EVERY and CAT[passive] ~= nil and not profile_for(passive))
+end
+
 function KITS.count(perk)
     local n = 0
-    for _, kit in ipairs(KITS.list) do if kit.passive == perk then n = n + 1 end end
+    for _, kit in ipairs(KITS.list) do if KITS.covers(perk, kit.passive) then n = n + 1 end end
     return n
 end
 
@@ -1307,9 +1346,18 @@ local function good_enough()
     if complete() then return true end
     if not state.scanned_window or perks_found < #CAT_LIST - 3 then return false end
     for _, p in ipairs(LOADOUT and LOADOUT.profiles or {}) do
-        if not sites_by_perk[p.perk] then return false end
+        if p.perk ~= EVERY and not sites_by_perk[p.perk] then return false end
     end
     return true
+end
+
+-- the passives the Every armor stack is on now: every one found that has no tab of its own
+local function every_covers()
+    local n, records = 0, 0
+    for pk, list in pairs(sites_by_perk) do
+        if not profile_for(pk) then n, records = n + 1, records + #list end
+    end
+    return n, records
 end
 
 local function summary()
@@ -1317,7 +1365,12 @@ local function summary()
     for _, p in ipairs(LOADOUT and LOADOUT.profiles or {}) do
         local name = CAT[p.perk].name
         local list = sites_by_perk[p.perk]
-        if not list then parts[#parts + 1] = name .. ' (perk ' .. p.perk .. '): not found yet'
+        if p.perk == EVERY then
+            local n, records = every_covers()
+            local res = last_result[EVERY] and last_result[EVERY].res
+            parts[#parts + 1] = name .. ': on ' .. n .. ' passive(s) without their own tab (' .. records .. ' record(s)), ' ..
+                                (res and #res.enabled or 0) .. ' passive(s)' .. (p.own == false and ', own passives off' or '')
+        elseif not list then parts[#parts + 1] = name .. ' (perk ' .. p.perk .. '): not found yet'
         else
             local added = 0
             for _, s in ipairs(list) do added = math.max(added, s.added or 0) end
@@ -1333,7 +1386,9 @@ write_status = function()
     if not path then return false end
     local verdict
     local stacked = false
-    for _, p in ipairs(LOADOUT and LOADOUT.profiles or {}) do if sites_by_perk[p.perk] then stacked = true end end
+    for _, p in ipairs(LOADOUT and LOADOUT.profiles or {}) do
+        if sites_by_perk[p.perk] or (p.perk == EVERY and next(sites_by_perk)) then stacked = true end
+    end
     if state.phase == 'ready' then
         verdict = stacked and 'OK - perk stacked' or 'OK - ready (no stack found yet)'
     elseif state.phase == 'gave_up' then

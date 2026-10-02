@@ -29,7 +29,7 @@ Armory Forge started as an edit of **[Modular Armor Passives / Passive Picker v3
 - **Requires:** [Bingus Shared Loader](https://ayakamods.com/mods/bingus-shared-loader.3861/)
 - **Single-player / private lobbies only.** Don't use it in public matchmaking.
 - Download: [AyakaMods](https://ayakamods.com/mods/super-earth-armory-forge.4359/) · [GitHub Releases](https://github.com/Hung1510/Super-Earth-Armory-Forge/releases/latest) (full edition) · [Nexus Mods: Passive Swap - Armory Forge Lite](https://www.nexusmods.com/helldivers2/mods/16789) (Passive Swap edition)
-- **Two editions:** the **full edition** (`Super-Earth-Armory-Forge-v6.2.zip`, the version is always in the name) stacks passives and edits values. The **Passive Swap edition** (`Super-Earth-Armory-Forge-Passive-Swap-v6.2.zip`) gives each armor one other passive at the game's own values, with no stacking and no value editing. Install one or the other.
+- **Two editions:** the **full edition** (`Super-Earth-Armory-Forge-v6.2.1.zip`, the version is always in the name) stacks passives and edits values. The **Passive Swap edition** (`Super-Earth-Armory-Forge-Passive-Swap-v6.2.1.zip`) gives each armor one other passive at the game's own values, with no stacking and no value editing. Install one or the other.
 - **Support:** the mod is free and always will be. If it's worth a coffee to you, **[tip on Ko-fi](https://ko-fi.com/phamtrangiahung)**. I'd really appreciate it, and it helps me keep updating the mod.
 
 ## Ways to use it
@@ -72,12 +72,13 @@ Then:
 - **Guide tab:** step-by-step use and every control, in the panel and in the web builder (G).
 - **The game ignores your keyboard and mouse while the panel is open** (no moving, shooting, turning or clicking the armory behind it); the wheel still scrolls the panel. Keys tab: *Blocked / Let through*.
 - **Confirmed or not:** each value says *UNTESTED* or *CONFIRMED IN GAME* (from [TESTING.md](TESTING.md)).
-- **When two passives change the same thing:** *Stack all* or *Strongest only*.
+- **When two passives change the same thing:** *Stack all* or *Strongest only* (new stacks start on *Strongest only*).
+- **Every armor:** *+ Armor* → *Every armor* is one stack that follows you to any armor you wear, so you can change armor and keep the same passives and weight. Keep the armor's own passive or turn it off. A passive with its own tab still uses that tab. Full edition only.
 - Every change applies at once and is saved to `%LOCALAPPDATA%\CowboyBingus\Helldivers2\ArmoryForge\loadout.ini`, the same format as the web builder, so you can import it there to share. Installing a web-builder build starts fresh from that build; the release zip always keeps what you made.
 - **Presets tab:** load a standard preset or one of yours. **+ Save current stack** saves what you have; rename, overwrite or delete your own. Saved in `ArmoryForge\my-presets.txt`.
 - **Quick-swap (F9):** cycles your presets in game without opening the panel (built-ins if you have none saved). Set `swap_hotkey = F9` or `OFF` in `[settings]`.
 - **Undo / Ctrl+Z** takes back the last change (up to 30).
-- **Panel size:** `[-] 100% [+]` at the top, or **Ctrl +** / **Ctrl -** (Ctrl 0 resets), 80 to 150%. Also `panel_scale = 1.2` in `[settings]`.
+- **Panel size:** `[-] 100% [+]` at the top, or **Ctrl +** / **Ctrl -** (Ctrl 0 resets), 80 to 200%. Up to 150% it always fits the screen; above that, on a small screen (720p, 900p), it gets taller than the screen with bigger text, and the wheel outside a list scrolls it. Also `panel_scale = 1.2` in `[settings]`.
 - **Move it:** drag the top strip anywhere on the screen; the spot is remembered. **Ctrl 0** puts it back.
 - **Long lists scroll:** mouse wheel over the list, the bar on its right, or PageUp / PageDown.
 - **Copy code / Paste code:** your build as one short line of text for Discord etc. (only what you changed). Web-builder share links paste too.
@@ -135,7 +136,7 @@ pip install lupa                                   # optional: Lua syntax check
 python tools\picker.py list                        # every passive, effect, default
 python tools\picker.py build loadout.ini           # preview
 python tools\picker.py build loadout.ini --zip "My Stack.zip"
-python tools\picker.py release --zip dist\Super-Earth-Armory-Forge-v6.2.zip   # the release zip (CI names it after the tag)
+python tools\picker.py release --zip dist\Super-Earth-Armory-Forge-v6.2.1.zip   # the release zip (CI names it after the tag)
 ```
 
 The web builder can import and export the same `loadout.ini`.
@@ -156,6 +157,11 @@ Siege-Ready.stat_ammo_capacity   = 1.5
 
 [profile: Siege-Ready]           ; a second, independent stack
 Scout = on
+
+[profile: Every armor]           ; any armor whose passive has no tab of its own
+own_passive = off                ; only these count (default: on, the armor keeps its own)
+weight = light
+Fortified = on
 ```
 
 Advanced: `raw = 0xHEXID type value, ...` and `raw_stats = stat unk1 unk2, ...` append arbitrary rows. Types are 0 set, 1 add, 2 multiply, 3 time.
@@ -188,6 +194,7 @@ tests/test_report_share.py panel off, short share codes, the problem report
 tools/research.lua         research builds only (`picker.py research`): armor kit dump, weight experiment
 tests/test_research.py     the research build, and that no release carries it
 tests/test_wearing.py      what you wear, one armor's weight, the game's input while the panel is open
+tests/test_every_armor.py  the Every armor stack: a setup that stays whatever armor you wear
 tests/test_window_filter.py the game-window input filter's machine code, run on an x64 emulator
 tests/test_lang.py         the panel in Simplified Chinese: coverage, fonts without Chinese, data stays English
 tests/test_web_i18n.js     the web builder in Simplified Chinese

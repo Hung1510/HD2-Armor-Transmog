@@ -83,6 +83,12 @@
     "Stack all": "全部叠加",
     "Strongest only": "仅取最强",
     "Values here replace the originals.": "这里的数值会替换原本的数值。",
+    "Every armor (any armor you wear)": "所有护甲（你穿的任何护甲）",
+    "The armor's own passive": "护甲自带被动",
+    "Keep it": "保留",
+    "Turn it off": "关闭",
+    "Only the passives you tick below apply, whatever armor you wear.": "无论穿哪件护甲，只有下面勾选的被动生效。",
+    "The armor's own passive stays and the ticked passives are added on top.": "护甲自带被动保留，勾选的被动叠加在其上。",
     "tick all": "全选",
     "clear": "清除",
     "Search passives or effects": "搜索被动或效果",
@@ -185,6 +191,10 @@
     [/^(.+) \(base\)$/, "$1（基础）"],
     [/^Wear any armor with (.+) to get this stack \(Armor Transmog changes the look\)\. (.+)$/,
       "穿上任意带$1的护甲即可获得这套堆叠（外观可用 Armor Transmog 更换）。$2"],
+    [/^This stack follows you to any armor you wear, so you can switch armor freely and keep the same setup\. A passive with its own tab uses that tab instead\. ?(.*)$/,
+      "这套堆叠跟随你穿的任何护甲，随意换护甲也能保持同一套配置。有自己标签页的被动则使用那个标签页。$1"],
+    [/^Every armor moves and gets armor like (\w+) armor, and keeps its look\.$/,
+      "所有护甲的移动与护甲值都按$1护甲计算，外观不变。"],
     [/^Every (.+) armor moves and gets armor like (\w+) armor, and keeps its look\.$/,
       "所有$1护甲的移动与护甲值都按$2护甲计算，外观不变。"],
     [/^(.+?)( #\d+)? \((light|medium|heavy)\)$/, "$1$2（$3）"],
@@ -255,6 +265,13 @@
       if (!rep) continue;
       const m = s.match(re);
       if (m) return rep.replace(/\$(\d)/g, (_, d) => (m[+d] === undefined ? "" : tr(m[+d])));
+    }
+    // several sentences in one text: each on its own ("A. B." -> "甲。乙。")
+    const parts = s.match(/[^.!?]+[.!?]+(\s+|$)/g);
+    if (parts && parts.length > 1 && parts.join("") === s) {
+      const out = parts.map((p) => tr(p.trim()));
+      if (out.some((o, i) => o !== parts[i].trim()))
+        return out.reduce((a, o) => a + (a && !/[。！？]$/.test(a) ? " " : "") + o, "");
     }
     return s;
   }

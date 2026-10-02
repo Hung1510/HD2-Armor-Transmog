@@ -20,6 +20,7 @@
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const human = (k) => k.replace(/^stat_/, "").replace(/_/g, " ");
   const nameOf = (pid) => cat.byId.get(pid).name;
+  const EVERY = core.EVERY;
 
   function toast(msg) {
     const t = $("toast");
@@ -40,7 +41,7 @@
     return `set to ${v}`;
   }
 
-  function blankProfile(perk) { return { perk, conflicts: "stack", enabled: [], tweaks: {} }; }
+  function blankProfile(perk) { return { perk, conflicts: "strongest", enabled: [], tweaks: {} }; }
   function blankState() { return { name: "My Armory Build", retire: true, hotkey: "F7", swap_hotkey: "F9", panel_scale: 1, panel: true, armors: {}, profiles: [blankProfile(7)] }; }
 
   // tweaks on passives that are off are kept in state (so toggling back restores them)
@@ -148,7 +149,8 @@
   function renderProfile() {
     const prof = state.profiles[active];
     const used = new Set(state.profiles.map((p) => p.perk));
-    const triggerOpts = cat.list.map((c) =>
+    const every = prof.perk === EVERY;
+    const triggerOpts = [{ id: EVERY, name: "Every armor (any armor you wear)" }, ...cat.list].map((c) =>
       `<option value="${c.id}" ${c.id === prof.perk ? "selected" : ""} ${used.has(c.id) && c.id !== prof.perk ? "disabled" : ""}>${esc(c.name)}</option>`).join("");
     const baseEffects = core.effectsOf(cat, prof.perk);
     const q = search.trim().toLowerCase();
@@ -171,7 +173,19 @@
             <button type="button" data-policy="strongest" aria-pressed="${prof.conflicts === "strongest"}">Strongest only</button>
           </div></div>
       </div>
-      <p class="hint" style="margin:0">Wear any armor with ${esc(nameOf(prof.perk))} to get this stack (Armor Transmog changes the look).
+      ${every ? `<p class="hint" style="margin:0">This stack follows you to any armor you wear, so you can switch armor freely and keep the same setup. A passive with its own tab uses that tab instead.
+        ${prof.weight !== null && prof.weight !== undefined ? `Every armor moves and gets armor like ${core.WEIGHT_NAMES[prof.weight]} armor, and keeps its look.` : ""}
+        ${prof.conflicts === "stack" ? "Overlapping effects multiply or add together." : "Overlapping effects keep only the biggest one."}</p>
+
+      <div class="base">
+        <h3>The armor's own passive</h3>
+        <div class="seg" role="group" aria-label="The armor's own passive">
+          <button type="button" data-own="keep" aria-pressed="${prof.own !== false}">Keep it</button>
+          <button type="button" data-own="off" aria-pressed="${prof.own === false}">Turn it off</button>
+        </div>
+        <p class="hint" style="margin:6px 0 0">${prof.own === false ? "Only the passives you tick below apply, whatever armor you wear." : "The armor's own passive stays and the ticked passives are added on top."}</p>
+      </div>
+` : `<p class="hint" style="margin:0">Wear any armor with ${esc(nameOf(prof.perk))} to get this stack (Armor Transmog changes the look).
         ${prof.weight !== null && prof.weight !== undefined ? `Every ${esc(nameOf(prof.perk))} armor moves and gets armor like ${core.WEIGHT_NAMES[prof.weight]} armor, and keeps its look.` : ""}
         ${prof.conflicts === "stack" ? "Overlapping effects multiply or add together." : "Overlapping effects keep only the biggest one."}</p>
 
@@ -180,10 +194,10 @@
         <p class="hint" style="margin:0">Values here replace the originals.</p>
         <div class="effects" style="border:0; padding:0">${baseEffects.map((e) => effEditor(prof.perk, e, prof)).join("")}</div>
       </div>
-
+`}
       <div class="toolbar">
         <input type="search" id="search" placeholder="Search passives or effects" value="${esc(search)}" class="grow" aria-label="Filter">
-        <span class="hint">${onCount} of ${cat.list.length - 1} ticked</span>
+        <span class="hint">${onCount} of ${cat.list.length - (every ? 0 : 1)} ticked</span>
         <button class="link-btn" type="button" id="allOn">tick all</button>
         <button class="link-btn" type="button" id="allOff">clear</button>
       </div>
@@ -327,6 +341,7 @@
         prof.enabled = prof.enabled.filter((x) => x !== perk);
         for (const k of Object.keys(prof.tweaks)) if (k.startsWith(prof.perk + ".")) delete prof.tweaks[k];
         prof.perk = perk;
+        if (perk !== EVERY) delete prof.own;
         render();
       } else if (e.target.id === "weightSel") {
         const i = ["light", "medium", "heavy"].indexOf(e.target.value);
@@ -346,6 +361,8 @@
       const prof = state.profiles[active];
       const pol = e.target.closest("[data-policy]");
       if (pol) { prof.conflicts = pol.dataset.policy; render(); return; }
+      const own = e.target.closest("[data-own]");
+      if (own) { if (own.dataset.own === "off") prof.own = false; else delete prof.own; render(); return; }
       const tg = e.target.closest("[data-toggle]");
       if (tg) {
         const pid = +tg.dataset.toggle;
@@ -464,7 +481,7 @@
 
   function openAdd() {
     const used = new Set(state.profiles.map((p) => p.perk));
-    $("addSel").innerHTML = cat.list.filter((c) => !used.has(c.id))
+    $("addSel").innerHTML = [{ id: EVERY, name: "Every armor (any armor you wear)" }, ...cat.list].filter((c) => !used.has(c.id))
       .map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join("");
     $("addDlg").showModal();
   }

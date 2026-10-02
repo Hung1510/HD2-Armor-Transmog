@@ -4,12 +4,15 @@ Panel size (panel_scale) and sharp drawing, driven like a player would.
 
     python tests/test_panel_scale.py
 
-1. panel_scale in [settings]: 0.8 .. 1.5 (or 80% .. 150%), same rules in picker.py and
+1. panel_scale in [settings]: 0.8 .. 2.0 (or 80% .. 200%), same rules in picker.py and
    the web builder; the generated Lua is identical.
 2. In game: Ctrl + / Ctrl - / Ctrl 0 and the [-] [+] buttons resize the panel in 10 % steps,
-   capped at 80 % and 150 %; the size is saved, survives a restart and a preset load,
+   capped at 80 % and 200 %; the size is saved, survives a restart and a preset load,
    and is not an undo step.
-3. The panel is drawn on whole pixels and always fits the screen, at 1080p, 1440p and 4K.
+3. Up to 150 % the panel is drawn on whole pixels and always fits the screen, at 1080p,
+   1440p and 4K.
+4. 6.2.1: over 150 % on a small screen (1280x720) the panel is taller than the screen so its
+   text is bigger; it starts at the top and the wheel outside a list scrolls it.
 """
 import json
 import os
@@ -74,13 +77,13 @@ def saved_scale(appdata):
 sink = open(os.path.join(ROOT, "presets", "01-kitchen-sink.ini"), encoding="utf-8").read()
 
 # ------------------------------------------------------------------ 1. the setting
-for val, want in (("0.8", 0.8), ("1.5", 1.5), ("120%", 1.2), ("1.25", 1.3), ("1", 1.0)):
+for val, want in (("0.8", 0.8), ("1.5", 1.5), ("120%", 1.2), ("1.25", 1.3), ("1", 1.0), ("2", 2.0), ("160%", 1.6)):
     s, _ = picker.load_config_text(sink.replace("[settings]", "[settings]\npanel_scale = %s" % val, 1))
     rc, out = node("""const core=require('./docs/core.js'),data=require('./docs/data.json'),cat=core.makeCatalog(data);
 console.log(core.loadConfigText(cat,%s).settings.panel_scale)""" % json.dumps(sink.replace("[settings]", "[settings]\npanel_scale = %s" % val, 1)))
     check(abs(s["panel_scale"] - want) < 1e-9 and abs(float(out) - want) < 1e-9,
           "panel_scale = %s -> %.1f in picker.py and the web builder" % (val, want))
-for bad in ("0.5", "2", "big", "160%"):
+for bad in ("0.5", "2.1", "big", "210%"):
     try:
         picker.load_config_text("[settings]\npanel_scale = %s\n[profile: Med-Kit]\n" % bad)
         ok = False
@@ -115,10 +118,10 @@ check(any(t == "120%" for t in g.texts()), "numpad + works too")
 g.click("zoom:-")
 check(any(t == "110%" for t in g.texts()), "the [-] button makes it smaller")
 check(any("Panel size 110%" in t for t in g.texts()), "a message says the new size")
-for _ in range(8):
-    ctrl(g, PLUS)
-check(any(t == "150%" for t in g.texts()), "capped at 150%")
 for _ in range(12):
+    ctrl(g, PLUS)
+check(any(t == "200%" for t in g.texts()), "capped at 200%")
+for _ in range(16):
     ctrl(g, MINUS)
 check(any(t == "80%" for t in g.texts()), "capped at 80%")
 ctrl(g, ZERO)
@@ -168,6 +171,37 @@ for rh in (1080, 1440, 2160):
     sizes[rh] = panel_px(gg)[1]
 check(sizes[1080] < sizes[1440] < sizes[2160] and abs(sizes[1440] / sizes[1080] - 4 / 3) < 0.02,
       "panel height follows the screen: %s" % sizes)
+
+# ------------------------------------------------------------------ 4. bigger than a small screen
+def at_720(scale):
+    pth, _ = build(sink.replace("[settings]", "[settings]\npanel_scale = %.1f" % scale, 1))
+    gg = FakeGame(pth, appdata=tempfile.mkdtemp())
+    gg.set_resolution(1280, 720)
+    gg.tick(420)
+    gg.key(F7)
+    gg.tick(120)
+    return gg
+
+
+g15, g20 = at_720(1.5), at_720(2.0)
+x, y, w, h, _ = g15.regions()["panel"]
+check(y >= 0 and y + h <= 720, "720p at 150%%: the panel still fits the screen (%dx%d)" % (w, h))
+body15 = max(c[4] for c in g15.draw_calls() if c[0] == b"text")
+x, y, w, h, _ = g20.regions()["panel"]
+body20 = max(c[4] for c in g20.draw_calls() if c[0] == b"text")
+check(h > 720 and y + h == 720 and x + w <= 1280,
+      "720p at 200%%: taller than the screen (%dx%d), starts at the top, fits across" % (w, h))
+check(body20 > body15 * 1.4, "... and its text is bigger (%s px vs %s px at 150%%)" % (body20, body15))
+g20.scroll_wheel("drag", -20)
+x, y, w, h, _ = g20.regions()["panel"]
+check(y == 0, "the wheel outside a list scrolls it down to its bottom edge")
+low = next(k for k, r in g20.regions().items() if k != "panel" and 0 <= r[1] and r[1] + r[3] < 120
+           and k.split(":")[0] not in ("sel", "tick", "addpick", "swap", "pre", "scroll"))
+g20.scroll_wheel(low, 20)
+x, y, w, h, _ = g20.regions()["panel"]
+check(y + h == 720, "... and back up to its top (wheel over '%s')" % low)
+g20.click("settings")
+check(any("Taller than the screen" in t for t in g20.texts()), "Keys tab says how to scroll it")
 
 if failed:
     print("\n%d FAILED" % len(failed))
